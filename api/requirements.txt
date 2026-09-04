@@ -2,12 +2,16 @@
 fastapi
 uvicorn[standard]
 pydantic
+python-multipart
 
 # Database & queuing
 sqlalchemy
 psycopg2-binary
 redis
 celery
+
+# Object Storage
+minio
 
 # Vector & search backends
 qdrant-client

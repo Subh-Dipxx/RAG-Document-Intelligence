@@ -3,13 +3,42 @@ import json
 import urllib.request
 import urllib.error
 from typing import Dict, Any
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlalchemy import create_engine, text
 import redis
 from opensearchpy import OpenSearch
 
-app = FastAPI(title="RAG Platform API")
+from db.database import init_db
+from storage.minio_client import minio_storage
+from api.routes import documents, jobs, eval as eval_route
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize DB tables
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Startup warning: DB init failed: {e}")
+
+    # Initialize MinIO buckets
+    try:
+        minio_storage.init_buckets()
+    except Exception as e:
+        print(f"Startup warning: MinIO init failed: {e}")
+
+    yield
+
+
+app = FastAPI(title="RAG Platform API", lifespan=lifespan)
+
+# Register API v1 routes
+app.include_router(documents.router, prefix="/api/v1")
+app.include_router(jobs.router, prefix="/api/v1")
+app.include_router(eval_route.router, prefix="/api/v1")
 
 # Read environment variables with sensible defaults (matching .env.example)
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/rag")
@@ -90,3 +119,4 @@ def health():
     }
     overall = all(v.get("ok") for v in results.values())
     return {"ok": overall, "services": results}
+

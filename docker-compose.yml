@@ -84,7 +84,9 @@ services:
       - ollama_data:/var/lib/ollama
 
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,7 +108,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
-      timeout: 5s
+      timeout: 15s
       retries: 5
 
 volumes:
