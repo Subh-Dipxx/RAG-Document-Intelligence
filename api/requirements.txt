@@ -1,0 +1,18 @@
+# Core web and infra
+fastapi
+uvicorn[standard]
+pydantic
+
+# Database & queuing
+sqlalchemy
+psycopg2-binary
+redis
+celery
+
+# Vector & search backends
+qdrant-client
+opensearch-py
+
+# Sentence Transformers (relies on torch). The Dockerfile installs a CPU-only
+# torch wheel before installing this to avoid CUDA GPU packages.
+sentence-transformers

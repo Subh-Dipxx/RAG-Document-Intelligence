@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 88
+# Enable many common checks; teams can customize further
+select = ["E", "F", "W", "I", "C", "D"]
+exclude = [".git", "__pycache__", "build", "dist", "venv"]
+
+[tool.ruff.per-file-ignores]
+# Keep files clean; tests may be more permissive
+"tests/*" = ["D","I"]
+
+[tool.mypy]
+python_version = 3.11
+ignore_missing_imports = true
+strict = false
+
+# Note: stricter per-package rules are provided in mypy.ini for clarity and
+# compatibility with mypy's per-module configuration semantics.
