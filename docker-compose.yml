@@ -96,10 +96,21 @@ services:
         condition: service_healthy
       opensearch:
         condition: service_healthy
-    environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}"
-      REDIS_URL: "redis://redis:${REDIS_PORT}/0"
+    env_file:
+      - .env
+    environment: &app_env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379/0"
       MINIO_ENDPOINT: "${MINIO_ENDPOINT}"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+      MINIO_BUCKET_RAW_DOCUMENTS: "${MINIO_BUCKET_RAW_DOCUMENTS}"
+      MINIO_BUCKET_PAGE_IMAGES: "${MINIO_BUCKET_PAGE_IMAGES}"
+      MINIO_BUCKET_OCR_OUTPUT: "${MINIO_BUCKET_OCR_OUTPUT}"
+      MINIO_BUCKET_TABLES: "${MINIO_BUCKET_TABLES}"
+      MINIO_BUCKET_THUMBNAILS: "${MINIO_BUCKET_THUMBNAILS}"
+      MINIO_PRESIGN_EXPIRES_SECONDS: "${MINIO_PRESIGN_EXPIRES_SECONDS}"
+      OBJECT_STORAGE_BACKEND: "${OBJECT_STORAGE_BACKEND}"
       QDRANT_URL: "${QDRANT_URL}"
       OPENSEARCH_URL: "${OPENSEARCH_URL}"
       OLLAMA_URL: "${OLLAMA_URL}"
@@ -110,6 +121,20 @@ services:
       interval: 10s
       timeout: 15s
       retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    command: ["celery", "-A", "workers.celery_app:celery_app", "worker", "--loglevel=info", "--queues=default,document_tasks,dead_letter"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env  
+    environment: *app_env
 
 volumes:
   postgres_data:

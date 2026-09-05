@@ -1,4 +1,4 @@
-import os
+from config import get_settings
 import json
 import urllib.request
 import urllib.error
@@ -18,18 +18,8 @@ from api.routes import documents, jobs, eval as eval_route
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB tables
-    try:
-        init_db()
-    except Exception as e:
-        print(f"Startup warning: DB init failed: {e}")
-
-    # Initialize MinIO buckets
-    try:
-        minio_storage.init_buckets()
-    except Exception as e:
-        print(f"Startup warning: MinIO init failed: {e}")
-
+    init_db()
+    minio_storage.init_buckets()
     yield
 
 
@@ -40,14 +30,14 @@ app.include_router(documents.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(eval_route.router, prefix="/api/v1")
 
-# Read environment variables with sensible defaults (matching .env.example)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/rag")
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
-QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
-OPENSEARCH_URL = os.getenv("OPENSEARCH_URL", "http://opensearch:9200")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
+settings = get_settings()
 
+DATABASE_URL = settings.database_url
+REDIS_URL = settings.redis_url
+MINIO_ENDPOINT = settings.minio_endpoint
+QDRANT_URL = settings.qdrant_url
+OPENSEARCH_URL = settings.opensearch_url
+OLLAMA_URL = settings.ollama_url
 
 def http_check(url: str, path: str = "", timeout: int = 5) -> Dict[str, Any]:
     full = url.rstrip("/") + path

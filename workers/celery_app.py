@@ -1,55 +1,112 @@
-import os
 from celery import Celery, Task
-from kombu import Queue, Exchange
+from kombu import Exchange, Queue
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+from config import get_settings
+
+settings = get_settings()
+
+default_exchange = Exchange(
+    settings.celery_default_queue,
+    type="direct",
+)
+
+dead_letter_exchange = Exchange(
+    settings.celery_dead_letter_queue,
+    type="direct",
+)
 
 celery_app = Celery(
     "rag_workers",
-    broker=REDIS_URL,
-    backend=REDIS_URL,
+    broker=settings.redis_url,
+    backend=settings.redis_url,
+    include=["workers.tasks"],
 )
-
-# Configure Queues and Dead-Letter Queue (DLQ) exchanges
-default_exchange = Exchange("default", type="direct")
-dlq_exchange = Exchange("dead_letter", type="direct")
 
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
+
     timezone="UTC",
     enable_utc=True,
+
     task_queues=(
-        Queue("default", default_exchange, routing_key="default"),
-        Queue("document_tasks", default_exchange, routing_key="document_tasks"),
-        Queue("dead_letter", dlq_exchange, routing_key="dead_letter"),
+        Queue(
+            settings.celery_default_queue,
+            default_exchange,
+            routing_key=settings.celery_default_queue,
+        ),
+        Queue(
+            settings.celery_document_queue,
+            default_exchange,
+            routing_key=settings.celery_document_queue,
+        ),
+        Queue(
+            settings.celery_dead_letter_queue,
+            dead_letter_exchange,
+            routing_key=settings.celery_dead_letter_queue,
+        ),
     ),
-    task_default_queue="default",
-    task_default_exchange="default",
-    task_default_routing_key="default",
+
+    task_default_queue=settings.celery_default_queue,
+    task_default_exchange=settings.celery_default_queue,
+    task_default_routing_key=settings.celery_default_queue,
+
     task_routes={
-        "workers.tasks.dead_letter_handler_task": {"queue": "dead_letter"},
-        "workers.tasks.process_document_task": {"queue": "document_tasks"},
+        "workers.tasks.process_document_task": {
+            "queue": settings.celery_document_queue,
+        },
+        "workers.tasks.dead_letter_handler_task": {
+            "queue": settings.celery_dead_letter_queue,
+        },
+        "workers.tasks.step1_failure_test_task": {
+            "queue": settings.celery_default_queue,
+        },
     },
 )
 
 
 class DLQBaseTask(Task):
-    """Custom base task that routes failed tasks to the dead-letter queue after max retries are exceeded."""
+    """Send permanently failed tasks to the configured DLQ task."""
 
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-        print(f"Task {self.name}[{task_id}] failed permanently: {exc}. Routing to DLQ.")
+    def on_failure(
+        self,
+        exc,
+        task_id,
+        args,
+        kwargs,
+        einfo,
+    ):
+        print(
+            f"Task {self.name}[{task_id}] failed permanently. "
+            f"Sending to DLQ."
+        )
+
         try:
             from workers.tasks import dead_letter_handler_task
-            dead_letter_handler_task.delay(
-                task_name=self.name,
-                task_id=task_id,
-                args=args,
-                kwargs=kwargs,
-                exception=str(exc),
-                traceback=str(einfo),
+
+            dead_letter_handler_task.apply_async(
+                kwargs={
+                    "task_name": self.name,
+                    "task_id": task_id,
+                    "args": args,
+                    "kwargs": kwargs,
+                    "exception": str(exc),
+                    "traceback": str(einfo),
+                },
+                queue=settings.celery_dead_letter_queue,
             )
-        except Exception as dlq_err:
-            print(f"Failed to publish to DLQ for task {task_id}: {dlq_err}")
-        super().on_failure(exc, task_id, args, kwargs, einfo)
+
+        except Exception as dlq_error:
+            print(
+                f"Failed to publish task {task_id} "
+                f"to DLQ: {dlq_error}"
+            )
+
+        super().on_failure(
+            exc,
+            task_id,
+            args,
+            kwargs,
+            einfo,
+        )

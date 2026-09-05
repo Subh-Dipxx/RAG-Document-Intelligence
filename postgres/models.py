@@ -1,3 +1,5 @@
+"""Re-export SQLAlchemy models from ``db.models`` (single schema)."""
+from db.models import *  # noqa: F401,F403
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
