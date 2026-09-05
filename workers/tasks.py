@@ -1,6 +1,18 @@
+from __future__ import annotations
+
+import os
+import tempfile
 from typing import Any
 
 from config import get_settings
+from db import crud
+from db.database import get_db
+from domain.models import Document
+from ingestion.parsers.pdf import PyMuPDFParser
+from chunking.naive import NaiveCharacterChunker
+from indexing.embedders.bge import BGEEmbedder
+from indexing.vector_stores.pgvector import PgVectorStore
+from storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 from workers.celery_app import DLQBaseTask, celery_app
 
 
@@ -21,7 +33,17 @@ def process_document_task(
     document_id: str,
     version_id: str,
 ) -> dict[str, Any]:
-    """Stage 1 document-processing task skeleton."""
+    """
+    Step 2 document-processing pipeline:
+
+    MinIO
+        -> PyMuPDF PDF parsing
+        -> PostgreSQL pages
+        -> naive character chunks
+        -> PostgreSQL chunks
+        -> local BGE embeddings
+        -> pgvector
+    """
 
     print(
         f"Processing document {document_id}, "
@@ -29,13 +51,269 @@ def process_document_task(
         f"attempt={self.request.retries + 1}"
     )
 
-    return {
-        "status": "completed",
-        "document_id": document_id,
-        "version_id": version_id,
-        "processed_pages": 0,
-        "created_chunks": 0,
-    }
+    db_generator = get_db()
+    db = next(db_generator)
+
+    temp_path: str | None = None
+
+    try:
+        # ---------------------------------------------------------
+        # 1. Load document/version metadata from PostgreSQL
+        # ---------------------------------------------------------
+        db_document = crud.get_document(db, document_id)
+
+        if db_document is None:
+            raise ValueError(f"Document not found: {document_id}")
+
+        versions = crud.get_versions(db, document_id)
+        db_version = next(
+            (version for version in versions if version.id == version_id),
+            None,
+        )
+
+        if db_version is None:
+            raise ValueError(
+                f"Version not found: document_id={document_id}, "
+                f"version_id={version_id}"
+            )
+
+        storage_key = db_version.storage_key
+
+        if not storage_key:
+            raise ValueError(
+                f"Version has no storage key: {version_id}"
+            )
+
+        # ---------------------------------------------------------
+        # 2. Download source document from MinIO
+        # ---------------------------------------------------------
+        file_bytes = minio_storage.download_bytes(
+            bucket_name=RAW_DOCUMENTS_BUCKET,
+            object_name=storage_key,
+        )
+
+        if not file_bytes:
+            raise ValueError(
+                f"Downloaded document is empty: {storage_key}"
+            )
+
+        # ---------------------------------------------------------
+        # 3. Write temporary PDF
+        #
+        # PyMuPDFParser validates the .pdf suffix, so preserve
+        # the original extension where possible.
+        # ---------------------------------------------------------
+        original_name = db_document.file_name or "document.pdf"
+        suffix = os.path.splitext(original_name)[1].lower()
+
+        if suffix != ".pdf":
+            raise ValueError(
+                "Step 2 currently supports PDF documents only. "
+                f"Received: {original_name}"
+            )
+
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            suffix=".pdf",
+            delete=False,
+        ) as temp_file:
+            temp_file.write(file_bytes)
+            temp_path = temp_file.name
+
+        # ---------------------------------------------------------
+        # 4. Parse PDF using PyMuPDF
+        # ---------------------------------------------------------
+        parser = PyMuPDFParser()
+        parsed = parser.parse(temp_path)
+
+        pages = parsed.pages
+
+        print(
+            f"Parsed document {document_id}: "
+            f"{len(pages)} page(s)"
+        )
+
+        # ---------------------------------------------------------
+        # 5. Persist pages
+        # ---------------------------------------------------------
+        existing_pages = crud.get_pages_by_version(
+            db,
+            version_id,
+        )
+
+        if existing_pages:
+            print(
+                f"Pages already exist for version {version_id}; "
+                "skipping duplicate page creation."
+            )
+        else:
+            for page in pages:
+                crud.create_page(
+                    db=db,
+                    document_id=document_id,
+                    version_id=version_id,
+                    page=page,
+                )
+
+        # ---------------------------------------------------------
+        # 6. Build domain document for chunking
+        #
+        # The parser's temporary filename is not our DB document ID,
+        # therefore explicitly restore the real IDs here.
+        # ---------------------------------------------------------
+        domain_document = Document(
+            id=document_id,
+            title=db_document.title,
+            file_name=db_document.file_name,
+            mime_type=db_document.mime_type,
+            file_size=db_document.file_size,
+            owner_id=db_document.owner_id,
+            tenant_id=db_document.tenant_id,
+            corpus_id=db_document.corpus_id,
+            folder_id=db_document.folder_id,
+            detected_mime_type=db_document.detected_mime_type,
+            language=db_document.language,
+            content_hash=db_document.content_hash,
+            current_version_id=version_id,
+            forbid_external=db_document.forbid_external,
+            permissions=db_document.permissions or [],
+            pages=pages,
+            metadata=db_document.metadata_json or {},
+        )
+
+        # ---------------------------------------------------------
+        # 7. Naive character chunking
+        # ---------------------------------------------------------
+        chunker = NaiveCharacterChunker()
+        chunks = chunker.chunk(domain_document)
+
+        print(
+            f"Created {len(chunks)} chunk(s) "
+            f"for document {document_id}"
+        )
+
+        # ---------------------------------------------------------
+        # 8. Persist chunks
+        # ---------------------------------------------------------
+        existing_chunks = crud.get_chunks_by_document(
+            db,
+            document_id,
+        )
+
+        existing_version_chunks = [
+            chunk
+            for chunk in existing_chunks
+            if chunk.version_id == version_id
+        ]
+
+        if existing_version_chunks:
+            print(
+                f"Chunks already exist for version {version_id}; "
+                "skipping duplicate chunk creation."
+            )
+            persisted_chunks = existing_version_chunks
+        else:
+            for chunk in chunks:
+                crud.create_chunk(
+                    db=db,
+                    chunk=chunk,
+                )
+
+            persisted_chunks = crud.get_chunks_by_document(
+                db,
+                document_id,
+            )
+
+            persisted_chunks = [
+                chunk
+                for chunk in persisted_chunks
+                if chunk.version_id == version_id
+            ]
+
+        if not persisted_chunks:
+            raise RuntimeError(
+                f"No chunks persisted for version {version_id}"
+            )
+
+        # ---------------------------------------------------------
+        # 9. Generate local BGE embeddings
+        # ---------------------------------------------------------
+        embedder = BGEEmbedder()
+
+        texts = [
+            chunk.text
+            for chunk in persisted_chunks
+            if chunk.text
+        ]
+
+        if not texts:
+            raise RuntimeError(
+                f"No non-empty chunk text for version {version_id}"
+            )
+
+        embeddings = embedder.embed(texts)
+
+        if len(embeddings) != len(texts):
+            raise RuntimeError(
+                "Embedding count does not match chunk count: "
+                f"{len(embeddings)} != {len(texts)}"
+            )
+
+        # ---------------------------------------------------------
+        # 10. Store vectors in PostgreSQL/pgvector
+        # ---------------------------------------------------------
+        vector_store = PgVectorStore()
+
+        vector_items = []
+
+        embedding_index = 0
+
+        for chunk in persisted_chunks:
+            if not chunk.text:
+                continue
+
+            vector_items.append(
+                {
+                    "id": chunk.id,
+                    "vector": embeddings[embedding_index],
+                    "embedding_id": chunk.id,
+                    "embedding_model": embedder.model_name,
+                }
+            )
+
+            embedding_index += 1
+
+        vector_store.upsert(vector_items)
+
+        print(
+            f"Indexed {len(vector_items)} embedding(s) "
+            f"for document {document_id}"
+        )
+
+        return {
+            "status": "completed",
+            "document_id": document_id,
+            "version_id": version_id,
+            "processed_pages": len(pages),
+            "created_chunks": len(persisted_chunks),
+            "embedded_chunks": len(vector_items),
+            "embedding_model": embedder.model_name,
+        }
+
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError as cleanup_error:
+                print(
+                    f"Temporary file cleanup warning: "
+                    f"{cleanup_error}"
+                )
+
+        try:
+            db_generator.close()
+        except Exception:
+            pass
 
 
 @celery_app.task(

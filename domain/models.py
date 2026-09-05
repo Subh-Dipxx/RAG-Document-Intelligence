@@ -159,6 +159,7 @@ class Chunk(BaseModel):
     content_hash: Optional[str] = None
     embedding_id: Optional[str] = None
     embedding_model: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 class Table(BaseModel):
     id: str

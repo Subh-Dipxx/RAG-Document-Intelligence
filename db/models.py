@@ -15,7 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
-
+from pgvector.sqlalchemy import Vector
 from db.database import Base
 
 
@@ -173,6 +173,7 @@ class ChunkModel(Base):
     content_hash = Column(String, nullable=True, index=True)
     embedding_id = Column(String, nullable=True)
     embedding_model = Column(String, nullable=True)
+    embedding = Column(Vector(384), nullable=True)
     metadata_json = Column(JSON, default=dict)
 
     document = relationship("DocumentModel", back_populates="chunks")
