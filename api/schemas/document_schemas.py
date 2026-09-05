@@ -16,7 +16,7 @@ class VersionResponse(BaseModel):
     storage_key: Optional[str] = None
     file_hash: Optional[str] = None
     created_at: datetime
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict, validation_alias="metadata_json")
 
     class Config:
         from_attributes = True
@@ -31,7 +31,7 @@ class DocumentResponse(BaseModel):
     permissions: List[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict, validation_alias="metadata_json")
     versions: List[VersionResponse] = Field(default_factory=list)
 
     class Config:

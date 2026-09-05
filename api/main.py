@@ -23,7 +23,15 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="RAG Platform API", lifespan=lifespan)
+app = FastAPI(
+    title="RAG Platform API",
+    description="Local RAG document intelligence API. Interactive API documentation is available at /docs.",
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+)
 
 # Register API v1 routes
 app.include_router(documents.router, prefix="/api/v1")

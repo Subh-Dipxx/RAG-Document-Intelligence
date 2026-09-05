@@ -67,6 +67,13 @@ class Settings:
     opensearch_url: str
     ollama_url: str
 
+    # Chunking
+    chunk_size: int
+    chunk_overlap: int
+
+    # Embeddings
+    embedding_model: str
+
     def object_buckets(self) -> tuple[str, ...]:
         return (
             self.minio_bucket_raw_documents,
@@ -120,6 +127,11 @@ def load_settings() -> Settings:
         qdrant_url=_required("QDRANT_URL"),
         opensearch_url=_required("OPENSEARCH_URL"),
         ollama_url=_required("OLLAMA_URL"),
+
+        chunk_size=_required_int("CHUNK_SIZE"),
+        chunk_overlap=_required_int("CHUNK_OVERLAP"),
+
+        embedding_model=_required("EMBEDDING_MODEL"),
     )
 
 

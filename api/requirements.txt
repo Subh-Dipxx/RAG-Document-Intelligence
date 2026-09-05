@@ -9,6 +9,8 @@ sqlalchemy
 psycopg2-binary
 redis
 celery
+pgvector
+PyMuPDF
 
 # Object Storage
 minio
