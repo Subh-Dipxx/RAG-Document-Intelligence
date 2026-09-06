@@ -1,7 +1,7 @@
 from celery import Celery, Task
 from kombu import Exchange, Queue
 
-from config import get_settings
+from backend.config import get_settings
 
 settings = get_settings()
 
@@ -19,7 +19,7 @@ celery_app = Celery(
     "rag_workers",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["workers.tasks"],
+    include=["backend.workers.tasks"],
 )
 
 celery_app.conf.update(
@@ -53,13 +53,13 @@ celery_app.conf.update(
     task_default_routing_key=settings.celery_default_queue,
 
     task_routes={
-        "workers.tasks.process_document_task": {
+        "backend.workers.tasks.process_document_task": {
             "queue": settings.celery_document_queue,
         },
-        "workers.tasks.dead_letter_handler_task": {
+        "backend.workers.tasks.dead_letter_handler_task": {
             "queue": settings.celery_dead_letter_queue,
         },
-        "workers.tasks.step1_failure_test_task": {
+        "backend.workers.tasks.step1_failure_test_task": {
             "queue": settings.celery_default_queue,
         },
     },
@@ -83,7 +83,7 @@ class DLQBaseTask(Task):
         )
 
         try:
-            from workers.tasks import dead_letter_handler_task
+            from backend.workers.tasks import dead_letter_handler_task
 
             dead_letter_handler_task.apply_async(
                 kwargs={

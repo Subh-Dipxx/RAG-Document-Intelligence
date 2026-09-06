@@ -1,5 +1,5 @@
 from typing import Protocol, Any
-from domain.models import OCRResult
+from backend.domain.models import OCRResult
 
 
 class OCREngine(Protocol):

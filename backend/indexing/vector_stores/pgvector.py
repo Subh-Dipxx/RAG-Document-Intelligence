@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 
-from db.database import get_engine
-from db.models import ChunkModel
+from backend.database.database import get_engine
+from backend.database.models import ChunkModel
 
 
 class PgVectorStore:

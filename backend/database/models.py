@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
-from db.database import Base
+from backend.database.database import Base
 
 
 def utc_now():

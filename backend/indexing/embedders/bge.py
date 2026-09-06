@@ -4,7 +4,7 @@ from typing import List, Sequence
 
 from sentence_transformers import SentenceTransformer
 
-from config import get_settings
+from backend.config import get_settings
 
 
 class BGEEmbedder:
@@ -29,3 +29,22 @@ class BGEEmbedder:
         )
 
         return embeddings.tolist()
+
+
+_embedder: BGEEmbedder | None = None
+
+
+def get_bge_embedder() -> BGEEmbedder:
+    """
+    Return the BGE embedder cached for the current worker process.
+
+    Celery uses separate processes for prefork workers, so each
+    worker process gets its own model instance instead of loading
+    the model for every document-processing task.
+    """
+    global _embedder
+
+    if _embedder is None:
+        _embedder = BGEEmbedder()
+
+    return _embedder

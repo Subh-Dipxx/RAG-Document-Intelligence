@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from config import get_settings
-from storage.base import ObjectStorage
-from storage.memory import memory_storage
-from storage.minio_client import minio_storage
+from backend.config import get_settings
+from backend.storage.base import ObjectStorage
+from backend.storage.memory import memory_storage
+from backend.storage.minio_client import minio_storage
 
 
 def get_object_storage() -> ObjectStorage:

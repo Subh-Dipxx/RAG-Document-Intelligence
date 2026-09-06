@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from config import get_settings
+from backend.config import get_settings
 
 Base = declarative_base()
 
@@ -61,7 +61,7 @@ def get_db():
 def init_db():
     """Import all SQLAlchemy models and create missing tables."""
 
-    import db.models  # noqa: F401
+    import backend.database.models  # noqa: F401
 
     db_engine = get_engine()
 

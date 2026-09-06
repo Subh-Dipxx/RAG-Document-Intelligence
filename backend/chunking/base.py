@@ -1,5 +1,5 @@
 from typing import Protocol, List
-from domain.models import Document, Chunk
+from backend.domain.models import Document, Chunk
 
 
 class Chunker(Protocol):

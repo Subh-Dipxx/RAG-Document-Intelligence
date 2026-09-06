@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from db.models import (
+from backend.database.models import (
     AccessGrantModel,
     ChunkModel,
     CitationModel,
@@ -19,7 +19,7 @@ from db.models import (
     VersionModel,
     generate_uuid,
 )
-from domain.models import (
+from backend.domain.models import (
     AccessGrant,
     Chunk,
     Citation,

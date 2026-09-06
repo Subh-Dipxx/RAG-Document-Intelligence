@@ -1,4 +1,4 @@
-from domain.models import (
+from backend.domain.models import (
     AccessGrant,
     Answer,
     Chunk,

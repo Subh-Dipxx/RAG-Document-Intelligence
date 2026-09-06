@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Dict, Tuple
 
-from config import get_settings
-from storage.keys import object_key
+from backend.config import get_settings
+from backend.storage.keys import object_key
 
 
 class MemoryStorage:

@@ -2,10 +2,10 @@ import uuid
 from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-from db.database import get_db
-from db import crud
-from domain.models import EvalResult, Query
-from api.schemas.document_schemas import EvalResultCreate, EvalResultResponse
+from backend.database.database import get_db
+from backend.database import crud
+from backend.domain.models import EvalResult, Query
+from backend.api.schemas.document_schemas import EvalResultCreate, EvalResultResponse
 
 router = APIRouter(prefix="/eval", tags=["eval"])
 

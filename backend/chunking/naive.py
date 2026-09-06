@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import List
 from uuid import uuid4
 
-from config import get_settings
-from domain.models import Chunk, Document
+from backend.config import get_settings
+from backend.domain.models import Chunk, Document
 
 
 class NaiveCharacterChunker:

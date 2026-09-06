@@ -1,4 +1,4 @@
-from config import get_settings
+from backend.config import get_settings
 import json
 import urllib.request
 import urllib.error
@@ -10,9 +10,9 @@ from sqlalchemy import create_engine, text
 import redis
 from opensearchpy import OpenSearch
 
-from db.database import init_db
-from storage.minio_client import minio_storage
-from api.routes import documents, jobs, eval as eval_route
+from backend.database.database import init_db
+from backend.storage.minio_client import minio_storage
+from backend.api.controllers import documents, jobs, eval as eval_route
 
 
 

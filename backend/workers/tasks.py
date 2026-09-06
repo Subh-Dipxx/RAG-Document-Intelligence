@@ -4,16 +4,16 @@ import os
 import tempfile
 from typing import Any
 
-from config import get_settings
-from db import crud
-from db.database import get_db
-from domain.models import Document
-from ingestion.parsers.pdf import PyMuPDFParser
-from chunking.naive import NaiveCharacterChunker
-from indexing.embedders.bge import BGEEmbedder
-from indexing.vector_stores.pgvector import PgVectorStore
-from storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
-from workers.celery_app import DLQBaseTask, celery_app
+from backend.config import get_settings
+from backend.database import crud
+from backend.database.database import get_db
+from backend.domain.models import Document
+from backend.ingestion.parsers.pdf import PyMuPDFParser
+from backend.chunking.naive import NaiveCharacterChunker
+from backend.indexing.embedders.bge import get_bge_embedder
+from backend.indexing.vector_stores.pgvector import PgVectorStore
+from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
+from backend.workers.celery_app import DLQBaseTask, celery_app
 
 
 settings = get_settings()
@@ -22,7 +22,7 @@ settings = get_settings()
 @celery_app.task(
     bind=True,
     base=DLQBaseTask,
-    name="workers.tasks.process_document_task",
+    name="backend.workers.tasks.process_document_task",
     autoretry_for=(Exception,),
     retry_backoff=True,
     retry_backoff_max=settings.celery_retry_backoff_max,
@@ -238,7 +238,7 @@ def process_document_task(
         # ---------------------------------------------------------
         # 9. Generate local BGE embeddings
         # ---------------------------------------------------------
-        embedder = BGEEmbedder()
+        embedder = get_bge_embedder()
 
         texts = [
             chunk.text
@@ -317,7 +317,7 @@ def process_document_task(
 
 
 @celery_app.task(
-    name="workers.tasks.dead_letter_handler_task",
+    name="backend.workers.tasks.dead_letter_handler_task",
 )
 def dead_letter_handler_task(
     task_name: str,
@@ -347,7 +347,7 @@ def dead_letter_handler_task(
 @celery_app.task(
     bind=True,
     base=DLQBaseTask,
-    name="workers.tasks.step1_failure_test_task",
+    name="backend.workers.tasks.step1_failure_test_task",
     autoretry_for=(RuntimeError,),
     retry_backoff=False,
     max_retries=settings.celery_max_retries,

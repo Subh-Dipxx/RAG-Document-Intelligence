@@ -1,5 +1,5 @@
 from typing import Protocol, List, Optional, Dict, Any
-from domain.models import Query, Chunk, Answer
+from backend.domain.models import Query, Chunk, Answer
 
 
 class Generator(Protocol):

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import fitz
 
-from domain.models import Document, Page, ParsedDocument
+from backend.domain.models import Document, Page, ParsedDocument
 
 
 class PyMuPDFParser:

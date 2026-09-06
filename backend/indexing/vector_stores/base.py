@@ -1,5 +1,5 @@
 from typing import Protocol, List, Optional, Dict, Any
-from domain.models import Chunk
+from backend.domain.models import Chunk
 
 
 class VectorStore(Protocol):

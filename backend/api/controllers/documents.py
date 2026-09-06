@@ -5,12 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from sqlalchemy.orm import Session
 import json
 
-from db.database import get_db
-from db import crud
-from domain.models import Document, Version
-from storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
-from workers.tasks import process_document_task
-from api.schemas.document_schemas import DocumentResponse, VersionResponse
+from backend.database.database import get_db
+from backend.database import crud
+from backend.domain.models import Document, Version
+from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
+from backend.workers.tasks import process_document_task
+from backend.api.schemas.document_schemas import DocumentResponse, VersionResponse
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
