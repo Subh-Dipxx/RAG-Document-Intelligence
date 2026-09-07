@@ -12,7 +12,12 @@ from opensearchpy import OpenSearch
 
 from backend.database.database import init_db
 from backend.storage.minio_client import minio_storage
-from backend.api.controllers import documents, jobs, eval as eval_route
+from backend.api.controllers import (
+    documents,
+    jobs,
+    eval as eval_route,
+    query as query_route,
+)
 
 
 
@@ -37,6 +42,7 @@ app = FastAPI(
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(eval_route.router, prefix="/api/v1")
+app.include_router(query_route.router, prefix="/api/v1")
 
 settings = get_settings()
 
@@ -45,7 +51,6 @@ REDIS_URL = settings.redis_url
 MINIO_ENDPOINT = settings.minio_endpoint
 QDRANT_URL = settings.qdrant_url
 OPENSEARCH_URL = settings.opensearch_url
-OLLAMA_URL = settings.ollama_url
 
 def http_check(url: str, path: str = "", timeout: int = 5) -> Dict[str, Any]:
     full = url.rstrip("/") + path
@@ -99,11 +104,6 @@ def check_opensearch() -> Dict[str, Any]:
         return {"ok": False, "error": str(e)}
 
 
-def check_ollama() -> Dict[str, Any]:
-    # Ollama exposes /v1/models for a simple readiness check
-    return http_check(OLLAMA_URL, "/v1/models")
-
-
 @app.get("/health")
 def health():
     """Check connectivity to all external services and return per-service status."""
@@ -113,7 +113,6 @@ def health():
         "minio": check_minio(),
         "qdrant": check_qdrant(),
         "opensearch": check_opensearch(),
-        "ollama": check_ollama(),
     }
     overall = all(v.get("ok") for v in results.values())
     return {"ok": overall, "services": results}

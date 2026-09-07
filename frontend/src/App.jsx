@@ -1,100 +1,125 @@
-import { useEffect, useState } from 'react'
-
-async function readJson(response) {
-  const text = await response.text()
-
-  let data = null
-
-  try {
-    data = text ? JSON.parse(text) : null
-  } catch {
-    data = { detail: text }
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.detail || `Request failed (${response.status})`)
-  }
-
-  return data
-}
+import { useState, useEffect } from 'react'
+import './styles.css'
 
 function App() {
-  // Frontend-only state.
-  // This starts empty on every page load/refresh.
-  const [documents, setDocuments] = useState([])
-
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [health, setHealth] = useState(null)
+  const [documents, setDocuments] = useState([])
 
-  const loadHealth = async () => {
-    try {
-      const data = await readJson(await fetch('/health'))
-      setHealth(data)
-    } catch (error) {
-      setHealth({
-        ok: false,
-        error: error.message,
-      })
-    }
-  }
+  const [question, setQuestion] = useState('')
+  const [answer, setAnswer] = useState(null)
+  const [queryLoading, setQueryLoading] = useState(false)
+  const [queryError, setQueryError] = useState('')
 
-  // Only load backend health.
-  // IMPORTANT: Do NOT load /api/v1/documents here.
   useEffect(() => {
-    loadHealth()
+    const fetchHealth = async () => {
+      try {
+        const res = await fetch('/health')
+        const data = await res.json()
+        setHealth(data)
+      } catch (err) {
+        console.error('Failed to fetch health:', err)
+        setHealth(null)
+      }
+    }
+
+    fetchHealth()
   }, [])
 
-  const upload = async (event) => {
-    event.preventDefault()
+  const handleFileChange = (e) => {
+    setFile(e.target.files?.[0] || null)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
 
     if (!file) {
-      setStatus('Select a document first.')
+      setStatus('Please select a file.')
       return
     }
 
     setLoading(true)
-    setStatus('Uploading and queueing document…')
+    setStatus('Uploading document...')
 
     try {
-      const body = new FormData()
-
-      body.append('file', file)
+      const formData = new FormData()
 
       if (title.trim()) {
-        body.append('title', title.trim())
+        formData.append('title', title.trim())
       }
 
-      body.append('permissions', '[]')
-      body.append('metadata_json', '{}')
+      formData.append('file', file)
 
-      // Upload using the existing backend endpoint.
-      const uploadedDocument = await readJson(
-        await fetch('/api/v1/documents', {
-          method: 'POST',
-          body,
-        })
-      )
+      const res = await fetch('/api/v1/documents', {
+        method: 'POST',
+        body: formData,
+      })
 
-      // IMPORTANT:
-      // Display ONLY the document returned by this upload.
-      //
-      // If another document was previously displayed,
-      // it is replaced rather than appended.
-      setDocuments([uploadedDocument])
+      const data = await res.json()
 
+      if (!res.ok) {
+        throw new Error(data?.detail || 'Upload failed')
+      }
+
+      setDocuments([data])
       setStatus('Document uploaded successfully.')
-
       setFile(null)
       setTitle('')
-
-      event.target.reset()
-    } catch (error) {
-      setStatus(error.message)
+      setAnswer(null)
+      setQuestion('')
+      setQueryError('')
+    } catch (err) {
+      console.error(err)
+      setStatus(err.message || 'Upload failed.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleQuery = async (e) => {
+    e.preventDefault()
+
+    if (!question.trim()) {
+      setQueryError('Please enter a question.')
+      return
+    }
+
+    setQueryLoading(true)
+    setQueryError('')
+    setAnswer(null)
+
+    try {
+      const res = await fetch('/api/v1/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+    body: JSON.stringify({
+      question: question.trim(),
+      top_k: 5,
+      filters: documents.length > 0
+        ? {
+            document_id: documents[0].document_id || documents[0].id,
+          }
+        : {},
+    }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.detail || 'Query failed')
+      }
+
+      setAnswer(data)
+    } catch (err) {
+      console.error(err)
+      setQueryError(err.message || 'Query failed.')
+    } finally {
+      setQueryLoading(false)
     }
   }
 
@@ -103,44 +128,29 @@ function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">DOCUMENT INTELLIGENCE</p>
-
           <h1>RAG Platform</h1>
-
           <p className="subtitle">
-            Upload, process, and inspect your document corpus.
+            Upload, process, and query your document corpus.
           </p>
         </div>
 
-        <div
-          className={`health-pill ${
-            health?.ok ? 'healthy' : ''
-          }`}
-        >
+        <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
           <span className="dot" />
-
-          {health?.ok
-            ? 'Services healthy'
-            : 'Checking services'}
+          {health?.ok ? 'Services healthy' : 'Checking services'}
         </div>
       </header>
 
       <main className="content">
-        <section className="grid">
-          {/* Upload */}
+        <div className="grid">
           <div className="card upload-card">
-            <div className="card-heading">
-              <div>
-                <p className="eyebrow">INGESTION</p>
+            <p className="eyebrow">INGESTION</p>
+            <h2>Upload document</h2>
 
-                <h2>Upload document</h2>
-              </div>
-            </div>
-
-            <form onSubmit={upload}>
+            <form onSubmit={handleSubmit}>
               <label>
                 Title
-
                 <input
+                  type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Optional title"
@@ -149,40 +159,33 @@ function App() {
 
               <label>
                 Document
-
                 <input
                   type="file"
-                  onChange={(e) =>
-                    setFile(e.target.files?.[0] || null)
-                  }
+                  onChange={handleFileChange}
                 />
               </label>
 
-              <button
-                type="submit"
-                disabled={loading}
-              >
-                {loading
-                  ? 'Uploading…'
-                  : 'Upload document'}
+              {file && (
+                <p className="file-selected">
+                  Selected: {file.name}
+                </p>
+              )}
+
+              <button type="submit" disabled={loading}>
+                {loading ? 'Uploading...' : 'Upload document'}
               </button>
             </form>
 
             {status && (
-              <p className="status">
+              <div className="status">
                 {status}
-              </p>
+              </div>
             )}
           </div>
 
-          {/* Backend status */}
           <div className="card">
             <div className="card-heading">
-              <div>
-                <p className="eyebrow">API</p>
-
-                <h2>Backend status</h2>
-              </div>
+              <p className="eyebrow">API</p>
 
               <a
                 className="docs-link"
@@ -194,54 +197,38 @@ function App() {
               </a>
             </div>
 
+            <h2>Backend status</h2>
+
             <div className="service-list">
               {health?.services ? (
-                Object.entries(health.services).map(
-                  ([name, value]) => (
-                    <div
-                      className="service-row"
-                      key={name}
-                    >
-                      <span>{name}</span>
-
-                      <span
-                        className={
-                          value.ok ? 'ok' : 'bad'
-                        }
-                      >
-                        {value.ok
-                          ? 'OK'
-                          : 'Unavailable'}
-                      </span>
-                    </div>
-                  )
-                )
+                Object.entries(health.services).map(([name, value]) => (
+                  <div key={name} className="service-row">
+                    <span>{name}</span>
+                    <span className={value.ok ? 'ok' : 'bad'}>
+                      {value.ok ? 'OK' : 'Unavailable'}
+                    </span>
+                  </div>
+                ))
               ) : (
                 <p className="muted">
-                  Loading service status…
+                  Loading service status...
                 </p>
               )}
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Current uploaded document only */}
-        <section className="card documents-card">
-          <div className="card-heading">
-            <div>
-              <p className="eyebrow">CURRENT UPLOAD</p>
-
-              <h2>Document</h2>
-            </div>
-          </div>
+        <div className="card documents-card">
+          <p className="eyebrow">CURRENT UPLOAD</p>
+          <h2>Document</h2>
 
           {documents.length === 0 ? (
             <p className="muted">
               No document uploaded in this session.
             </p>
           ) : (
-            <div className="table-wrap">
-              <table>
+            <div className="table-container">
+              <table className="doc-table">
                 <thead>
                   <tr>
                     <th>Title</th>
@@ -253,29 +240,151 @@ function App() {
 
                 <tbody>
                   {documents.map((doc) => (
-                    <tr key={doc.id}>
-                      <td>
-                        {doc.title || 'Untitled'}
-                      </td>
-
-                      <td>
-                        {doc.file_name || '—'}
-                      </td>
-
-                      <td>
-                        {doc.mime_type || '—'}
-                      </td>
-
-                      <td>
-                        {doc.versions?.length ?? 0}
-                      </td>
+                    <tr key={doc.document_id || doc.id}>
+                      <td>{doc.title || '—'}</td>
+                      <td>{doc.filename || doc.file_name || '—'}</td>
+                      <td>{doc.mime_type || '—'}</td>
+                      <td>{doc.versions?.length ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
+        </div>
+
+        <div className="card query-card">
+          <p className="eyebrow">RAG QUERY</p>
+          <h2>Ask your documents</h2>
+
+          <form onSubmit={handleQuery}>
+            <label>
+              Question
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ask a question about the uploaded documents..."
+                rows="4"
+              />
+            </label>
+
+            <button type="submit" disabled={queryLoading}>
+              {queryLoading ? 'Searching...' : 'Ask question'}
+            </button>
+          </form>
+
+          {queryError && (
+            <div className="query-error">
+              {queryError}
+            </div>
+          )}
+
+          {answer && (
+            <div className="answer-section">
+              <div className="answer-header">
+                <h3>Answer</h3>
+
+                {answer.abstained ? (
+                  <span className="answer-badge abstained">
+                    Abstained
+                  </span>
+                ) : (
+                  <span className="answer-badge">
+                    Answered
+                  </span>
+                )}
+              </div>
+
+              <div className="answer-box">
+                {answer.answer}
+              </div>
+
+              <div className="answer-meta">
+                <span>
+                  Confidence:{' '}
+                  {answer.confidence !== null &&
+                  answer.confidence !== undefined
+                    ? answer.confidence.toFixed(3)
+                    : '—'}
+                </span>
+
+                <span>
+                  Retrieved chunks: {answer.retrieved_chunks}
+                </span>
+
+                <span>
+                  Model: {answer.model || '—'}
+                </span>
+              </div>
+
+              <h3 className="sources-title">
+                Citations
+              </h3>
+
+              {answer.citations?.length > 0 ? (
+                <div className="citation-list">
+                  {answer.citations.map((citation, index) => (
+                    <div
+                      className="citation-card"
+                      key={
+                        citation.chunk_id ||
+                        `${citation.source}-${index}`
+                      }
+                    >
+                      <div className="citation-header">
+                        <strong>
+                          {citation.source || `SOURCE ${index + 1}`}
+                        </strong>
+
+                        {citation.page && (
+                          <span>
+                            Page {citation.page}
+                          </span>
+                        )}
+                      </div>
+
+                      {citation.excerpt && (
+                        <p className="citation-excerpt">
+                          {citation.excerpt}
+                        </p>
+                      )}
+
+                      <div className="citation-meta">
+                        {citation.document_id && (
+                          <span>
+                            Document: {citation.document_id}
+                          </span>
+                        )}
+
+                        {citation.version_id && (
+                          <span>
+                            Version: {citation.version_id}
+                          </span>
+                        )}
+
+                        {citation.chunk_id && (
+                          <span>
+                            Chunk: {citation.chunk_id}
+                          </span>
+                        )}
+
+                        <span>
+                          {citation.is_generated
+                            ? 'Generated'
+                            : 'Retrieved source'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">
+                  No citations returned.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )

@@ -22,3 +22,5 @@ opensearch-py
 # Sentence Transformers (relies on torch). The Dockerfile installs a CPU-only
 # torch wheel before installing this to avoid CUDA GPU packages.
 sentence-transformers
+
+google-genai

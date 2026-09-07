@@ -76,13 +76,6 @@ services:
       timeout: 5s
       retries: 10
 
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "${OLLAMA_PORT}:11434"
-    volumes:
-      - ollama_data:/var/lib/ollama
-
   api:
     build:
       context: .
@@ -113,9 +106,10 @@ services:
       OBJECT_STORAGE_BACKEND: "${OBJECT_STORAGE_BACKEND}"
       QDRANT_URL: "${QDRANT_URL}"
       OPENSEARCH_URL: "${OPENSEARCH_URL}"
-      OLLAMA_URL: "${OLLAMA_URL}"
     ports:
       - "${API_PORT}:8000"
+    volumes:
+      - rag_huggingface_cache:/root/.cache/huggingface
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
@@ -154,7 +148,6 @@ volumes:
   minio_data:
   qdrant_storage:
   opensearch_data:
-  ollama_data:
   rag_huggingface_cache:
 
 networks:

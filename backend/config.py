@@ -65,7 +65,6 @@ class Settings:
     # Other local services
     qdrant_url: str
     opensearch_url: str
-    ollama_url: str
 
     # Chunking
     chunk_size: int
@@ -74,6 +73,13 @@ class Settings:
     # Embeddings
     embedding_model: str
 
+    # Generation
+    gemini_api_key: str
+    gemini_model: str
+
+    # Retrieval
+    retrieval_top_k: int
+    retrieval_min_score: float
     def object_buckets(self) -> tuple[str, ...]:
         return (
             self.minio_bucket_raw_documents,
@@ -126,12 +132,16 @@ def load_settings() -> Settings:
 
         qdrant_url=_required("QDRANT_URL"),
         opensearch_url=_required("OPENSEARCH_URL"),
-        ollama_url=_required("OLLAMA_URL"),
 
         chunk_size=_required_int("CHUNK_SIZE"),
         chunk_overlap=_required_int("CHUNK_OVERLAP"),
 
         embedding_model=_required("EMBEDDING_MODEL"),
+
+        gemini_api_key=_required("GEMINI_API_KEY"),
+        gemini_model=_required("GEMINI_MODEL"),
+        retrieval_top_k=_required_int("RETRIEVAL_TOP_K"),
+        retrieval_min_score=float(_required("RETRIEVAL_MIN_SCORE")),
     )
 
 
