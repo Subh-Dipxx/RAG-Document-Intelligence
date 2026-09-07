@@ -97,15 +97,15 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-    body: JSON.stringify({
-      question: question.trim(),
-      top_k: 5,
-      filters: documents.length > 0
-        ? {
-            document_id: documents[0].document_id || documents[0].id,
-          }
-        : {},
-    }),
+        body: JSON.stringify({
+          question: question.trim(),
+          top_k: 5,
+          filters: documents.length > 0
+            ? {
+                document_id: documents[0].document_id || documents[0].id,
+              }
+            : {},
+        }),
       })
 
       const data = await res.json()
@@ -123,81 +123,126 @@ function App() {
     }
   }
 
+  const currentDocument = documents[0]
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div>
-          <p className="eyebrow">DOCUMENT INTELLIGENCE</p>
-          <h1>RAG Platform</h1>
-          <p className="subtitle">
-            Upload, process, and query your document corpus.
-          </p>
+        <div className="brand">
+          <div className="brand-mark">R</div>
+          <div>
+            <p className="eyebrow">DOCUMENT INTELLIGENCE</p>
+            <h1>RAG Platform</h1>
+          </div>
         </div>
 
         <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
           <span className="dot" />
-          {health?.ok ? 'Services healthy' : 'Checking services'}
+          {health?.ok ? 'All systems operational' : 'Checking services'}
         </div>
       </header>
 
       <main className="content">
-        <div className="grid">
-          <div className="card upload-card">
-            <p className="eyebrow">INGESTION</p>
-            <h2>Upload document</h2>
+        <section className="hero">
+          <div>
+            <p className="hero-kicker">PDF-FOCUSED RAG</p>
+            <h2>Ask questions.<br /><span>Get grounded answers.</span></h2>
+            <p className="hero-copy">
+              Upload a PDF and query its content with answers grounded in
+              retrieved document context and source citations.
+            </p>
+          </div>
+
+          <div className="hero-stats">
+            <div>
+              <strong>{documents.length}</strong>
+              <span>Active document</span>
+            </div>
+            <div>
+              <strong>{answer?.retrieved_chunks ?? 0}</strong>
+              <span>Retrieved chunks</span>
+            </div>
+          </div>
+        </section>
+
+        <div className="workspace-grid">
+          <section className="card upload-card">
+            <div className="section-heading">
+              <div className="section-icon">↑</div>
+              <div>
+                <p className="eyebrow">INGESTION</p>
+                <h2>Upload PDF</h2>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit}>
-              <label>
-                Title
+              <label className="field">
+                <span>Title <small>Optional</small></span>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Optional title"
+                  placeholder="e.g. Product specification"
                 />
               </label>
 
-              <label>
-                Document
+              <label className="upload-zone">
                 <input
                   type="file"
+                  accept=".pdf,application/pdf"
                   onChange={handleFileChange}
                 />
+                <span className="upload-icon">PDF</span>
+                <strong>{file ? file.name : 'Choose a PDF document'}</strong>
+                <span>{file ? 'Ready to upload' : 'Click to browse your files'}</span>
               </label>
 
               {file && (
-                <p className="file-selected">
-                  Selected: {file.name}
-                </p>
+                <div className="selected-file">
+                  <span className="file-badge">PDF</span>
+                  <div>
+                    <strong>{file.name}</strong>
+                    <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                  </div>
+                </div>
               )}
 
-              <button type="submit" disabled={loading}>
-                {loading ? 'Uploading...' : 'Upload document'}
+              <button className="primary-button full-width" type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>Upload document <span>→</span></>
+                )}
               </button>
             </form>
 
             {status && (
-              <div className="status">
+              <div className={`status ${status.toLowerCase().includes('success') ? 'success' : ''}`}>
+                <span>{status.toLowerCase().includes('success') ? '✓' : '!'}</span>
                 {status}
               </div>
             )}
-          </div>
+          </section>
 
-          <div className="card">
-            <div className="card-heading">
-              <p className="eyebrow">API</p>
-
-              <a
-                className="docs-link"
-                href="/docs"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Swagger UI ↗
-              </a>
+          <section className="card system-card">
+            <div className="section-heading">
+              <div className="section-icon">◉</div>
+              <div>
+                <p className="eyebrow">SYSTEM</p>
+                <h2>Service status</h2>
+              </div>
             </div>
 
-            <h2>Backend status</h2>
+            <div className="system-summary">
+              <span className={`status-orb ${health?.ok ? 'online' : ''}`} />
+              <div>
+                <strong>{health?.ok ? 'System ready' : 'Checking system'}</strong>
+                <span>{health?.ok ? 'Ready to process your PDF' : 'Connecting to backend services'}</span>
+              </div>
+            </div>
 
             <div className="service-list">
               {health?.services ? (
@@ -205,76 +250,96 @@ function App() {
                   <div key={name} className="service-row">
                     <span>{name}</span>
                     <span className={value.ok ? 'ok' : 'bad'}>
-                      {value.ok ? 'OK' : 'Unavailable'}
+                      <i /> {value.ok ? 'Operational' : 'Unavailable'}
                     </span>
                   </div>
                 ))
               ) : (
-                <p className="muted">
-                  Loading service status...
-                </p>
+                <p className="muted">Loading service status...</p>
               )}
             </div>
-          </div>
+
+            <a className="docs-link" href="/docs" target="_blank" rel="noreferrer">
+              Open API documentation <span>↗</span>
+            </a>
+          </section>
         </div>
 
-        <div className="card documents-card">
-          <p className="eyebrow">CURRENT UPLOAD</p>
-          <h2>Document</h2>
+        <section className="card document-card">
+          <div className="card-heading">
+            <div>
+              <p className="eyebrow">CURRENT DOCUMENT</p>
+              <h2>Active PDF</h2>
+            </div>
+            {currentDocument && <span className="ready-badge">Ready</span>}
+          </div>
 
-          {documents.length === 0 ? (
-            <p className="muted">
-              No document uploaded in this session.
-            </p>
+          {!currentDocument ? (
+            <div className="empty-state">
+              <div className="empty-icon">PDF</div>
+              <strong>No PDF uploaded yet</strong>
+              <span>Upload a document above to start asking questions.</span>
+            </div>
           ) : (
-            <div className="table-container">
-              <table className="doc-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>File</th>
-                    <th>Type</th>
-                    <th>Versions</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {documents.map((doc) => (
-                    <tr key={doc.document_id || doc.id}>
-                      <td>{doc.title || '—'}</td>
-                      <td>{doc.filename || doc.file_name || '—'}</td>
-                      <td>{doc.mime_type || '—'}</td>
-                      <td>{doc.versions?.length ?? 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="document-info">
+              <div className="document-file-icon">PDF</div>
+              <div className="document-main">
+                <strong>{currentDocument.title || 'Untitled document'}</strong>
+                <span>{currentDocument.filename || currentDocument.file_name || '—'}</span>
+              </div>
+              <div className="document-detail">
+                <small>TYPE</small>
+                <strong>{currentDocument.mime_type || 'application/pdf'}</strong>
+              </div>
+              <div className="document-detail">
+                <small>VERSIONS</small>
+                <strong>{currentDocument.versions?.length ?? 0}</strong>
+              </div>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="card query-card">
-          <p className="eyebrow">RAG QUERY</p>
-          <h2>Ask your documents</h2>
+        <section className="card query-card">
+          <div className="query-intro">
+            <div>
+              <p className="eyebrow">RAG QUERY</p>
+              <h2>Ask your document</h2>
+              <p>Questions are answered using retrieved content from the active PDF.</p>
+            </div>
+            <div className="query-badge">BGE + pgvector + Gemini</div>
+          </div>
 
           <form onSubmit={handleQuery}>
-            <label>
-              Question
+            <label className="field">
+              <span>Question</span>
               <textarea
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ask a question about the uploaded documents..."
+                placeholder="What would you like to know about this document?"
                 rows="4"
               />
             </label>
 
-            <button type="submit" disabled={queryLoading}>
-              {queryLoading ? 'Searching...' : 'Ask question'}
-            </button>
+            <div className="query-actions">
+              <span className="query-hint">
+                {documents.length ? 'Searching the active PDF' : 'Upload a PDF to enable document-grounded queries'}
+              </span>
+              <button className="primary-button" type="submit" disabled={queryLoading}>
+                {queryLoading ? (
+                  <>
+                    <span className="spinner" />
+                    Searching...
+                  </>
+                ) : (
+                  <>Ask question <span>→</span></>
+                )}
+              </button>
+            </div>
           </form>
 
           {queryError && (
             <div className="query-error">
+              <span>!</span>
               {queryError}
             </div>
           )}
@@ -282,17 +347,13 @@ function App() {
           {answer && (
             <div className="answer-section">
               <div className="answer-header">
-                <h3>Answer</h3>
-
-                {answer.abstained ? (
-                  <span className="answer-badge abstained">
-                    Abstained
-                  </span>
-                ) : (
-                  <span className="answer-badge">
-                    Answered
-                  </span>
-                )}
+                <div>
+                  <p className="eyebrow">RESULT</p>
+                  <h3>Answer</h3>
+                </div>
+                <span className={`answer-badge ${answer.abstained ? 'abstained' : ''}`}>
+                  <i /> {answer.abstained ? 'Abstained' : 'Grounded answer'}
+                </span>
               </div>
 
               <div className="answer-box">
@@ -300,92 +361,76 @@ function App() {
               </div>
 
               <div className="answer-meta">
-                <span>
-                  Confidence:{' '}
-                  {answer.confidence !== null &&
-                  answer.confidence !== undefined
-                    ? answer.confidence.toFixed(3)
-                    : '—'}
-                </span>
-
-                <span>
-                  Retrieved chunks: {answer.retrieved_chunks}
-                </span>
-
-                <span>
-                  Model: {answer.model || '—'}
-                </span>
+                <div className="metric">
+                  <span>CONFIDENCE</span>
+                  <strong>
+                    {answer.confidence !== null && answer.confidence !== undefined
+                      ? answer.confidence.toFixed(3)
+                      : '—'}
+                  </strong>
+                </div>
+                <div className="metric">
+                  <span>RETRIEVED CHUNKS</span>
+                  <strong>{answer.retrieved_chunks}</strong>
+                </div>
+                <div className="metric">
+                  <span>MODEL</span>
+                  <strong>{answer.model || '—'}</strong>
+                </div>
               </div>
 
-              <h3 className="sources-title">
-                Citations
-              </h3>
+              <div className="sources-heading">
+                <div>
+                  <p className="eyebrow">PROVENANCE</p>
+                  <h3>Source citations</h3>
+                </div>
+                <span>{answer.citations?.length ?? 0} source{answer.citations?.length === 1 ? '' : 's'}</span>
+              </div>
 
               {answer.citations?.length > 0 ? (
                 <div className="citation-list">
                   {answer.citations.map((citation, index) => (
                     <div
                       className="citation-card"
-                      key={
-                        citation.chunk_id ||
-                        `${citation.source}-${index}`
-                      }
+                      key={citation.chunk_id || `${citation.source}-${index}`}
                     >
-                      <div className="citation-header">
-                        <strong>
-                          {citation.source || `SOURCE ${index + 1}`}
-                        </strong>
+                      <div className="citation-number">{index + 1}</div>
+                      <div className="citation-content">
+                        <div className="citation-header">
+                          <strong>{citation.source || `SOURCE ${index + 1}`}</strong>
+                          {citation.page && <span>Page {citation.page}</span>}
+                        </div>
 
-                        {citation.page && (
-                          <span>
-                            Page {citation.page}
-                          </span>
-                        )}
-                      </div>
-
-                      {citation.excerpt && (
-                        <p className="citation-excerpt">
-                          {citation.excerpt}
-                        </p>
-                      )}
-
-                      <div className="citation-meta">
-                        {citation.document_id && (
-                          <span>
-                            Document: {citation.document_id}
-                          </span>
+                        {citation.excerpt && (
+                          <p className="citation-excerpt">{citation.excerpt}</p>
                         )}
 
-                        {citation.version_id && (
-                          <span>
-                            Version: {citation.version_id}
+                        <div className="citation-meta">
+                          {citation.document_id && <span>Document {citation.document_id}</span>}
+                          {citation.version_id && <span>Version {citation.version_id}</span>}
+                          {citation.chunk_id && <span>Chunk {citation.chunk_id}</span>}
+                          <span className="source-type">
+                            {citation.is_generated ? 'Generated' : 'Retrieved source'}
                           </span>
-                        )}
-
-                        {citation.chunk_id && (
-                          <span>
-                            Chunk: {citation.chunk_id}
-                          </span>
-                        )}
-
-                        <span>
-                          {citation.is_generated
-                            ? 'Generated'
-                            : 'Retrieved source'}
-                        </span>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="muted">
-                  No citations returned.
-                </p>
+                <div className="empty-citations">
+                  No citations returned for this response.
+                </div>
               )}
             </div>
           )}
-        </div>
+        </section>
       </main>
+
+      <footer className="footer">
+        <span>RAG Document Intelligence</span>
+        <span>PDF ingestion • Retrieval • Grounded generation</span>
+      </footer>
     </div>
   )
 }

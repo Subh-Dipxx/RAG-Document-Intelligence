@@ -70,7 +70,11 @@ Rules:
 5. Every factual statement must be supported by a supplied source.
 6. Cite supporting sources using [SOURCE N].
 7. Only cite sources that actually support the statement.
-8. If the sources do not contain enough information, respond exactly:
+8.If the user asks for a summary, overview, paragraph, or general description,
+summarize the information contained in the supplied sources.
+Do not refuse merely because the supplied sources do not represent the entire
+document. Clearly base the response only on the supplied sources.
+9. If the sources do not contain enough information, respond exactly:
 "I could not find sufficient information in the uploaded documents to answer this question."
 
 User question:
