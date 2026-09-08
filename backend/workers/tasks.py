@@ -4,13 +4,14 @@ import os
 import tempfile
 from typing import Any
 
-from backend.config import get_settings
 from backend.database import crud
 from backend.database.database import get_db
 from backend.domain.models import Document
 from backend.ingestion.parsers.pdf import PyMuPDFParser
 from backend.ingestion.cleaners.pdf import PyMuPDFTextCleaner
 from backend.chunking.naive import NaiveCharacterChunker
+from backend.chunking.structure import StructureAwareChunker
+from backend.config import get_settings
 from backend.indexing.embedders.bge import get_bge_embedder
 from backend.indexing.vector_stores.pgvector import PgVectorStore
 from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
@@ -189,7 +190,17 @@ def process_document_task(
         # ---------------------------------------------------------
         # 7. Naive character chunking
         # ---------------------------------------------------------
-        chunker = NaiveCharacterChunker()
+        settings = get_settings()
+
+        if settings.chunker_type == "naive":
+            chunker = NaiveCharacterChunker()
+        elif settings.chunker_type == "structure_aware":
+            chunker = StructureAwareChunker()
+        else:
+            raise ValueError(
+                f"Unsupported CHUNKER_TYPE: {settings.chunker_type}"
+            )
+
         chunks = chunker.chunk(domain_document)
 
         print(
