@@ -70,6 +70,8 @@ class Settings:
     chunk_size: int
     chunk_overlap: int
     chunker_type: str
+    semantic_similarity_threshold: float
+    semantic_similarity_threshold: float
 
     # Embeddings
     embedding_model: str
@@ -141,6 +143,12 @@ def load_settings() -> Settings:
         chunk_size=_required_int("CHUNK_SIZE"),
         chunk_overlap=_required_int("CHUNK_OVERLAP"),
         chunker_type=_required("CHUNKER_TYPE"),
+        semantic_similarity_threshold=float(
+            _required("SEMANTIC_SIMILARITY_THRESHOLD")
+        ),
+        semantic_similarity_threshold=float(
+            _required("SEMANTIC_SIMILARITY_THRESHOLD")
+        ),
 
         embedding_model=_required("EMBEDDING_MODEL"),
 

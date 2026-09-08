@@ -11,6 +11,7 @@ from backend.ingestion.parsers.pdf import PyMuPDFParser
 from backend.ingestion.cleaners.pdf import PyMuPDFTextCleaner
 from backend.chunking.naive import NaiveCharacterChunker
 from backend.chunking.structure import StructureAwareChunker
+from backend.chunking.semantic import SemanticChunker
 from backend.config import get_settings
 from backend.indexing.embedders.bge import get_bge_embedder
 from backend.indexing.vector_stores.pgvector import PgVectorStore
@@ -196,6 +197,8 @@ def process_document_task(
             chunker = NaiveCharacterChunker()
         elif settings.chunker_type == "structure_aware":
             chunker = StructureAwareChunker()
+        elif settings.chunker_type == "semantic":
+            chunker = SemanticChunker()
         else:
             raise ValueError(
                 f"Unsupported CHUNKER_TYPE: {settings.chunker_type}"
