@@ -6,16 +6,13 @@ from uuid import uuid4
 
 from backend.config import get_settings
 from backend.domain.models import Chunk, Document, StructuralLabel
-from backend.indexing.embedders.bge import get_bge_embedder
 
 
 class SemanticChunker:
     """
-    Semantic chunker based on similarity between adjacent sentences.
+    Semantic chunker based on adjacent sentence embedding similarity.
 
-    Adjacent sentences remain in the same chunk while their semantic
-    similarity remains above the configured threshold and the chunk does
-    not exceed CHUNK_SIZE.
+    BGE is loaded lazily only when semantic chunking is actually executed.
     """
 
     def __init__(
@@ -46,6 +43,9 @@ class SemanticChunker:
             )
 
     def chunk(self, document: Document) -> List[Chunk]:
+        # Import the ML stack only when semantic chunking is actually used.
+        from backend.indexing.embedders.bge import get_bge_embedder
+
         chunks: List[Chunk] = []
         embedder = get_bge_embedder()
 
@@ -60,7 +60,12 @@ class SemanticChunker:
             if not sentences:
                 continue
 
-            sentence_texts = [sentence["text"] for sentence in sentences]
+            sentence_texts = [
+                sentence["text"]
+                for sentence in sentences
+            ]
+
+            # One batched embedding call for the whole page.
             embeddings = embedder.embed(sentence_texts)
 
             current: List[dict] = []
@@ -70,6 +75,7 @@ class SemanticChunker:
                 sentence_text = sentence["text"]
 
                 similarity = None
+
                 if index > 0:
                     similarity = self._cosine_similarity(
                         embeddings[index - 1],
@@ -96,6 +102,7 @@ class SemanticChunker:
                             sentences=current,
                         )
                     )
+
                     current = []
                     current_length = 0
 
@@ -116,7 +123,7 @@ class SemanticChunker:
     @staticmethod
     def _split_sentences(text: str) -> List[dict]:
         """
-        Split extracted PDF text into sentence-like units while keeping
+        Split extracted PDF text into sentence-like units while preserving
         character offsets.
         """
         pattern = re.compile(
@@ -157,16 +164,22 @@ class SemanticChunker:
                 "Embedding dimensions must match for cosine similarity"
             )
 
-        return sum(a * b for a, b in zip(first, second))
+        # BGEEmbedder normalizes embeddings, so dot product equals
+        # cosine similarity.
+        return sum(
+            a * b
+            for a, b in zip(first, second)
+        )
 
-    @staticmethod
     def _build_chunk(
+        self,
         document: Document,
         page_number: int,
         sentences: List[dict],
     ) -> Chunk:
         text = " ".join(
-            sentence["text"] for sentence in sentences
+            sentence["text"]
+            for sentence in sentences
         ).strip()
 
         return Chunk(
@@ -182,6 +195,7 @@ class SemanticChunker:
             structural_label=StructuralLabel.BODY,
             metadata={
                 "chunker": "semantic",
-                "similarity_threshold": get_settings().semantic_similarity_threshold,
+                "similarity_threshold": self.similarity_threshold,
+                "similarity_method": "adjacent_sentence_cosine",
             },
         )
