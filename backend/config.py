@@ -80,6 +80,10 @@ class Settings:
     # Retrieval
     retrieval_top_k: int
     retrieval_min_score: float
+
+    # Authentication
+    jwt_secret: str
+    jwt_access_token_expire_minutes: int
     def object_buckets(self) -> tuple[str, ...]:
         return (
             self.minio_bucket_raw_documents,
@@ -142,6 +146,10 @@ def load_settings() -> Settings:
         gemini_model=_required("GEMINI_MODEL"),
         retrieval_top_k=_required_int("RETRIEVAL_TOP_K"),
         retrieval_min_score=float(_required("RETRIEVAL_MIN_SCORE")),
+        jwt_secret=_required("JWT_SECRET"),
+        jwt_access_token_expire_minutes=_required_int(
+            "JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
+        ),
     )
 
 

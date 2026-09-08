@@ -27,6 +27,16 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 
+class UserModel(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    username = Column(String, nullable=False, unique=True, index=True)
+    password_hash = Column(String, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=utc_now)
+
+
 class TenantModel(Base):
     __tablename__ = "tenants"
 

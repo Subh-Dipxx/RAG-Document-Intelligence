@@ -1,7 +1,19 @@
 import { useState, useEffect } from 'react'
 import './styles.css'
+import LoginPage from './LoginPage'
 
 function App() {
+  const [token, setToken] = useState(() => localStorage.getItem('access_token'))
+
+  const handleLogin = (accessToken) => {
+    localStorage.setItem('access_token', accessToken)
+    setToken(accessToken)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    setToken(null)
+  }
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState('')
@@ -125,6 +137,10 @@ function App() {
 
   const currentDocument = documents[0]
 
+  if (!token) {
+    return <LoginPage onLogin={handleLogin} />
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -136,9 +152,19 @@ function App() {
           </div>
         </div>
 
-        <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
-          <span className="dot" />
-          {health?.ok ? 'All systems operational' : 'Checking services'}
+        <div className="topbar-actions">
+          <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
+            <span className="dot" />
+            {health?.ok ? 'All systems operational' : 'Checking services'}
+          </div>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
         </div>
       </header>
 

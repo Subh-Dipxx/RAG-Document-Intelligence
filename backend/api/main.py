@@ -13,6 +13,7 @@ from opensearchpy import OpenSearch
 from backend.database.database import init_db
 from backend.storage.minio_client import minio_storage
 from backend.api.controllers import (
+    auth,
     documents,
     jobs,
     eval as eval_route,
@@ -43,6 +44,7 @@ app.include_router(documents.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(eval_route.router, prefix="/api/v1")
 app.include_router(query_route.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
 
 settings = get_settings()
 
