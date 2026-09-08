@@ -4,6 +4,20 @@ import fitz
 
 from backend.domain.models import Document, Page, ParsedDocument
 
+from typing import Protocol
+
+
+
+class DocumentParser(Protocol):
+    """Protocol for document parsers that convert files into ParsedDocument."""
+
+    def parse(self, file_path: str) -> ParsedDocument:
+        """Parse a file at file_path and return a ParsedDocument.
+
+        Implementations should not perform heavy side effects beyond reading the
+        supplied file.
+        """
+        ...
 
 class PyMuPDFParser:
     """PDF parser using PyMuPDF for text-layer extraction."""

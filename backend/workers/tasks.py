@@ -9,6 +9,7 @@ from backend.database import crud
 from backend.database.database import get_db
 from backend.domain.models import Document
 from backend.ingestion.parsers.pdf import PyMuPDFParser
+from backend.ingestion.cleaners.pdf import PyMuPDFTextCleaner
 from backend.chunking.naive import NaiveCharacterChunker
 from backend.indexing.embedders.bge import get_bge_embedder
 from backend.indexing.vector_stores.pgvector import PgVectorStore
@@ -126,7 +127,11 @@ def process_document_task(
         parser = PyMuPDFParser()
         parsed = parser.parse(temp_path)
 
-        pages = parsed.pages
+        cleaner = PyMuPDFTextCleaner()
+        pages = [
+            cleaner.clean_page(page)
+            for page in parsed.pages
+        ]
 
         print(
             f"Parsed document {document_id}: "
