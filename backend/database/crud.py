@@ -66,6 +66,7 @@ def create_corpus(db: Session, corpus: Corpus) -> CorpusModel:
         tenant_id=corpus.tenant_id,
         name=corpus.name,
         forbid_external=corpus.forbid_external,
+        chunker_type=corpus.chunker_type,
         embedding_model=corpus.embedding_model,
         embedding_dim=corpus.embedding_dim,
         metadata_json=corpus.metadata,

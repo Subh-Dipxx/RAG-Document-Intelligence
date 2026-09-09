@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from backend.config import get_settings
 from backend.domain.models import Chunk, Document
+from backend.chunking.token_counter import get_token_counter
 
 
 class NaiveCharacterChunker:
@@ -67,6 +68,9 @@ class NaiveCharacterChunker:
                         text=text[start:end],
                         start_offset=start,
                         end_offset=end,
+                        tokens=get_token_counter().count(
+                            text[start:end]
+                        ),
                     )
                 )
 

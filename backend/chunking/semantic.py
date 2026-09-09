@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from backend.config import get_settings
 from backend.domain.models import Chunk, Document, StructuralLabel
+from backend.chunking.token_counter import get_token_counter
 
 
 class SemanticChunker:
@@ -192,6 +193,7 @@ class SemanticChunker:
             text=text,
             start_offset=sentences[0]["start_offset"],
             end_offset=sentences[-1]["end_offset"],
+            tokens=get_token_counter().count(text),
             structural_label=StructuralLabel.BODY,
             metadata={
                 "chunker": "semantic",

@@ -59,6 +59,7 @@ class CorpusModel(Base):
     tenant_id = Column(String, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False)
     forbid_external = Column(Boolean, nullable=False, default=False)
+    chunker_type = Column(String, nullable=True)
     embedding_model = Column(String, nullable=True)
     embedding_dim = Column(Integer, nullable=True)
     metadata_json = Column(JSON, default=dict)

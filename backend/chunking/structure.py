@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from backend.config import get_settings
 from backend.domain.models import Chunk, Document, StructuralLabel
+from backend.chunking.token_counter import get_token_counter
 
 
 class StructureAwareChunker:
@@ -236,6 +237,7 @@ class StructureAwareChunker:
             text=text,
             start_offset=start_offset,
             end_offset=end_offset,
+            tokens=get_token_counter().count(text),
             structural_label=structural_label,
             metadata={
                 "chunker": "structure_aware",

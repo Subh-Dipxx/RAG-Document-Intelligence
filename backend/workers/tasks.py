@@ -9,9 +9,7 @@ from backend.database.database import get_db
 from backend.domain.models import Document, Page
 from backend.ingestion.parsers.pdf import PyMuPDFParser
 from backend.ingestion.cleaners.pdf import PyMuPDFTextCleaner
-from backend.chunking.naive import NaiveCharacterChunker
-from backend.chunking.structure import StructureAwareChunker
-from backend.chunking.semantic import SemanticChunker
+from backend.chunking.factory import ChunkerFactory
 from backend.config import get_settings
 from backend.indexing.embedders.bge import get_bge_embedder
 from backend.indexing.vector_stores.pgvector import PgVectorStore
@@ -189,21 +187,24 @@ def process_document_task(
         )
 
         # ---------------------------------------------------------
-        # 7. Naive character chunking
+        # 7. Configured chunking
+        #
+        # Prefer the corpus-level chunker when the document belongs
+        # to a corpus. Fall back to the global CHUNKER_TYPE setting.
         # ---------------------------------------------------------
         settings = get_settings()
 
-        if settings.chunker_type == "naive":
-            chunker = NaiveCharacterChunker()
-        elif settings.chunker_type == "structure_aware":
-            chunker = StructureAwareChunker()
-        elif settings.chunker_type == "semantic":
-            chunker = SemanticChunker()
-        else:
-            raise ValueError(
-                f"Unsupported CHUNKER_TYPE: {settings.chunker_type}"
-            )
+        corpus_chunker_type = (
+            db_document.corpus.chunker_type
+            if db_document.corpus
+            else None
+        )
 
+        selected_chunker_type = (
+            corpus_chunker_type or settings.chunker_type
+        )
+
+        chunker = ChunkerFactory.create(selected_chunker_type)
         chunks = chunker.chunk(domain_document)
 
         print(
@@ -377,71 +378,3 @@ def step1_failure_test_task(self) -> None:
     raise RuntimeError(
         "Intentional Step 1 retry/DLQ verification failure"
     )
-
-@celery_app.task(name="backend.workers.tasks.semantic_chunking_test_task")
-def semantic_chunking_test_task():
-    """Run a small semantic-chunking verification inside a Celery worker."""
-    import time
-
-    page = Page(
-        document_id="semantic-test",
-        version_id="semantic-version",
-        number=1,
-        text=(
-            "RAG systems retrieve relevant documents for a question. "
-            "Semantic chunking groups related text together. "
-            "Document retrieval depends on useful text representations. "
-            "PostgreSQL stores document metadata and application records. "
-            "Database tables store chunks and their embeddings for vector search. "
-            "MinIO stores the original uploaded PDF files. "
-            "The weather forecast predicts heavy rainfall tomorrow. "
-            "Temperatures are expected to fall during the afternoon. "
-            "Residents should prepare for strong winds and thunderstorms."
-        ),
-    )
-
-    document = Document(
-        id="semantic-test",
-        title="Semantic Test",
-        file_name="semantic-test.pdf",
-        mime_type="application/pdf",
-        pages=[page],
-    )
-
-    started = time.perf_counter()
-
-    chunker = SemanticChunker(
-        chunk_size=1000,
-        similarity_threshold=0.70,
-    )
-
-    chunks = chunker.chunk(document)
-
-    elapsed = time.perf_counter() - started
-
-    print(
-        f"SEMANTIC TEST COMPLETED: "
-        f"{len(chunks)} chunk(s) in {elapsed:.2f}s",
-        flush=True,
-    )
-
-    for index, chunk in enumerate(chunks, 1):
-        print(
-            f"SEMANTIC TEST CHUNK {index}: "
-            f"{chunk.text}",
-            flush=True,
-        )
-
-    return {
-        "status": "ok",
-        "chunks": len(chunks),
-        "elapsed_seconds": round(elapsed, 2),
-        "metadata": [
-            chunk.metadata
-            for chunk in chunks
-        ],
-        "texts": [
-            chunk.text
-            for chunk in chunks
-        ],
-    }

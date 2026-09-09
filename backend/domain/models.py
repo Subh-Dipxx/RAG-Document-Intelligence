@@ -72,6 +72,7 @@ class Corpus(BaseModel):
     tenant_id: str
     name: str
     forbid_external: bool = False
+    chunker_type: Optional[str] = None
     embedding_model: Optional[str] = None
     embedding_dim: Optional[int] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
