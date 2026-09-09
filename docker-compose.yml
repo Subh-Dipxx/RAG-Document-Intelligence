@@ -76,7 +76,11 @@ services:
       timeout: 5s
       retries: 10
 
+  # Optional Docker-based FastAPI service.
+  # FastAPI normally runs from backend/.venv on the host.
   api:
+    profiles:
+      - docker-api
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -94,7 +98,7 @@ services:
     environment: &app_env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379/0"
-      MINIO_ENDPOINT: "${MINIO_ENDPOINT}"
+      MINIO_ENDPOINT: "http://minio:9000"
       MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
       MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
       MINIO_BUCKET_RAW_DOCUMENTS: "${MINIO_BUCKET_RAW_DOCUMENTS}"
@@ -104,8 +108,8 @@ services:
       MINIO_BUCKET_THUMBNAILS: "${MINIO_BUCKET_THUMBNAILS}"
       MINIO_PRESIGN_EXPIRES_SECONDS: "${MINIO_PRESIGN_EXPIRES_SECONDS}"
       OBJECT_STORAGE_BACKEND: "${OBJECT_STORAGE_BACKEND}"
-      QDRANT_URL: "${QDRANT_URL}"
-      OPENSEARCH_URL: "${OPENSEARCH_URL}"
+      QDRANT_URL: "http://qdrant:6333"
+      OPENSEARCH_URL: "http://opensearch:9200"
     ports:
       - "${API_PORT}:8000"
     volumes:
@@ -120,7 +124,15 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: ["celery", "-A", "backend.workers.celery_app:celery_app", "worker", "--loglevel=info", "--queues=default,document_tasks,dead_letter"]
+    command:
+      [
+        "celery",
+        "-A",
+        "backend.workers.celery_app:celery_app",
+        "worker",
+        "--loglevel=info",
+        "--queues=default,document_tasks,dead_letter"
+      ]
     depends_on:
       redis:
         condition: service_healthy
@@ -128,7 +140,13 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    environment: *app_env
+    environment:
+      <<: *app_env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379/0"
+      MINIO_ENDPOINT: "http://minio:9000"
+      QDRANT_URL: "http://qdrant:6333"
+      OPENSEARCH_URL: "http://opensearch:9200"
     volumes:
       - rag_huggingface_cache:/root/.cache/huggingface
 
@@ -136,9 +154,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    depends_on:
-      api:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${FRONTEND_PORT}:80"
 
