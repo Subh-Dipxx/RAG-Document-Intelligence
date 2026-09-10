@@ -7,7 +7,8 @@ from typing import Any
 from backend.database import crud
 from backend.database.database import get_db
 from backend.domain.models import Document, Page
-from backend.ingestion.parsers.pdf import PyMuPDFParser
+from backend.ingestion.parsers.detector import detect_file_type
+from backend.ingestion.parsers.factory import get_parser
 from backend.ingestion.cleaners.pdf import PyMuPDFTextCleaner
 from backend.chunking.factory import ChunkerFactory
 from backend.config import get_settings
@@ -99,43 +100,62 @@ def process_document_task(
             )
 
         # ---------------------------------------------------------
-        # 3. Write temporary PDF
-        #
-        # PyMuPDFParser validates the .pdf suffix, so preserve
-        # the original extension where possible.
+        # 3. Detect document type from file contents
         # ---------------------------------------------------------
-        original_name = db_document.file_name or "document.pdf"
-        suffix = os.path.splitext(original_name)[1].lower()
+        original_name = db_document.file_name or "document"
 
-        if suffix != ".pdf":
+        detected_type = detect_file_type(
+            original_name,
+            file_bytes,
+        )
+
+        if detected_type == "unknown":
             raise ValueError(
-                "Step 2 currently supports PDF documents only. "
-                f"Received: {original_name}"
+                f"Unsupported or unrecognized document type: "
+                f"{original_name}"
             )
+
+        print(
+            f"Detected document type for {original_name}: "
+            f"{detected_type}"
+        )
+
+        # ---------------------------------------------------------
+        # 4. Write temporary source document
+        # ---------------------------------------------------------
+        suffix = os.path.splitext(original_name)[1]
+
+        if not suffix:
+            suffix = ".bin"
 
         with tempfile.NamedTemporaryFile(
             mode="wb",
-            suffix=".pdf",
+            suffix=suffix,
             delete=False,
         ) as temp_file:
             temp_file.write(file_bytes)
             temp_path = temp_file.name
 
         # ---------------------------------------------------------
-        # 4. Parse PDF using PyMuPDF
+        # 5. Select parser based on detected content type
         # ---------------------------------------------------------
-        parser = PyMuPDFParser()
+        parser = get_parser(detected_type)
         parsed = parser.parse(temp_path)
 
-        cleaner = PyMuPDFTextCleaner()
-        pages = [
-            cleaner.clean_page(page)
-            for page in parsed.pages
-        ]
+        # Preserve the existing PDF cleaning behavior.
+        if detected_type == "pdf":
+            cleaner = PyMuPDFTextCleaner()
+            pages = [
+                cleaner.clean_page(page)
+                for page in parsed.pages
+            ]
+        else:
+            pages = parsed.pages
 
         print(
             f"Parsed document {document_id}: "
-            f"{len(pages)} page(s)"
+            f"type={detected_type}, "
+            f"pages={len(pages)}"
         )
 
         # ---------------------------------------------------------

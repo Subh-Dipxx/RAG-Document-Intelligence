@@ -340,7 +340,7 @@ function App() {
               </label>
               <div className="ask-meta">
                 <span className="query-hint">
-                  {documents.length ? 'Searching the active PDF' : 'Upload a PDF to enable document-grounded queries'}
+                  {documents.length ? 'Searching the active File' : 'Upload a File to enable document-grounded queries'}
                 </span>
                 <button className="primary-button" type="submit" disabled={queryLoading}>
                   {queryLoading ? (
@@ -435,12 +435,12 @@ function App() {
             <section id="library" className="panel library-panel">
               <div className="panel-heading">
                 <p className="eyebrow">Library</p>
-                <h2>Active PDF</h2>
+                <h2>Active File</h2>
               </div>
 
               {!currentDocument ? (
                 <div className="empty-state">
-                  <strong>No PDF uploaded yet</strong>
+                  <strong>No File uploaded yet</strong>
                   <span>Ingest a document to ground later answers.</span>
                 </div>
               ) : (
@@ -470,10 +470,13 @@ function App() {
                 </label>
 
                 <label className={`upload-zone${file ? ' has-file' : ''}${loading ? ' is-loading' : ''}`}>
-                  <input type="file" accept=".pdf,application/pdf" onChange={handleFileChange} />
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                  />
                   <span className="upload-icon"><IconUpload /></span>
-                  <strong>{file ? file.name : 'Choose a PDF'}</strong>
-                  <span>{file ? 'Ready to ingest' : 'PDF only · click to browse'}</span>
+                  <strong>{file ? file.name : 'Choose a file'}</strong>
+                  <span>{file ? 'Ready to ingest' : 'Click to browse files'}</span>
                 </label>
 
                 {file && (

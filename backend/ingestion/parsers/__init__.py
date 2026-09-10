@@ -1,3 +1,3 @@
-from backend.ingestion.parsers.pdf import DocumentParser, PyMuPDFParser
+from backend.ingestion.parsers.factory import get_parser
 
-__all__ = ["DocumentParser", "PyMuPDFParser"]
+__all__ = ["get_parser"]
