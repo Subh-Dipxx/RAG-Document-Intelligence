@@ -18,10 +18,17 @@ export const metadata = {
   description: 'PDF-focused RAG document intelligence platform',
 }
 
+const THEME_BOOTSTRAP = `(function(){try{var t=localStorage.getItem('rag-theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${syne.variable} ${manrope.variable}`}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+      </head>
+      <body className={`${syne.variable} ${manrope.variable}`} suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   )
 }

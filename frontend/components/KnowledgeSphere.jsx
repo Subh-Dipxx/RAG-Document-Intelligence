@@ -4,7 +4,7 @@ import { useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-function RevolvingOrb({ reduced }) {
+function RevolvingOrb({ reduced, light }) {
   const group = useRef(null)
   const inner = useRef(null)
   const dust = useRef(null)
@@ -42,11 +42,11 @@ function RevolvingOrb({ reduced }) {
         <sphereGeometry args={[1.28, 64, 64]} />
         <meshPhysicalMaterial
           color="#c4b5fd"
-          emissive="#6d28d9"
-          emissiveIntensity={0.42}
+          emissive={light ? '#7c3aed' : '#6d28d9'}
+          emissiveIntensity={light ? 0.22 : 0.42}
           roughness={0.18}
           metalness={0.12}
-          transmission={0.62}
+          transmission={light ? 0.48 : 0.62}
           thickness={1.35}
           ior={1.35}
           transparent
@@ -57,30 +57,24 @@ function RevolvingOrb({ reduced }) {
       </mesh>
       <mesh scale={1.015}>
         <sphereGeometry args={[1.28, 48, 48]} />
-        <meshBasicMaterial color="#ddd6fe" wireframe transparent opacity={0.085} />
+        <meshBasicMaterial color="#ddd6fe" wireframe transparent opacity={light ? 0.14 : 0.085} />
       </mesh>
       <mesh ref={inner} scale={0.68}>
         <icosahedronGeometry args={[1, 1]} />
-        <meshBasicMaterial color="#e9d5ff" wireframe transparent opacity={0.38} />
+        <meshBasicMaterial color="#e9d5ff" wireframe transparent opacity={light ? 0.28 : 0.38} />
       </mesh>
       <points ref={dust} geometry={dustGeo}>
-        <pointsMaterial
-          size={0.016}
-          color="#ede9fe"
-          transparent
-          opacity={0.62}
-          sizeAttenuation
-          depthWrite={false}
-        />
+        <pointsMaterial size={0.016} color="#ede9fe" transparent opacity={light ? 0.45 : 0.62} sizeAttenuation depthWrite={false} />
       </points>
     </group>
   )
 }
 
-export default function KnowledgeSphere() {
+export default function KnowledgeSphere({ theme = 'dark' }) {
   const reduced =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const light = theme === 'light'
 
   return (
     <div className="knowledge-sphere" aria-hidden="true">
@@ -92,11 +86,11 @@ export default function KnowledgeSphere() {
         dpr={[1, 1.6]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        <ambientLight intensity={0.28} color="#c4b5fd" />
-        <pointLight position={[2.4, 1.6, 3.2]} intensity={14} color="#c4b5fd" distance={14} />
-        <pointLight position={[-2.8, -1.4, 1.8]} intensity={7} color="#6366f1" distance={12} />
-        <directionalLight position={[0, 3, 2]} intensity={0.55} color="#f5f3ff" />
-        <RevolvingOrb reduced={reduced} />
+        <ambientLight intensity={light ? 0.55 : 0.28} color={light ? '#a78bfa' : '#c4b5fd'} />
+        <pointLight position={[2.4, 1.6, 3.2]} intensity={light ? 10 : 14} color="#c4b5fd" distance={14} />
+        <pointLight position={[-2.8, -1.4, 1.8]} intensity={light ? 5 : 7} color="#6366f1" distance={12} />
+        <directionalLight position={[0, 3, 2]} intensity={light ? 0.85 : 0.55} color="#f5f3ff" />
+        <RevolvingOrb reduced={reduced} light={light} />
       </Canvas>
     </div>
   )

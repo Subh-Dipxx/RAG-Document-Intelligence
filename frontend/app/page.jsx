@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoginPage from '../components/LoginPage'
 
+const THEME_KEY = 'rag-theme'
+
 const KnowledgeSphere = dynamic(() => import('../components/KnowledgeSphere'), {
   ssr: false,
   loading: () => <div className="knowledge-sphere" aria-hidden="true"><div className="knowledge-sphere-glow" /><div className="knowledge-sphere-css" /></div>,
@@ -65,8 +67,40 @@ function IconUpload() {
   )
 }
 
+function IconSun() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6.1 6.1l1.6 1.6M16.3 16.3l1.6 1.6M17.9 6.1l-1.6 1.6M7.7 16.3l-1.6 1.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconMoon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M16.5 13.2A6.6 6.6 0 0 1 10.8 4.8 7 7 0 1 0 19.2 13.8a6.5 6.5 0 0 1-2.7-.6z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function applyTheme(next) {
+  if (typeof document === 'undefined') return
+  document.documentElement.setAttribute('data-theme', next)
+}
+
+function readStoredTheme() {
+  if (typeof window === 'undefined') return 'dark'
+  try {
+    return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'
+  } catch {
+    return 'dark'
+  }
+}
+
 function App() {
   const [token, setToken] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
+  const [theme, setTheme] = useState('dark')
 
   const handleLogin = (accessToken) => {
     localStorage.setItem('access_token', accessToken)
@@ -88,6 +122,23 @@ function App() {
   const [answer, setAnswer] = useState(null)
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
+
+  useEffect(() => {
+    const stored = readStoredTheme()
+    setTheme(stored)
+    applyTheme(stored)
+  }, [])
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light'
+    setTheme(next)
+    applyTheme(next)
+    try {
+      localStorage.setItem(THEME_KEY, next)
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
 
   useEffect(() => {
     const fetchHealth = async () => {
@@ -204,8 +255,10 @@ function App() {
     return <LoginPage onLogin={handleLogin} />
   }
 
+  const isLight = theme === 'light'
+
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={theme}>
       <aside className="sidebar">
         <a className="sidebar-logo" href="#workspace" aria-label="Workspace">
           <span>R</span>
@@ -224,6 +277,15 @@ function App() {
             <IconSources />
           </a>
         </nav>
+        <button
+          type="button"
+          className="sidebar-theme"
+          onClick={toggleTheme}
+          title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+          aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          {isLight ? <IconMoon /> : <IconSun />}
+        </button>
         <button type="button" className="sidebar-logout" onClick={handleLogout} title="Logout">
           <IconLogout />
         </button>
@@ -241,13 +303,25 @@ function App() {
               {health?.ok ? 'Systems online' : 'Checking services'}
             </div>
             <span className="stack-chip">BGE · pgvector · Gemini</span>
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-pressed={isLight}
+              aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              <span className={`theme-toggle-knob ${isLight ? 'is-light' : ''}`}>
+                {isLight ? <IconSun /> : <IconMoon />}
+              </span>
+              <span className="theme-toggle-label">{isLight ? 'Light' : 'Dark'}</span>
+            </button>
           </div>
         </header>
 
         <div className="workspace">
           <section id="workspace" className="hero-panel">
             <div className="hero-stage">
-              <KnowledgeSphere />
+              <KnowledgeSphere theme={theme} />
               <div className="hero-copy">
                 <p className="hero-kicker">Grounded retrieval</p>
                 <h2>Ask the corpus.<br />Keep every answer cited.</h2>
@@ -300,9 +374,7 @@ function App() {
                   </span>
                 </div>
 
-                <div className="answer-box">
-                  {answer.answer}
-                </div>
+                <div className="answer-box">{answer.answer}</div>
 
                 <div className="answer-meta">
                   <div className="metric">
@@ -334,37 +406,26 @@ function App() {
                 {answer.citations?.length > 0 ? (
                   <div className="citation-list">
                     {answer.citations.map((citation, index) => (
-                      <div
-                        className="citation-card"
-                        key={citation.chunk_id || `${citation.source}-${index}`}
-                      >
+                      <div className="citation-card" key={citation.chunk_id || `${citation.source}-${index}`}>
                         <div className="citation-number">{index + 1}</div>
                         <div className="citation-content">
                           <div className="citation-header">
                             <strong>{citation.source || `SOURCE ${index + 1}`}</strong>
                             {citation.page && <span>Page {citation.page}</span>}
                           </div>
-
-                          {citation.excerpt && (
-                            <p className="citation-excerpt">{citation.excerpt}</p>
-                          )}
-
+                          {citation.excerpt && <p className="citation-excerpt">{citation.excerpt}</p>}
                           <div className="citation-meta">
                             {citation.document_id && <span>Document {citation.document_id}</span>}
                             {citation.version_id && <span>Version {citation.version_id}</span>}
                             {citation.chunk_id && <span>Chunk {citation.chunk_id}</span>}
-                            <span className="source-type">
-                              {citation.is_generated ? 'Generated' : 'Retrieved source'}
-                            </span>
+                            <span className="source-type">{citation.is_generated ? 'Generated' : 'Retrieved source'}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="empty-citations">
-                    No citations returned for this response.
-                  </div>
+                  <div className="empty-citations">No citations returned for this response.</div>
                 )}
               </div>
             )}
@@ -405,23 +466,12 @@ function App() {
               <form onSubmit={handleSubmit} className="upload-form">
                 <label className="field upload-field">
                   <span>Document title <small>Optional</small></span>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Product specification"
-                  />
+                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Product specification" />
                 </label>
 
                 <label className={`upload-zone${file ? ' has-file' : ''}${loading ? ' is-loading' : ''}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={handleFileChange}
-                  />
-                  <span className="upload-icon">
-                    <IconUpload />
-                  </span>
+                  <input type="file" accept=".pdf,application/pdf" onChange={handleFileChange} />
+                  <span className="upload-icon"><IconUpload /></span>
                   <strong>{file ? file.name : 'Choose a PDF'}</strong>
                   <span>{file ? 'Ready to ingest' : 'PDF only · click to browse'}</span>
                 </label>
@@ -438,14 +488,7 @@ function App() {
                 )}
 
                 <button className="primary-button full-width upload-submit" type="submit" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <span className="spinner" />
-                      Uploading...
-                    </>
-                  ) : (
-                    'Upload document'
-                  )}
+                  {loading ? (<><span className="spinner" />Uploading...</>) : 'Upload document'}
                 </button>
               </form>
 
@@ -476,7 +519,6 @@ function App() {
                 <p className="eyebrow">System</p>
                 <h2>Service status</h2>
               </div>
-
               <div className="system-summary">
                 <span className={`status-orb ${health?.ok ? 'online' : ''}`} />
                 <div>
@@ -484,22 +526,18 @@ function App() {
                   <span>{health?.ok ? 'Ready to process your PDF' : 'Connecting to backend services'}</span>
                 </div>
               </div>
-
               <div className="service-list">
                 {health?.services ? (
                   Object.entries(health.services).map(([name, value]) => (
                     <div key={name} className="service-row">
                       <span>{name}</span>
-                      <span className={value.ok ? 'ok' : 'bad'}>
-                        <i /> {value.ok ? 'Operational' : 'Unavailable'}
-                      </span>
+                      <span className={value.ok ? 'ok' : 'bad'}><i /> {value.ok ? 'Operational' : 'Unavailable'}</span>
                     </div>
                   ))
                 ) : (
                   <p className="muted">Loading service status...</p>
                 )}
               </div>
-
               <a className="docs-link" href="/docs" target="_blank" rel="noreferrer">
                 Open API documentation <span>↗</span>
               </a>
