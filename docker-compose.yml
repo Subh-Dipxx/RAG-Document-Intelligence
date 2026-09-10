@@ -131,6 +131,7 @@ services:
         "backend.workers.celery_app:celery_app",
         "worker",
         "--loglevel=info",
+        "--pool=solo",
         "--queues=default,document_tasks,dead_letter"
       ]
     depends_on:
