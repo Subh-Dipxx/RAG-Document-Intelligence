@@ -1,9 +1,10 @@
+'use client'
+
 import { useState, useEffect } from 'react'
-import './styles.css'
-import LoginPage from './LoginPage'
+import LoginPage from '../components/LoginPage'
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('access_token'))
+  const [token, setToken] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
 
   const handleLogin = (accessToken) => {
     localStorage.setItem('access_token', accessToken)
