@@ -1,7 +1,69 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import LoginPage from '../components/LoginPage'
+
+const KnowledgeSphere = dynamic(() => import('../components/KnowledgeSphere'), {
+  ssr: false,
+  loading: () => <div className="knowledge-sphere" aria-hidden="true"><div className="knowledge-sphere-glow" /><div className="knowledge-sphere-css" /></div>,
+})
+
+function IconMark() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" stroke="currentColor" strokeWidth="1.35" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" stroke="currentColor" strokeWidth="1.35" transform="rotate(60 12 12)" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" stroke="currentColor" strokeWidth="1.35" transform="rotate(-60 12 12)" />
+    </svg>
+  )
+}
+
+function IconFile() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M7 3.5h7.2L18.5 8v12.2A1.3 1.3 0 0 1 17.2 21.5H7A1.5 1.5 0 0 1 5.5 20V5A1.5 1.5 0 0 1 7 3.5z" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M14.2 3.6V8h4.2" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconAsk() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12a7 7 0 1 1 3.2 5.9L5.5 19.5 6.4 16A7 7 0 0 1 5 12z" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+function IconSources() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M7 5.5h10M7 10h10M7 14.5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="4.5" y="3.5" width="15" height="17" rx="2" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+function IconLogout() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M10 7V5.5A1.5 1.5 0 0 1 11.5 4h7A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 10 18.5V17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 12h10M11 8.5 14.5 12 11 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconUpload() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 16V5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8 9l4-4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 16.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 function App() {
   const [token, setToken] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
@@ -144,320 +206,307 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">R</div>
-          <div>
-            <p className="eyebrow">DOCUMENT INTELLIGENCE</p>
-            <h1>RAG Platform</h1>
+      <aside className="sidebar">
+        <a className="sidebar-logo" href="#workspace" aria-label="Workspace">
+          <span>R</span>
+        </a>
+        <nav className="sidebar-nav">
+          <a href="#workspace" className="is-active" title="Workspace">
+            <IconMark />
+          </a>
+          <a href="#library" title="Library">
+            <IconFile />
+          </a>
+          <a href="#query" title="Ask">
+            <IconAsk />
+          </a>
+          <a href="#sources" title="Sources">
+            <IconSources />
+          </a>
+        </nav>
+        <button type="button" className="sidebar-logout" onClick={handleLogout} title="Logout">
+          <IconLogout />
+        </button>
+      </aside>
+
+      <div className="stage">
+        <header className="topbar">
+          <div className="brand">
+            <p className="eyebrow">Document intelligence</p>
+            <h1>Knowledge workspace</h1>
           </div>
-        </div>
-
-        <div className="topbar-actions">
-          <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
-            <span className="dot" />
-            {health?.ok ? 'All systems operational' : 'Checking services'}
-          </div>
-
-          <button
-            type="button"
-            className="logout-button"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <main className="content">
-        <section className="hero">
-          <div>
-            <p className="hero-kicker">PDF-FOCUSED RAG</p>
-            <h2>Ask questions.<br /><span>Get grounded answers.</span></h2>
-            <p className="hero-copy">
-              Upload a PDF and query its content with answers grounded in
-              retrieved document context and source citations.
-            </p>
-          </div>
-
-          <div className="hero-stats">
-            <div>
-              <strong>{documents.length}</strong>
-              <span>Active document</span>
+          <div className="topbar-actions">
+            <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
+              <span className="dot" />
+              {health?.ok ? 'Systems online' : 'Checking services'}
             </div>
-            <div>
-              <strong>{answer?.retrieved_chunks ?? 0}</strong>
-              <span>Retrieved chunks</span>
-            </div>
+            <span className="stack-chip">BGE · pgvector · Gemini</span>
           </div>
-        </section>
+        </header>
 
-        <div className="workspace-grid">
-          <section className="card upload-card">
-            <div className="section-heading">
-              <div className="section-icon">↑</div>
-              <div>
-                <p className="eyebrow">INGESTION</p>
-                <h2>Upload PDF</h2>
+        <div className="workspace">
+          <section id="workspace" className="hero-panel">
+            <div className="hero-stage">
+              <KnowledgeSphere />
+              <div className="hero-copy">
+                <p className="hero-kicker">Grounded retrieval</p>
+                <h2>Ask the corpus.<br />Keep every answer cited.</h2>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <label className="field">
-                <span>Title <small>Optional</small></span>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Product specification"
+            <form id="query" className="ask-bar" onSubmit={handleQuery}>
+              <label className="ask-field">
+                <span>Question</span>
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="What would you like to know about this document?"
+                  rows="2"
                 />
               </label>
-
-              <label className="upload-zone">
-                <input
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={handleFileChange}
-                />
-                <span className="upload-icon">PDF</span>
-                <strong>{file ? file.name : 'Choose a PDF document'}</strong>
-                <span>{file ? 'Ready to upload' : 'Click to browse your files'}</span>
-              </label>
-
-              {file && (
-                <div className="selected-file">
-                  <span className="file-badge">PDF</span>
-                  <div>
-                    <strong>{file.name}</strong>
-                    <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
-                  </div>
-                </div>
-              )}
-
-              <button className="primary-button full-width" type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <span className="spinner" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>Upload document <span>→</span></>
-                )}
-              </button>
+              <div className="ask-meta">
+                <span className="query-hint">
+                  {documents.length ? 'Searching the active PDF' : 'Upload a PDF to enable document-grounded queries'}
+                </span>
+                <button className="primary-button" type="submit" disabled={queryLoading}>
+                  {queryLoading ? (
+                    <>
+                      <span className="spinner" />
+                      Searching...
+                    </>
+                  ) : (
+                    'Ask question'
+                  )}
+                </button>
+              </div>
             </form>
 
-            {status && (
-              <div className={`status ${status.toLowerCase().includes('success') ? 'success' : ''}`}>
-                <span>{status.toLowerCase().includes('success') ? '✓' : '!'}</span>
-                {status}
+            {queryError && (
+              <div className="query-error">
+                <span>!</span>
+                {queryError}
+              </div>
+            )}
+
+            {answer && (
+              <div className="answer-section">
+                <div className="answer-header">
+                  <div>
+                    <p className="eyebrow">Result</p>
+                    <h3>Answer</h3>
+                  </div>
+                  <span className={`answer-badge ${answer.abstained ? 'abstained' : ''}`}>
+                    <i /> {answer.abstained ? 'Abstained' : 'Grounded answer'}
+                  </span>
+                </div>
+
+                <div className="answer-box">
+                  {answer.answer}
+                </div>
+
+                <div className="answer-meta">
+                  <div className="metric">
+                    <span>Confidence</span>
+                    <strong>
+                      {answer.confidence !== null && answer.confidence !== undefined
+                        ? answer.confidence.toFixed(3)
+                        : '—'}
+                    </strong>
+                  </div>
+                  <div className="metric">
+                    <span>Retrieved chunks</span>
+                    <strong>{answer.retrieved_chunks}</strong>
+                  </div>
+                  <div className="metric">
+                    <span>Model</span>
+                    <strong>{answer.model || '—'}</strong>
+                  </div>
+                </div>
+
+                <div id="sources" className="sources-heading">
+                  <div>
+                    <p className="eyebrow">Provenance</p>
+                    <h3>Source citations</h3>
+                  </div>
+                  <span>{answer.citations?.length ?? 0} source{answer.citations?.length === 1 ? '' : 's'}</span>
+                </div>
+
+                {answer.citations?.length > 0 ? (
+                  <div className="citation-list">
+                    {answer.citations.map((citation, index) => (
+                      <div
+                        className="citation-card"
+                        key={citation.chunk_id || `${citation.source}-${index}`}
+                      >
+                        <div className="citation-number">{index + 1}</div>
+                        <div className="citation-content">
+                          <div className="citation-header">
+                            <strong>{citation.source || `SOURCE ${index + 1}`}</strong>
+                            {citation.page && <span>Page {citation.page}</span>}
+                          </div>
+
+                          {citation.excerpt && (
+                            <p className="citation-excerpt">{citation.excerpt}</p>
+                          )}
+
+                          <div className="citation-meta">
+                            {citation.document_id && <span>Document {citation.document_id}</span>}
+                            {citation.version_id && <span>Version {citation.version_id}</span>}
+                            {citation.chunk_id && <span>Chunk {citation.chunk_id}</span>}
+                            <span className="source-type">
+                              {citation.is_generated ? 'Generated' : 'Retrieved source'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-citations">
+                    No citations returned for this response.
+                  </div>
+                )}
               </div>
             )}
           </section>
 
-          <section className="card system-card">
-            <div className="section-heading">
-              <div className="section-icon">◉</div>
-              <div>
-                <p className="eyebrow">SYSTEM</p>
+          <aside className="rail">
+            <section id="library" className="panel library-panel">
+              <div className="panel-heading">
+                <p className="eyebrow">Library</p>
+                <h2>Active PDF</h2>
+              </div>
+
+              {!currentDocument ? (
+                <div className="empty-state">
+                  <strong>No PDF uploaded yet</strong>
+                  <span>Ingest a document to ground later answers.</span>
+                </div>
+              ) : (
+                <div className="document-info">
+                  <div className="document-file-icon">PDF</div>
+                  <div className="document-main">
+                    <strong>{currentDocument.title || 'Untitled document'}</strong>
+                    <span>{currentDocument.filename || currentDocument.file_name || '—'}</span>
+                  </div>
+                  <div className="document-meta-row">
+                    <div className="document-detail">
+                      <small>Type</small>
+                      <strong>{currentDocument.mime_type || 'application/pdf'}</strong>
+                    </div>
+                    <div className="document-detail">
+                      <small>Versions</small>
+                      <strong>{currentDocument.versions?.length ?? 0}</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="upload-form">
+                <label className="field upload-field">
+                  <span>Document title <small>Optional</small></span>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Product specification"
+                  />
+                </label>
+
+                <label className={`upload-zone${file ? ' has-file' : ''}${loading ? ' is-loading' : ''}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleFileChange}
+                  />
+                  <span className="upload-icon">
+                    <IconUpload />
+                  </span>
+                  <strong>{file ? file.name : 'Choose a PDF'}</strong>
+                  <span>{file ? 'Ready to ingest' : 'PDF only · click to browse'}</span>
+                </label>
+
+                {file && (
+                  <div className="selected-file">
+                    <span className="file-badge">PDF</span>
+                    <div className="selected-file-meta">
+                      <strong>{file.name}</strong>
+                      <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    </div>
+                    <span className="file-ready-pill">Ready</span>
+                  </div>
+                )}
+
+                <button className="primary-button full-width upload-submit" type="submit" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="spinner" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Upload document'
+                  )}
+                </button>
+              </form>
+
+              {status && (
+                <div
+                  className={`status${
+                    status.toLowerCase().includes('success')
+                      ? ' success'
+                      : loading || status.toLowerCase().includes('uploading')
+                        ? ' pending'
+                        : ' error'
+                  }`}
+                >
+                  <span>
+                    {status.toLowerCase().includes('success')
+                      ? '✓'
+                      : loading || status.toLowerCase().includes('uploading')
+                        ? '…'
+                        : '!'}
+                  </span>
+                  {status}
+                </div>
+              )}
+            </section>
+
+            <section className="panel system-card">
+              <div className="panel-heading">
+                <p className="eyebrow">System</p>
                 <h2>Service status</h2>
               </div>
-            </div>
 
-            <div className="system-summary">
-              <span className={`status-orb ${health?.ok ? 'online' : ''}`} />
-              <div>
-                <strong>{health?.ok ? 'System ready' : 'Checking system'}</strong>
-                <span>{health?.ok ? 'Ready to process your PDF' : 'Connecting to backend services'}</span>
-              </div>
-            </div>
-
-            <div className="service-list">
-              {health?.services ? (
-                Object.entries(health.services).map(([name, value]) => (
-                  <div key={name} className="service-row">
-                    <span>{name}</span>
-                    <span className={value.ok ? 'ok' : 'bad'}>
-                      <i /> {value.ok ? 'Operational' : 'Unavailable'}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="muted">Loading service status...</p>
-              )}
-            </div>
-
-            <a className="docs-link" href="/docs" target="_blank" rel="noreferrer">
-              Open API documentation <span>↗</span>
-            </a>
-          </section>
-        </div>
-
-        <section className="card document-card">
-          <div className="card-heading">
-            <div>
-              <p className="eyebrow">CURRENT DOCUMENT</p>
-              <h2>Active PDF</h2>
-            </div>
-            {currentDocument && <span className="ready-badge">Ready</span>}
-          </div>
-
-          {!currentDocument ? (
-            <div className="empty-state">
-              <div className="empty-icon">PDF</div>
-              <strong>No PDF uploaded yet</strong>
-              <span>Upload a document above to start asking questions.</span>
-            </div>
-          ) : (
-            <div className="document-info">
-              <div className="document-file-icon">PDF</div>
-              <div className="document-main">
-                <strong>{currentDocument.title || 'Untitled document'}</strong>
-                <span>{currentDocument.filename || currentDocument.file_name || '—'}</span>
-              </div>
-              <div className="document-detail">
-                <small>TYPE</small>
-                <strong>{currentDocument.mime_type || 'application/pdf'}</strong>
-              </div>
-              <div className="document-detail">
-                <small>VERSIONS</small>
-                <strong>{currentDocument.versions?.length ?? 0}</strong>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="card query-card">
-          <div className="query-intro">
-            <div>
-              <p className="eyebrow">RAG QUERY</p>
-              <h2>Ask your document</h2>
-              <p>Questions are answered using retrieved content from the active PDF.</p>
-            </div>
-            <div className="query-badge">BGE + pgvector + Gemini</div>
-          </div>
-
-          <form onSubmit={handleQuery}>
-            <label className="field">
-              <span>Question</span>
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="What would you like to know about this document?"
-                rows="4"
-              />
-            </label>
-
-            <div className="query-actions">
-              <span className="query-hint">
-                {documents.length ? 'Searching the active PDF' : 'Upload a PDF to enable document-grounded queries'}
-              </span>
-              <button className="primary-button" type="submit" disabled={queryLoading}>
-                {queryLoading ? (
-                  <>
-                    <span className="spinner" />
-                    Searching...
-                  </>
-                ) : (
-                  <>Ask question <span>→</span></>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {queryError && (
-            <div className="query-error">
-              <span>!</span>
-              {queryError}
-            </div>
-          )}
-
-          {answer && (
-            <div className="answer-section">
-              <div className="answer-header">
+              <div className="system-summary">
+                <span className={`status-orb ${health?.ok ? 'online' : ''}`} />
                 <div>
-                  <p className="eyebrow">RESULT</p>
-                  <h3>Answer</h3>
-                </div>
-                <span className={`answer-badge ${answer.abstained ? 'abstained' : ''}`}>
-                  <i /> {answer.abstained ? 'Abstained' : 'Grounded answer'}
-                </span>
-              </div>
-
-              <div className="answer-box">
-                {answer.answer}
-              </div>
-
-              <div className="answer-meta">
-                <div className="metric">
-                  <span>CONFIDENCE</span>
-                  <strong>
-                    {answer.confidence !== null && answer.confidence !== undefined
-                      ? answer.confidence.toFixed(3)
-                      : '—'}
-                  </strong>
-                </div>
-                <div className="metric">
-                  <span>RETRIEVED CHUNKS</span>
-                  <strong>{answer.retrieved_chunks}</strong>
-                </div>
-                <div className="metric">
-                  <span>MODEL</span>
-                  <strong>{answer.model || '—'}</strong>
+                  <strong>{health?.ok ? 'System ready' : 'Checking system'}</strong>
+                  <span>{health?.ok ? 'Ready to process your PDF' : 'Connecting to backend services'}</span>
                 </div>
               </div>
 
-              <div className="sources-heading">
-                <div>
-                  <p className="eyebrow">PROVENANCE</p>
-                  <h3>Source citations</h3>
-                </div>
-                <span>{answer.citations?.length ?? 0} source{answer.citations?.length === 1 ? '' : 's'}</span>
-              </div>
-
-              {answer.citations?.length > 0 ? (
-                <div className="citation-list">
-                  {answer.citations.map((citation, index) => (
-                    <div
-                      className="citation-card"
-                      key={citation.chunk_id || `${citation.source}-${index}`}
-                    >
-                      <div className="citation-number">{index + 1}</div>
-                      <div className="citation-content">
-                        <div className="citation-header">
-                          <strong>{citation.source || `SOURCE ${index + 1}`}</strong>
-                          {citation.page && <span>Page {citation.page}</span>}
-                        </div>
-
-                        {citation.excerpt && (
-                          <p className="citation-excerpt">{citation.excerpt}</p>
-                        )}
-
-                        <div className="citation-meta">
-                          {citation.document_id && <span>Document {citation.document_id}</span>}
-                          {citation.version_id && <span>Version {citation.version_id}</span>}
-                          {citation.chunk_id && <span>Chunk {citation.chunk_id}</span>}
-                          <span className="source-type">
-                            {citation.is_generated ? 'Generated' : 'Retrieved source'}
-                          </span>
-                        </div>
-                      </div>
+              <div className="service-list">
+                {health?.services ? (
+                  Object.entries(health.services).map(([name, value]) => (
+                    <div key={name} className="service-row">
+                      <span>{name}</span>
+                      <span className={value.ok ? 'ok' : 'bad'}>
+                        <i /> {value.ok ? 'Operational' : 'Unavailable'}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-citations">
-                  No citations returned for this response.
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      </main>
+                  ))
+                ) : (
+                  <p className="muted">Loading service status...</p>
+                )}
+              </div>
 
-      <footer className="footer">
-        <span>RAG Document Intelligence</span>
-        <span>PDF ingestion • Retrieval • Grounded generation</span>
-      </footer>
+              <a className="docs-link" href="/docs" target="_blank" rel="noreferrer">
+                Open API documentation <span>↗</span>
+              </a>
+            </section>
+          </aside>
+        </div>
+      </div>
     </div>
   )
 }

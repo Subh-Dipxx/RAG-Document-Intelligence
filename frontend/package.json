@@ -8,8 +8,10 @@
     "start": "next start"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.1.2",
     "next": "15.5.0",
     "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "react-dom": "19.1.1",
+    "three": "^0.170.0"
   }
 }
