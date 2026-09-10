@@ -252,7 +252,7 @@ function App() {
   const currentDocument = documents[0]
 
   if (!token) {
-    return <LoginPage onLogin={handleLogin} />
+    return <LoginPage onLogin={handleLogin} theme={theme} onToggleTheme={toggleTheme} />
   }
 
   const isLight = theme === 'light'
