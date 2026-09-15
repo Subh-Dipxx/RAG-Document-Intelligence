@@ -179,6 +179,7 @@ function App() {
 
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
+  const [answerHistory, setAnswerHistory] = useState([])
   const [conversationMessages, setConversationMessages] = useState([])
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
@@ -304,6 +305,9 @@ function App() {
 
     setQueryLoading(true)
     setQueryError('')
+    if (answer) {
+      setAnswerHistory((history) => [...history, answer])
+    }
     setAnswer(null)
 
     try {
@@ -437,18 +441,23 @@ function App() {
         (message) => message.role === 'assistant'
       )
 
-      const latestAssistant = assistantMessages[assistantMessages.length - 1]
+      const answerResults = assistantMessages.map((message) => ({
+        conversation_id: data.id,
+        answer: message.content,
+        citations: message.citations || [],
+        abstained: message.metadata?.abstained || false,
+        confidence: message.metadata?.confidence ?? null,
+        retrieved_chunks: message.metadata?.retrieved_chunks ?? 0,
+        model: message.metadata?.model || null,
+      }))
+
+      const latestAssistant = answerResults[answerResults.length - 1]
+
       if (latestAssistant) {
-        setAnswer({
-          conversation_id: data.id,
-          answer: latestAssistant.content,
-          citations: latestAssistant.citations || [],
-          abstained: latestAssistant.metadata?.abstained || false,
-          confidence: latestAssistant.metadata?.confidence ?? null,
-          retrieved_chunks: latestAssistant.metadata?.retrieved_chunks ?? 0,
-          model: latestAssistant.metadata?.model || null,
-        })
+        setAnswerHistory(answerResults.slice(0, -1))
+        setAnswer(latestAssistant)
       } else {
+        setAnswerHistory([])
         setAnswer(null)
       }
 
@@ -469,6 +478,7 @@ function App() {
   const handleNewConversation = () => {
     setConversationId(null)
     setAnswer(null)
+    setAnswerHistory([])
     setConversationMessages([])
     setQuestion('')
     setQueryError('')
@@ -685,75 +695,51 @@ function App() {
               </div>
             </div>
 
-            {conversationMessages.length > 0 && (
-              <div className="conversation-thread">
-                {conversationMessages.map((message, index) => (
-                  <div
-                    key={message.id || `${message.role}-${index}`}
-                    className={`conversation-message conversation-message-${message.role}`}
-                  >
-                    <div className="conversation-message-label">
-                      {message.role === 'user' ? 'You' : 'Assistant'}
+            {(answerHistory.length > 0 || answer) && (
+              <div className="conversation-viewport">
+                {[...answerHistory, ...(answer ? [answer] : [])].map((result, resultIndex) => (
+                  <div className="answer-section" key={resultIndex}>
+                  <div className="answer-header">
+                    <div>
+                      <p className="eyebrow">Result</p>
+                      <h3>Answer</h3>
                     </div>
-
-                    <div className="conversation-message-content">
-                      {message.content}
-                    </div>
-
-                    {message.role === 'assistant' && message.citations?.length > 0 && (
-                      <div className="conversation-message-sources">
-                        {message.citations.length}{' '}
-                        {message.citations.length === 1 ? 'source' : 'sources'}
-                      </div>
-                    )}
+                    <span className={`answer-badge ${result.abstained ? 'abstained' : ''}`}>
+                      <i /> {result.abstained ? 'Abstained' : 'Grounded answer'}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
 
-            {answer && (
-              <div className="answer-section">
-                <div className="answer-header">
-                  <div>
-                    <p className="eyebrow">Result</p>
-                    <h3>Answer</h3>
-                  </div>
-                  <span className={`answer-badge ${answer.abstained ? 'abstained' : ''}`}>
-                    <i /> {answer.abstained ? 'Abstained' : 'Grounded answer'}
-                  </span>
-                </div>
-
-                <div className="answer-box">{answer.answer}</div>
+                <div className="answer-box">{result.answer}</div>
 
                 <div className="answer-meta">
                   <div className="metric">
                     <span>Confidence</span>
                     <strong>
-                      {answer.confidence !== null && answer.confidence !== undefined
-                        ? answer.confidence.toFixed(3)
+                      {result.confidence !== null && result.confidence !== undefined
+                        ? result.confidence.toFixed(3)
                         : '—'}
                     </strong>
                   </div>
                   <div className="metric">
                     <span>Retrieved chunks</span>
-                    <strong>{answer.retrieved_chunks}</strong>
+                    <strong>{result.retrieved_chunks}</strong>
                   </div>
                   <div className="metric">
                     <span>Model</span>
-                    <strong>{answer.model || '—'}</strong>
+                    <strong>{result.model || '—'}</strong>
                   </div>
                 </div>
 
-                <div id="sources" className="sources-heading">
+                <div id={resultIndex === answerHistory.length ? "sources" : undefined} className="sources-heading">
                   <div>
                     <p className="eyebrow">Provenance</p>
                     <h3>Source citations</h3>
-                  </div>                  <span>{answer.citations?.length ?? 0} source{answer.citations?.length === 1 ? '' : 's'}</span>
+                  </div>                  <span>{result.citations?.length ?? 0} source{result.citations?.length === 1 ? '' : 's'}</span>
                 </div>
 
-                {answer.citations?.length > 0 ? (
+                {result.citations?.length > 0 ? (
                   <div className="citation-list">
-                    {answer.citations.map((citation, index) => (
+                    {result.citations.map((citation, index) => (
                       <div className="citation-card" key={citation.chunk_id || `${citation.source}-${index}`}>
                         <div className="citation-number">{index + 1}</div>
                         <div className="citation-content">
@@ -775,6 +761,8 @@ function App() {
                 ) : (
                   <div className="empty-citations">No citations returned for this response.</div>
                 )}
+                  </div>
+                ))}
               </div>
             )}
 

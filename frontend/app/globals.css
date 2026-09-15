@@ -96,7 +96,14 @@ button { cursor: pointer; }
   box-shadow: 0 0 18px rgba(167, 139, 250, 0.16);
 }
 
-.stage { min-width: 0; display: flex; flex-direction: column; }
+.stage {
+  min-width: 0;
+  min-height: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .topbar {
   min-height: 72px;
   padding: 0 28px;
@@ -140,10 +147,21 @@ button { cursor: pointer; }
 }
 
 .workspace {
+  flex: 1 1 auto;
+  height: 0;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.78fr);
   gap: 20px;
   padding: 22px 24px 32px;
+  overflow: hidden;
+}
+
+.rail {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .hero-panel, .panel {
   border: 1px solid var(--border);
@@ -152,15 +170,26 @@ button { cursor: pointer; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 40px rgba(124,58,237,0.08), var(--shadow);
   backdrop-filter: blur(18px);
 }
-.hero-panel { padding: 8px 8px 22px; min-width: 0; }
+.hero-panel {
+  position: relative;
+  padding: 8px 8px 22px;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .hero-stage {
   position: relative;
-  min-height: 460px;
+  min-height: 0;
+  flex: 1 1 auto;
   display: grid;
   place-items: center;
   overflow: hidden;
   border-radius: 20px;
 }
+
 .hero-copy {
   position: absolute; top: 22px; left: 24px; right: 24px;
   z-index: 2; margin: 0; text-align: center; pointer-events: none;
@@ -198,8 +227,13 @@ button { cursor: pointer; }
 }
 
 .ask-bar {
-  position: relative; z-index: 3;
-  margin: 8px 18px 0; padding: 16px;
+  position: absolute;
+  z-index: 10;
+  left: 18px;
+  right: 18px;
+  bottom: 22px;
+  margin: 0;
+  padding: 16px;
   border: 1px solid var(--border-strong);
   border-radius: 22px;
   background: rgba(10, 10, 24, 0.78);
@@ -261,9 +295,26 @@ button { cursor: pointer; }
 .status.pending { border-color: rgba(196,181,253,0.28); background: rgba(139,92,246,0.12); color: var(--accent); }
 
 /* Conversation history thread */
+.conversation-viewport {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 18px 8px 190px;
+  box-sizing: border-box;
+}
+
+.hero-panel:has(.conversation-viewport) .hero-stage {
+  display: none;
+}
+
 .conversation-thread {
   width: min(900px, 100%);
-  margin: 0 auto 28px;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 18px;
