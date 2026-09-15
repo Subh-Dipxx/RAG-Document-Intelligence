@@ -17,6 +17,7 @@ from backend.api.controllers import (
     jobs,
     eval as eval_route,
     query as query_route,
+    chat as chat_route,
 )
 
 
@@ -42,6 +43,7 @@ app.include_router(documents.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(eval_route.router, prefix="/api/v1")
 app.include_router(query_route.router, prefix="/api/v1")
+app.include_router(chat_route.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 
 settings = get_settings()

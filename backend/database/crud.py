@@ -6,6 +6,8 @@ from backend.database.models import (
     AccessGrantModel,
     ChunkModel,
     CitationModel,
+    ChatConversationModel,
+    ChatMessageModel,
     CorpusModel,
     DeletionAuditModel,
     DocumentModel,
@@ -18,6 +20,7 @@ from backend.database.models import (
     TenantModel,
     VersionModel,
     generate_uuid,
+    utc_now,
 )
 from backend.domain.models import (
     AccessGrant,
@@ -392,3 +395,91 @@ def create_eval_result(db: Session, eval_res: EvalResult) -> EvalResultModel:
 
 def list_eval_results(db: Session, skip: int = 0, limit: int = 100) -> List[EvalResultModel]:
     return db.query(EvalResultModel).offset(skip).limit(limit).all()
+
+
+def create_chat_conversation(
+    db: Session,
+    user_id: str,
+    title: Optional[str] = None,
+    document_id: Optional[str] = None,
+) -> "ChatConversationModel":
+    row = ChatConversationModel(
+        id=generate_uuid(),
+        user_id=user_id,
+        title=title,
+        document_id=document_id,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def get_chat_conversation(
+    db: Session,
+    conversation_id: str,
+    user_id: str,
+) -> Optional["ChatConversationModel"]:
+    return (
+        db.query(ChatConversationModel)
+        .filter(
+            ChatConversationModel.id == conversation_id,
+            ChatConversationModel.user_id == user_id,
+        )
+        .first()
+    )
+
+
+def list_chat_conversations(
+    db: Session,
+    user_id: str,
+) -> List["ChatConversationModel"]:
+    return (
+        db.query(ChatConversationModel)
+        .filter(ChatConversationModel.user_id == user_id)
+        .order_by(ChatConversationModel.updated_at.desc())
+        .all()
+    )
+
+
+def create_chat_message(
+    db: Session,
+    conversation_id: str,
+    role: str,
+    content: str,
+    citations: Optional[list] = None,
+    metadata_json: Optional[dict] = None,
+) -> "ChatMessageModel":
+    row = ChatMessageModel(
+        id=generate_uuid(),
+        conversation_id=conversation_id,
+        role=role,
+        content=content,
+        citations=citations or [],
+        metadata_json=metadata_json or {},
+    )
+    db.add(row)
+
+    conversation = (
+        db.query(ChatConversationModel)
+        .filter(ChatConversationModel.id == conversation_id)
+        .first()
+    )
+    if conversation:
+        conversation.updated_at = utc_now()
+
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def list_chat_messages(
+    db: Session,
+    conversation_id: str,
+) -> List["ChatMessageModel"]:
+    return (
+        db.query(ChatMessageModel)
+        .filter(ChatMessageModel.conversation_id == conversation_id)
+        .order_by(ChatMessageModel.created_at.asc())
+        .all()
+    )

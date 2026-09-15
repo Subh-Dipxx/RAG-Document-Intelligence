@@ -309,3 +309,61 @@ class EvalResultModel(Base):
     correct = Column(Boolean, nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utc_now)
+
+
+class ChatConversationModel(Base):
+    __tablename__ = "chat_conversations"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(
+        String,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title = Column(String, nullable=True)
+    document_id = Column(
+        String,
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("UserModel")
+    document = relationship("DocumentModel")
+    messages = relationship(
+        "ChatMessageModel",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+    )
+
+
+class ChatMessageModel(Base):
+    __tablename__ = "chat_messages"
+    __table_args__ = (
+        Index(
+            "ix_chat_messages_conversation_created",
+            "conversation_id",
+            "created_at",
+        ),
+    )
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    conversation_id = Column(
+        String,
+        ForeignKey("chat_conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    citations = Column(JSON, default=list)
+    metadata_json = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+
+    conversation = relationship(
+        "ChatConversationModel",
+        back_populates="messages",
+    )

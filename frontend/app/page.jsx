@@ -117,6 +117,8 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [health, setHealth] = useState(null)
   const [documents, setDocuments] = useState([])
+  const [conversations, setConversations] = useState([])
+  const [conversationId, setConversationId] = useState(null)
 
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
@@ -128,6 +130,35 @@ function App() {
     setTheme(stored)
     applyTheme(stored)
   }, [])
+
+  useEffect(() => {
+    if (!token) {
+      setConversations([])
+      setConversationId(null)
+      return
+    }
+
+    const fetchConversations = async () => {
+      try {
+        const res = await fetch('/api/v1/chat', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!res.ok) {
+          throw new Error(`Failed to load conversations (${res.status})`)
+        }
+
+        const data = await res.json()
+        setConversations(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error('Failed to fetch conversations:', err)
+      }
+    }
+
+    fetchConversations()
+  }, [token])
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -222,9 +253,11 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           question: question.trim(),
+          conversation_id: conversationId,
           top_k: 5,
           filters: documents.length > 0
             ? {
@@ -260,12 +293,64 @@ function App() {
       }
 
       setAnswer(data)
+      setConversationId(data.conversation_id || null)
     } catch (err) {
       console.error(err)
       setQueryError(err.message || 'Query failed.')
     } finally {
       setQueryLoading(false)
     }
+  }
+
+  const handleSelectConversation = async (id) => {
+    if (!token || !id) return
+
+    try {
+      setQueryError('')
+      const res = await fetch(`/api/v1/chat/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        const rawBody = await res.text()
+        throw new Error(rawBody || `Failed to load conversation (${res.status})`)
+      }
+
+      const data = await res.json()
+      setConversationId(data.id)
+      setQuestion('')
+
+      const assistantMessages = (data.messages || []).filter(
+        (message) => message.role === 'assistant'
+      )
+
+      const latestAssistant = assistantMessages[assistantMessages.length - 1]
+      if (latestAssistant) {
+        setAnswer({
+          conversation_id: data.id,
+          answer: latestAssistant.content,
+          citations: latestAssistant.citations || [],
+          abstained: latestAssistant.metadata?.abstained || false,
+          confidence: latestAssistant.metadata?.confidence ?? null,
+          retrieved_chunks: latestAssistant.metadata?.retrieved_chunks ?? 0,
+          model: latestAssistant.metadata?.model || null,
+        })
+      } else {
+        setAnswer(null)
+      }
+    } catch (err) {
+      console.error('Failed to load conversation:', err)
+      setQueryError(err.message || 'Failed to load conversation.')
+    }
+  }
+
+  const handleNewConversation = () => {
+    setConversationId(null)
+    setAnswer(null)
+    setQuestion('')
+    setQueryError('')
   }
 
   const currentDocument = documents[0]
@@ -384,8 +469,7 @@ function App() {
                   <div>
                     <p className="eyebrow">Provenance</p>
                     <h3>Source citations</h3>
-                  </div>
-                  <span>{answer.citations?.length ?? 0} source{answer.citations?.length === 1 ? '' : 's'}</span>
+                  </div>                  <span>{answer.citations?.length ?? 0} source{answer.citations?.length === 1 ? '' : 's'}</span>
                 </div>
 
                 {answer.citations?.length > 0 ? (
@@ -532,6 +616,51 @@ function App() {
                         : '!'}
                   </span>
                   {status}
+                </div>
+              )}
+            </section>
+
+            <section className="panel chat-history-panel">
+              <div className="panel-heading chat-history-heading">
+                <div>
+                  <p className="eyebrow">Conversations</p>
+                  <h2>Chat history</h2>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleNewConversation}
+                >
+                  New chat
+                </button>
+              </div>
+
+              {conversations.length === 0 ? (
+                <div className="empty-state">
+                  <strong>No conversations yet</strong>
+                  <span>Your questions and answers will appear here.</span>
+                </div>
+              ) : (
+                <div className="conversation-list">
+                  {conversations.map((conversation) => (
+                    <button
+                      type="button"
+                      key={conversation.id}
+                      className={`conversation-item${
+                        conversation.id === conversationId ? ' is-active' : ''
+                      }`}
+                      onClick={() => handleSelectConversation(conversation.id)}
+                    >
+                      <span className="conversation-title">
+                        {conversation.title || 'Untitled conversation'}
+                      </span>
+                      <span className="conversation-date">
+                        {conversation.updated_at
+                          ? new Date(conversation.updated_at).toLocaleString()
+                          : ''}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
             </section>

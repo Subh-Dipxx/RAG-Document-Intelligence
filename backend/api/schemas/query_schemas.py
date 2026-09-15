@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class QueryRequest(BaseModel):
     question: str = Field(min_length=1)
+    conversation_id: Optional[str] = None
 
     user_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -30,6 +31,7 @@ class CitationResponse(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    conversation_id: Optional[str] = None
     answer: str
     citations: List[CitationResponse] = Field(default_factory=list)
     abstained: bool
