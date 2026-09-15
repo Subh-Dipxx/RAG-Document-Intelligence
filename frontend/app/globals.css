@@ -260,6 +260,69 @@ button { cursor: pointer; }
 .status.success { border-color: rgba(52,211,153,0.28); background: var(--success-bg); color: var(--success); }
 .status.pending { border-color: rgba(196,181,253,0.28); background: rgba(139,92,246,0.12); color: var(--accent); }
 
+/* Conversation history thread */
+.conversation-thread {
+  width: min(900px, 100%);
+  margin: 0 auto 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.conversation-message {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: 82%;
+}
+
+.conversation-message-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.conversation-message-assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.conversation-message-label {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.conversation-message-content {
+  padding: 14px 17px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.conversation-message-user .conversation-message-content {
+  border-color: var(--border-strong);
+  border-bottom-right-radius: 5px;
+  background: rgba(196, 181, 253, 0.1);
+}
+
+.conversation-message-assistant .conversation-message-content {
+  border-bottom-left-radius: 5px;
+}
+
+.conversation-message-sources {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .answer-section { margin: 18px 18px 6px; padding-top: 18px; border-top: 1px solid var(--border); }
 .answer-header, .sources-heading, .panel-heading, .ask-meta {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;

@@ -179,6 +179,7 @@ function App() {
 
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
+  const [conversationMessages, setConversationMessages] = useState([])
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
 
@@ -351,6 +352,25 @@ function App() {
 
       setAnswer(data)
       setConversationId(data.conversation_id || null)
+
+      setConversationMessages((messages) => [
+        ...messages,
+        {
+          role: 'user',
+          content: question.trim(),
+        },
+        {
+          role: 'assistant',
+          content: data.answer,
+          citations: data.citations || [],
+          metadata: {
+            abstained: data.abstained || false,
+            confidence: data.confidence ?? null,
+            retrieved_chunks: data.retrieved_chunks ?? 0,
+            model: data.model || null,
+          },
+        },
+      ])
     } catch (err) {
       console.error(err)
       setQueryError(err.message || 'Query failed.')
@@ -411,6 +431,7 @@ function App() {
       const data = await res.json()
       setConversationId(data.id)
       setQuestion('')
+      setConversationMessages(Array.isArray(data.messages) ? data.messages : [])
 
       const assistantMessages = (data.messages || []).filter(
         (message) => message.role === 'assistant'
@@ -430,6 +451,15 @@ function App() {
       } else {
         setAnswer(null)
       }
+
+      setShowChatHistory(false)
+
+      requestAnimationFrame(() => {
+        document.getElementById('query')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+      })
     } catch (err) {
       console.error('Failed to load conversation:', err)
       setQueryError(err.message || 'Failed to load conversation.')
@@ -439,8 +469,17 @@ function App() {
   const handleNewConversation = () => {
     setConversationId(null)
     setAnswer(null)
+    setConversationMessages([])
     setQuestion('')
     setQueryError('')
+    setShowChatHistory(false)
+
+    requestAnimationFrame(() => {
+      document.getElementById('query')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    })
   }
 
   const currentDocument = documents[0]
@@ -645,6 +684,32 @@ function App() {
                 <h2>Ask the corpus.<br />Keep every answer cited.</h2>
               </div>
             </div>
+
+            {conversationMessages.length > 0 && (
+              <div className="conversation-thread">
+                {conversationMessages.map((message, index) => (
+                  <div
+                    key={message.id || `${message.role}-${index}`}
+                    className={`conversation-message conversation-message-${message.role}`}
+                  >
+                    <div className="conversation-message-label">
+                      {message.role === 'user' ? 'You' : 'Assistant'}
+                    </div>
+
+                    <div className="conversation-message-content">
+                      {message.content}
+                    </div>
+
+                    {message.role === 'assistant' && message.citations?.length > 0 && (
+                      <div className="conversation-message-sources">
+                        {message.citations.length}{' '}
+                        {message.citations.length === 1 ? 'source' : 'sources'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {answer && (
               <div className="answer-section">
