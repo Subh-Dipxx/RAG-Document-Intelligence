@@ -78,9 +78,16 @@ Retrieved document sources:
 {context_text}
 """
 
-        models_to_try = [self.model_name, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash"]
+        import os
+
+        fallback_str = os.getenv("GEMINI_FALLBACK_MODELS", "")
+        fallbacks = [m.strip() for m in fallback_str.split(",") if m.strip()] if fallback_str else []
+        
+        models_to_try = [self.model_name] + fallbacks
         seen = set()
         models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+        temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.2"))
 
         response = None
         last_error = None
@@ -90,7 +97,7 @@ Retrieved document sources:
                     model=m_name,
                     contents=prompt,
                     config=types.GenerateContentConfig(
-                        temperature=0.2,
+                        temperature=temperature,
                     ),
                 )
                 if response:
@@ -183,6 +190,7 @@ Retrieved document sources:
         # explicitly referenced sources separately in metadata.
         citations: List[Citation] = []
         for source_number, chunk in enumerate(context, start=1):
+            clean_excerpt = self._clean_excerpt_human_readable(chunk.text)
             citations.append(
                 Citation(
                     source=f"SOURCE {source_number}",
@@ -190,7 +198,7 @@ Retrieved document sources:
                     version_id=chunk.version_id,
                     chunk_id=chunk.id,
                     page=chunk.page_number,
-                    excerpt=chunk.text,
+                    excerpt=clean_excerpt,
                     is_generated=False,
                 )
             )
@@ -243,3 +251,108 @@ Retrieved document sources:
         return " ".join(answer.lower().split()) == " ".join(
             cls.ABSTENTION_TEXT.lower().split()
         )
+
+    @classmethod
+    def _clean_excerpt_human_readable(cls, text: str) -> str:
+        if not text:
+            return ""
+
+        raw = text.strip()
+
+        # Remove technical identifiers
+        raw = re.sub(r"\[SOURCE\s+\d+\]", "", raw, flags=re.IGNORECASE)
+        raw = re.sub(r"(Document|Version|Chunk)\s+ID:\s*[a-f0-9\-]+", "", raw, flags=re.IGNORECASE)
+
+        # JSON object or list formatting to natural text
+        if (raw.startswith("{") and raw.endswith("}")) or (raw.startswith("[") and raw.endswith("]")):
+            try:
+                import json
+                data = json.loads(raw)
+                return cls._format_json_to_plain_text(data)
+            except Exception:
+                pass
+
+        # Tabular data, worksheet dumps, pipe '|' or em-dash '—' separated text -> Natural Language
+        lines = raw.split("\n")
+        sheet_title = ""
+        kv_pairs = []
+        record_rows = []
+        regular_sentences = []
+
+        for line in lines:
+            line_str = line.strip()
+            if not line_str:
+                continue
+
+            if line_str.lower().startswith("worksheet:"):
+                sheet_title = line_str.split(":", 1)[1].strip()
+                continue
+
+            cells = []
+            if "|" in line_str:
+                cells = [
+                    c.strip()
+                    for c in line_str.split("|")
+                    if c.strip() and not set(c.strip()).issubset({"-", ":", "—"})
+                ]
+            elif " — " in line_str:
+                cells = [c.strip() for c in line_str.split(" — ") if c.strip()]
+
+            if cells:
+                if len(cells) == 2 and cells[0].lower() not in ("field", "key", "property"):
+                    kv_pairs.append(f"{cells[0]} is {cells[1]}")
+                elif len(cells) > 2:
+                    if any(h in cells[0].lower() for h in ("field", "key", "column")) and any(h in cells[1].lower() for h in ("value", "department")):
+                        continue
+                    first_col = cells[0]
+                    rest = ", ".join(cells[1:])
+                    record_rows.append(f"{first_col} ({rest})")
+                elif len(cells) == 1:
+                    regular_sentences.append(cells[0])
+            else:
+                regular_sentences.append(line_str)
+
+        parts = []
+        if sheet_title:
+            parts.append(f"Worksheet context: {sheet_title}.")
+
+        if kv_pairs:
+            parts.append("Details: " + ", ".join(kv_pairs) + ".")
+
+        if record_rows:
+            parts.append("Recorded entries: " + "; ".join(record_rows) + ".")
+
+        if regular_sentences:
+            parts.append(" ".join(regular_sentences))
+
+        if parts:
+            result_text = " ".join(parts)
+            result_text = re.sub(r"\s+", " ", result_text)
+            result_text = re.sub(r"\.\s*\.", ".", result_text)
+            return result_text.strip()
+
+        return raw
+
+    @classmethod
+    def _format_json_to_plain_text(cls, obj, indent: int = 0) -> str:
+        if isinstance(obj, dict):
+            lines = []
+            prefix = "  " * indent
+            for k, v in obj.items():
+                label = str(k).replace("_", " ").title()
+                if isinstance(v, (dict, list)):
+                    lines.append(f"{prefix}{label}:\n" + cls._format_json_to_plain_text(v, indent + 1))
+                else:
+                    lines.append(f"{prefix}• {label}: {v}")
+            return "\n".join(lines)
+        elif isinstance(obj, list):
+            prefix = "  " * indent
+            lines = []
+            for item in obj:
+                if isinstance(item, (dict, list)):
+                    lines.append(cls._format_json_to_plain_text(item, indent + 1))
+                else:
+                    lines.append(f"{prefix}• {item}")
+            return "\n".join(lines)
+        return str(obj)
+

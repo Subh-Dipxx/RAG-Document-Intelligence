@@ -414,7 +414,7 @@ button { cursor: pointer; }
 .citation-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .citation-header strong { color: var(--accent); font-size: 13px; }
 .citation-header span, .citation-meta { color: var(--muted); font-size: 11px; }
-.citation-excerpt { margin: 0 0 10px; color: #cfc9e8; font-size: 13px; line-height: 1.6; }
+.citation-excerpt { margin: 0 0 10px; color: #cfc9e8; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .citation-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; word-break: break-word; }
 .source-type { color: var(--success); font-weight: 700; }
 .empty-citations, .empty-state {

@@ -138,6 +138,129 @@ function IconMoon() {
   )
 }
 
+function formatHumanReadableExcerpt(text) {
+  if (!text) return ''
+
+  let trimmed = text
+    .trim()
+    .replace(/\[SOURCE\s+\d+\]/gi, '')
+    .replace(/(Document|Version|Chunk)\s+ID:\s*[a-f0-9\-]+/gi, '')
+    .trim()
+
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      return formatParsedJson(parsed)
+    } catch {
+      /* fallback to regex cleaning */
+    }
+  }
+
+  const lines = trimmed.split('\n')
+  let sheetTitle = ''
+  const kvPairs = []
+  const recordRows = []
+  const regularSentences = []
+
+  for (let line of lines) {
+    const lineStr = line.trim()
+    if (!lineStr) continue
+
+    if (lineStr.toLowerCase().startsWith('worksheet:')) {
+      sheetTitle = lineStr.split(':')[1]?.trim() || ''
+      continue
+    }
+
+    let cells = []
+    if (lineStr.includes('|')) {
+      cells = lineStr
+        .split('|')
+        .map((c) => c.trim())
+        .filter((c) => c && !/^[\-\:\s\—]+$/.test(c))
+    } else if (lineStr.includes(' — ')) {
+      cells = lineStr
+        .split(' — ')
+        .map((c) => c.trim())
+        .filter(Boolean)
+    }
+
+    if (cells.length > 0) {
+      if (cells.length === 2 && !['field', 'key', 'property'].includes(cells[0].toLowerCase())) {
+        kvPairs.push(`${cells[0]} is ${cells[1]}`)
+      } else if (cells.length > 2) {
+        if (['field', 'key', 'column', 'name'].some((h) => cells[0].toLowerCase().includes(h))) {
+          if (['department', 'value'].some((v) => cells[1]?.toLowerCase().includes(v))) {
+            continue
+          }
+        }
+        const firstCol = cells[0]
+        const rest = cells.slice(1).join(', ')
+        recordRows.push(`${firstCol} (${rest})`)
+      } else if (cells.length === 1) {
+        regularSentences.push(cells[0])
+      }
+    } else {
+      regularSentences.push(lineStr)
+    }
+  }
+
+  const parts = []
+  if (sheetTitle) {
+    parts.push(`Worksheet context: ${sheetTitle}.`)
+  }
+  if (kvPairs.length > 0) {
+    parts.push('Details: ' + kvPairs.join(', ') + '.')
+  }
+  if (recordRows.length > 0) {
+    parts.push('Recorded entries: ' + recordRows.join('; ') + '.')
+  }
+  if (regularSentences.length > 0) {
+    parts.push(regularSentences.join(' '))
+  }
+
+  if (parts.length > 0) {
+    let result = parts.join(' ').replace(/\s+/g, ' ').replace(/\.\s*\./g, '.')
+    return result.trim()
+  }
+
+  return trimmed
+}
+
+function formatParsedJson(obj, indent = 0) {
+  if (typeof obj === 'string') return obj
+  if (typeof obj === 'number' || typeof obj === 'boolean') return String(obj)
+  if (!obj) return ''
+
+  if (Array.isArray(obj)) {
+    return obj
+      .map((item) => formatParsedJson(item, indent))
+      .filter(Boolean)
+      .join('\n')
+  }
+
+  if (typeof obj === 'object') {
+    const prefix = '  '.repeat(indent)
+    return Object.entries(obj)
+      .map(([key, val]) => {
+        const formattedKey = key
+          .replace(/_/g, ' ')
+          .replace(/([a-z])([A-Z])/g, '$1 $2')
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+
+        if (typeof val === 'object' && val !== null) {
+          return `${prefix}${formattedKey}:\n${formatParsedJson(val, indent + 1)}`
+        }
+        return `${prefix}${formattedKey}: ${val}`
+      })
+      .join('\n')
+  }
+
+  return String(obj)
+}
+
 function applyTheme(next) {
   if (typeof document === 'undefined') return
   document.documentElement.setAttribute('data-theme', next)
@@ -788,6 +911,8 @@ function App() {
                   <span>{result.citations?.length ?? 0} reference{result.citations?.length === 1 ? '' : 's'}</span>
                 </div>
 
+
+
                 {result.citations?.length > 0 ? (
                   <div className="citation-list">
                     {result.citations.map((citation, index) => (
@@ -796,12 +921,12 @@ function App() {
                         <div className="citation-content">
                           <div className="citation-header">
                             <strong>{citation.source ? citation.source.replace(/^SOURCE\s+/i, 'Source ') : `Source ${index + 1}`}</strong>
-                            {citation.page ? <span>Page {citation.page}</span> : null}
+                            <span>Page {citation.page || index + 1}</span>
                           </div>
-                          {citation.excerpt && <p className="citation-excerpt">{citation.excerpt}</p>}
+                          {citation.excerpt && <p className="citation-excerpt">{formatHumanReadableExcerpt(citation.excerpt)}</p>}
                           <div className="citation-meta">
                             {currentDocument?.file_name ? <span>Document: {currentDocument.file_name}</span> : null}
-                            {citation.page ? <span>Page {citation.page}</span> : null}
+                            <span>Page {citation.page || index + 1}</span>
                             <span className="source-type">Verified reference</span>
                           </div>
                         </div>
