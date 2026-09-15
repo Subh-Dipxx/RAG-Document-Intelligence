@@ -39,6 +39,60 @@ function IconAsk() {
   )
 }
 
+function IconChatHistory() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7A2.5 2.5 0 0 1 16.5 16H11l-4.5 3v-3.5A2.5 2.5 0 0 1 5 13V6.5z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 8.5h7M8.5 11.5h5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function IconSearch() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="10.8" cy="10.8" r="5.8" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m15.2 15.2 4.1 4.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconFilter() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 7h14M8 12h8M10.5 17h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconClose() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m7 7 10 10M17 7 7 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconMore() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="6" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="18" cy="12" r="1.5" />
+    </svg>
+  )
+}
+
 function IconSources() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -119,6 +173,9 @@ function App() {
   const [documents, setDocuments] = useState([])
   const [conversations, setConversations] = useState([])
   const [conversationId, setConversationId] = useState(null)
+  const [showChatHistory, setShowChatHistory] = useState(false)
+  const [historySearch, setHistorySearch] = useState('')
+  const [historySort, setHistorySort] = useState('recent')
 
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
@@ -302,6 +359,39 @@ function App() {
     }
   }
 
+  const filteredConversations = [...conversations]
+    .filter((conversation) =>
+      (conversation.title || 'Untitled conversation')
+        .toLowerCase()
+        .includes(historySearch.toLowerCase())
+    )
+    .sort((a, b) => {
+      const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0
+      const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0
+      return historySort === 'oldest' ? aTime - bTime : bTime - aTime
+    })
+
+  const formatConversationTime = (value) => {
+    if (!value) return ''
+    const date = new Date(value)
+    const seconds = Math.max(
+      0,
+      Math.floor((Date.now() - date.getTime()) / 1000)
+    )
+
+    if (seconds < 60) return 'just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`
+
+    return date.toLocaleDateString()
+  }
+
+  const getMessageCount = (conversation) =>
+    conversation.message_count ??
+    conversation.messages?.length ??
+    0
+
   const handleSelectConversation = async (id) => {
     if (!token || !id) return
 
@@ -371,6 +461,16 @@ function App() {
           <a href="#workspace" className="is-active" title="Workspace">
             <IconMark />
           </a>
+          <button
+            type="button"
+            className={`sidebar-history${showChatHistory ? ' is-active' : ''}`}
+            title="Chat History"
+            aria-label="Chat History"
+            aria-expanded={showChatHistory}
+            onClick={() => setShowChatHistory((open) => !open)}
+          >
+            <IconChatHistory />
+          </button>
           <a href="#library" title="Library">
             <IconFile />
           </a>
@@ -392,6 +492,120 @@ function App() {
         </button>
         <button type="button" className="sidebar-logout" onClick={handleLogout} title="Logout">
           <IconLogout />
+        </button>
+      </aside>
+
+      {showChatHistory && (
+        <button
+          type="button"
+          className="history-backdrop"
+          aria-label="Close Chat History"
+          onClick={() => setShowChatHistory(false)}
+        />
+      )}
+
+      <aside
+        className={`chat-history-drawer${showChatHistory ? ' is-open' : ''}`}
+        aria-label="Chat History"
+      >
+        <div className="history-drawer-header">
+          <div className="history-title-wrap">
+            <span className="history-title-icon">
+              <IconChatHistory />
+            </span>
+            <div>
+              <h2>Chat History</h2>
+              <p>Your past conversations</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="history-close"
+            aria-label="Close Chat History"
+            onClick={() => setShowChatHistory(false)}
+          >
+            <IconClose />
+          </button>
+        </div>
+
+        <div className="history-search-row">
+          <label className="history-search">
+            <IconSearch />
+            <input
+              type="search"
+              value={historySearch}
+              onChange={(event) => setHistorySearch(event.target.value)}
+              placeholder="Search conversations..."
+              aria-label="Search conversations"
+            />
+          </label>
+
+          <button
+            type="button"
+            className={`history-filter${historySort === 'oldest' ? ' is-active' : ''}`}
+            title={historySort === 'recent' ? 'Sort oldest first' : 'Sort recent first'}
+            aria-label={historySort === 'recent' ? 'Sort oldest first' : 'Sort recent first'}
+            onClick={() =>
+              setHistorySort((sort) => (sort === 'recent' ? 'oldest' : 'recent'))
+            }
+          >
+            <IconFilter />
+          </button>
+        </div>
+
+        <div className="history-conversation-list">
+          {filteredConversations.length === 0 ? (
+            <div className="history-empty">
+              <span className="history-empty-icon">
+                <IconChatHistory />
+              </span>
+              <strong>
+                {historySearch ? 'No matching conversations' : 'No conversations yet'}
+              </strong>
+              <span>
+                {historySearch
+                  ? 'Try a different search.'
+                  : 'Your questions and answers will appear here.'}
+              </span>
+            </div>
+          ) : (
+            filteredConversations.map((conversation) => (
+              <button
+                type="button"
+                key={conversation.id}
+                className={`history-conversation${
+                  conversation.id === conversationId ? ' is-active' : ''
+                }`}
+                onClick={() => handleSelectConversation(conversation.id)}
+              >
+                <span className="history-conversation-content">
+                  <span className="history-conversation-title">
+                    {conversation.title || 'Untitled conversation'}
+                  </span>
+                  <span className="history-conversation-meta">
+                    {getMessageCount(conversation)}{' '}
+                    {getMessageCount(conversation) === 1 ? 'message' : 'messages'}
+                    {' • '}
+                    {formatConversationTime(conversation.updated_at)}
+                  </span>
+                </span>
+
+                <span className="history-conversation-more" aria-hidden="true">
+                  <IconMore />
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="history-new-chat"
+          onClick={handleNewConversation}
+        >
+          <span>+</span>
+          New chat
         </button>
       </aside>
 
@@ -620,51 +834,7 @@ function App() {
               )}
             </section>
 
-            <section className="panel chat-history-panel">
-              <div className="panel-heading chat-history-heading">
-                <div>
-                  <p className="eyebrow">Conversations</p>
-                  <h2>Chat history</h2>
-                </div>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleNewConversation}
-                >
-                  New chat
-                </button>
-              </div>
-
-              {conversations.length === 0 ? (
-                <div className="empty-state">
-                  <strong>No conversations yet</strong>
-                  <span>Your questions and answers will appear here.</span>
-                </div>
-              ) : (
-                <div className="conversation-list">
-                  {conversations.map((conversation) => (
-                    <button
-                      type="button"
-                      key={conversation.id}
-                      className={`conversation-item${
-                        conversation.id === conversationId ? ' is-active' : ''
-                      }`}
-                      onClick={() => handleSelectConversation(conversation.id)}
-                    >
-                      <span className="conversation-title">
-                        {conversation.title || 'Untitled conversation'}
-                      </span>
-                      <span className="conversation-date">
-                        {conversation.updated_at
-                          ? new Date(conversation.updated_at).toLocaleString()
-                          : ''}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-
+  
             <section className="panel system-card">
               <div className="panel-heading">
                 <p className="eyebrow">System</p>
