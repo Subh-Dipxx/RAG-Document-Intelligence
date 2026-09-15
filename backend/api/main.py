@@ -11,6 +11,7 @@ import redis
 from opensearchpy import OpenSearch
 
 from backend.storage.minio_client import minio_storage
+from backend.database.database import init_db
 from backend.api.controllers import (
     auth,
     documents,
@@ -24,6 +25,7 @@ from backend.api.controllers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db()
     minio_storage.init_buckets()
     yield
 

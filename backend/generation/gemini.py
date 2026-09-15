@@ -78,13 +78,44 @@ Retrieved document sources:
 {context_text}
 """
 
-        response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-            ),
-        )
+        models_to_try = [self.model_name, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash"]
+        seen = set()
+        models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+        response = None
+        last_error = None
+        for m_name in models_to_try:
+            try:
+                response = self.client.models.generate_content(
+                    model=m_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.2,
+                    ),
+                )
+                if response:
+                    self.model_name = m_name
+                    break
+            except Exception as err:
+                print(f"Gemini generation error with model {m_name}: {err}", flush=True)
+                last_error = err
+
+        if response is None:
+            return Answer(
+                text=(
+                    f"Gemini service notice: {last_error or 'Unable to generate answer at this time.'}"
+                ),
+                citations=[],
+                is_generated=True,
+                abstained=True,
+                confidence=0.0,
+                metadata={
+                    "model": self.model_name,
+                    "retrieved_chunks": len(context),
+                    "used_sources": [],
+                    "error": str(last_error),
+                },
+            )
 
         answer_text = (response.text or "").strip()
         print(f"GEMINI_RAW_RESPONSE: {answer_text!r}", flush=True)

@@ -92,8 +92,6 @@ services:
   # Optional Docker-based FastAPI service.
   # FastAPI normally runs from backend/.venv on the host.
   api:
-    profiles:
-      - docker-api
     build:
       context: .
       dockerfile: backend/Dockerfile

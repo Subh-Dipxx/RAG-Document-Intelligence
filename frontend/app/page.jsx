@@ -205,11 +205,27 @@ function App() {
           },
         })
 
-        if (!res.ok) {
-          throw new Error(`Failed to load conversations (${res.status})`)
+        const contentType = res.headers.get('content-type') || ''
+        const rawBody = await res.text()
+
+        let data = null
+        if (contentType.includes('application/json')) {
+          try {
+            data = JSON.parse(rawBody)
+          } catch {
+            data = null
+          }
         }
 
-        const data = await res.json()
+        if (res.status === 401) {
+          handleLogout()
+          return
+        }
+
+        if (!res.ok) {
+          throw new Error(data?.detail || rawBody || `Failed to load conversations (${res.status})`)
+        }
+
         setConversations(Array.isArray(data) ? data : [])
       } catch (err) {
         console.error('Failed to fetch conversations:', err)
@@ -234,8 +250,13 @@ function App() {
     const fetchHealth = async () => {
       try {
         const res = await fetch('/health')
-        const data = await res.json()
-        setHealth(data)
+        const contentType = res.headers.get('content-type') || ''
+        if (res.ok && contentType.includes('application/json')) {
+          const data = await res.json()
+          setHealth(data)
+        } else {
+          setHealth(null)
+        }
       } catch (err) {
         console.error('Failed to fetch health:', err)
         setHealth(null)
@@ -271,13 +292,34 @@ function App() {
 
       const res = await fetch('/api/v1/documents', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       })
 
-      const data = await res.json()
+      const contentType = res.headers.get('content-type') || ''
+      const rawBody = await res.text()
+
+      let data = null
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(rawBody)
+        } catch {
+          data = null
+        }
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        setStatus('Session expired. Please sign in again.')
+        return
+      }
 
       if (!res.ok) {
-        throw new Error(data?.detail || 'Upload failed')
+        throw new Error(data?.detail || rawBody || `Upload failed (${res.status})`)
+      }
+
+      if (!data) {
+        throw new Error('The server returned an invalid response.')
       }
 
       setDocuments([data])
@@ -340,6 +382,12 @@ function App() {
         } catch {
           data = null
         }
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        setQueryError('Session expired. Please sign in again.')
+        return
       }
 
       if (!res.ok) {
@@ -704,37 +752,40 @@ function App() {
                       <p className="eyebrow">Result</p>
                       <h3>Answer</h3>
                     </div>
-                    <span className={`answer-badge ${result.abstained ? 'abstained' : ''}`}>
-                      <i /> {result.abstained ? 'Abstained' : 'Grounded answer'}
-                    </span>
+                    {result.abstained && (
+                      <span className="answer-badge abstained">
+                        <i /> Abstained
+                      </span>
+                    )}
                   </div>
 
                 <div className="answer-box">{result.answer}</div>
 
                 <div className="answer-meta">
                   <div className="metric">
-                    <span>Confidence</span>
+                    <span>Relevance score</span>
                     <strong>
                       {result.confidence !== null && result.confidence !== undefined
-                        ? result.confidence.toFixed(3)
+                        ? `${Math.round(result.confidence * 100)}%`
                         : '—'}
                     </strong>
                   </div>
                   <div className="metric">
-                    <span>Retrieved chunks</span>
+                    <span>Reference sections</span>
                     <strong>{result.retrieved_chunks}</strong>
                   </div>
                   <div className="metric">
-                    <span>Model</span>
-                    <strong>{result.model || '—'}</strong>
+                    <span>AI Model</span>
+                    <strong>{result.model || 'Gemini'}</strong>
                   </div>
                 </div>
 
                 <div id={resultIndex === answerHistory.length ? "sources" : undefined} className="sources-heading">
                   <div>
-                    <p className="eyebrow">Provenance</p>
-                    <h3>Source citations</h3>
-                  </div>                  <span>{result.citations?.length ?? 0} source{result.citations?.length === 1 ? '' : 's'}</span>
+                    <p className="eyebrow">Document Evidence</p>
+                    <h3>Reference Sources</h3>
+                  </div>
+                  <span>{result.citations?.length ?? 0} reference{result.citations?.length === 1 ? '' : 's'}</span>
                 </div>
 
                 {result.citations?.length > 0 ? (
@@ -744,22 +795,21 @@ function App() {
                         <div className="citation-number">{index + 1}</div>
                         <div className="citation-content">
                           <div className="citation-header">
-                            <strong>{citation.source || `SOURCE ${index + 1}`}</strong>
-                            {citation.page && <span>Page {citation.page}</span>}
+                            <strong>{citation.source ? citation.source.replace(/^SOURCE\s+/i, 'Source ') : `Source ${index + 1}`}</strong>
+                            {citation.page ? <span>Page {citation.page}</span> : null}
                           </div>
                           {citation.excerpt && <p className="citation-excerpt">{citation.excerpt}</p>}
                           <div className="citation-meta">
-                            {citation.document_id && <span>Document {citation.document_id}</span>}
-                            {citation.version_id && <span>Version {citation.version_id}</span>}
-                            {citation.chunk_id && <span>Chunk {citation.chunk_id}</span>}
-                            <span className="source-type">{citation.is_generated ? 'Generated' : 'Retrieved source'}</span>
+                            {currentDocument?.file_name ? <span>Document: {currentDocument.file_name}</span> : null}
+                            {citation.page ? <span>Page {citation.page}</span> : null}
+                            <span className="source-type">Verified reference</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="empty-citations">No citations returned for this response.</div>
+                  <div className="empty-citations">No reference sources returned for this response.</div>
                 )}
                   </div>
                 ))}
