@@ -234,10 +234,29 @@ function App() {
         }),
       })
 
-      const data = await res.json()
+      const contentType = res.headers.get('content-type') || ''
+      const rawBody = await res.text()
+
+      let data = null
+
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(rawBody)
+        } catch {
+          data = null
+        }
+      }
 
       if (!res.ok) {
-        throw new Error(data?.detail || 'Query failed')
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Query failed with status ${res.status}`
+        )
+      }
+
+      if (!data) {
+        throw new Error('The server returned an invalid response.')
       }
 
       setAnswer(data)
@@ -328,40 +347,6 @@ function App() {
               </div>
             </div>
 
-            <form id="query" className="ask-bar" onSubmit={handleQuery}>
-              <label className="ask-field">
-                <span>Question</span>
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="What would you like to know about this document?"
-                  rows="2"
-                />
-              </label>
-              <div className="ask-meta">
-                <span className="query-hint">
-                  {documents.length ? 'Searching the active File' : 'Upload a File to enable document-grounded queries'}
-                </span>
-                <button className="primary-button" type="submit" disabled={queryLoading}>
-                  {queryLoading ? (
-                    <>
-                      <span className="spinner" />
-                      Searching...
-                    </>
-                  ) : (
-                    'Ask question'
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {queryError && (
-              <div className="query-error">
-                <span>!</span>
-                {queryError}
-              </div>
-            )}
-
             {answer && (
               <div className="answer-section">
                 <div className="answer-header">
@@ -429,6 +414,40 @@ function App() {
                 )}
               </div>
             )}
+
+            <form id="query" className="ask-bar" onSubmit={handleQuery}>
+              <label className="ask-field">
+                <span>Question</span>
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="What would you like to know about this document?"
+                  rows="2"
+                />
+              </label>
+              <div className="ask-meta">
+                <span className="query-hint">
+                  {documents.length ? 'Searching the active File' : 'Upload a File to enable document-grounded queries'}
+                </span>
+                <button className="primary-button" type="submit" disabled={queryLoading}>
+                  {queryLoading ? (
+                    <>
+                      <span className="spinner" />
+                      Searching...
+                    </>
+                  ) : (
+                    'Ask question'
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {queryError && (
+              <div className="query-error">
+                <span>!</span>
+                {queryError}
+              </div>
+            )}
           </section>
 
           <aside className="rail">
@@ -445,7 +464,7 @@ function App() {
                 </div>
               ) : (
                 <div className="document-info">
-                  <div className="document-file-icon">PDF</div>
+                  <div className="document-file-icon">{(currentDocument.mime_type || "").split("/")[1]?.toUpperCase() || "FILE"}</div>
                   <div className="document-main">
                     <strong>{currentDocument.title || 'Untitled document'}</strong>
                     <span>{currentDocument.filename || currentDocument.file_name || '—'}</span>
@@ -481,7 +500,7 @@ function App() {
 
                 {file && (
                   <div className="selected-file">
-                    <span className="file-badge">PDF</span>
+                    <span className="file-badge">{file?.name?.split(".").pop()?.toUpperCase() || "FILE"}</span>
                     <div className="selected-file-meta">
                       <strong>{file.name}</strong>
                       <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
@@ -526,7 +545,7 @@ function App() {
                 <span className={`status-orb ${health?.ok ? 'online' : ''}`} />
                 <div>
                   <strong>{health?.ok ? 'System ready' : 'Checking system'}</strong>
-                  <span>{health?.ok ? 'Ready to process your PDF' : 'Connecting to backend services'}</span>
+                  <span>{health?.ok ? 'Ready to process your file' : 'Connecting to backend services'}</span>
                 </div>
               </div>
               <div className="service-list">
