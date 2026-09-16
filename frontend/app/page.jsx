@@ -357,6 +357,7 @@ function App() {
   const [answerHistory, setAnswerHistory] = useState([])
   const [conversationMessages, setConversationMessages] = useState([])
   const conversationViewportRef = useRef(null)
+  const latestQuestionRef = useRef(null)
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
 
@@ -371,10 +372,20 @@ function App() {
 
     requestAnimationFrame(() => {
       const viewport = conversationViewportRef.current
-      if (!viewport) return
+      const questionElement = latestQuestionRef.current
+
+      if (!viewport || !questionElement) return
+
+      const viewportRect = viewport.getBoundingClientRect()
+      const questionRect = questionElement.getBoundingClientRect()
+
+      const targetTop =
+        viewport.scrollTop +
+        (questionRect.top - viewportRect.top) -
+        18
 
       viewport.scrollTo({
-        top: viewport.scrollHeight,
+        top: Math.max(0, targetTop),
         behavior: 'smooth',
       })
     })
@@ -955,7 +966,10 @@ function App() {
                   {[...answerHistory, ...(answer ? [answer] : [])].map((result, resultIndex) => (
                     <div className="conversation-exchange" key={resultIndex}>
                       {result.question && (
-                        <div className="conversation-message conversation-message-user">
+                        <div
+                          ref={resultIndex === answerHistory.length ? latestQuestionRef : null}
+                          className="conversation-message conversation-message-user"
+                        >
                           <div className="conversation-message-label">You</div>
                           <div className="conversation-message-content">
                             {result.question}

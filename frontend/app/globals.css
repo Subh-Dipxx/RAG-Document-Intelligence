@@ -330,6 +330,12 @@ button { cursor: pointer; }
 .conversation-message-user {
   align-self: flex-end;
   align-items: flex-end;
+  max-width: 72%;
+  margin-left: auto;
+}
+
+.conversation-message-user .conversation-message-content {
+  text-align: left;
 }
 
 .conversation-message-assistant {
