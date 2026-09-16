@@ -952,7 +952,6 @@ function App() {
       <div className="stage">
         <header className="topbar">
           <div className="brand">
-            <p className="eyebrow">Document intelligence</p>
             <h1>Knowledge workspace</h1>
           </div>
           <div className="topbar-actions">
@@ -976,7 +975,6 @@ function App() {
             <div className="hero-stage">
               <KnowledgeSphere theme={theme} />
               <div className="hero-copy">
-                <p className="hero-kicker">Grounded retrieval</p>
                 <h2>Ask the corpus.<br />Keep every answer cited.</h2>
               </div>
             </div>
@@ -1098,82 +1096,80 @@ function App() {
               </div>
             )}
 
-            <form id="query" className="ask-bar" onSubmit={handleQuery}>
-              <label className="query-attach" title="Attach document">
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  hidden
-                />
-                <span>+</span>
-              </label>
+            <div className="composer-area">
+              <form id="query" className="ask-bar" onSubmit={handleQuery}>
+                {file && (
+                  <div className="query-selected-file">
+                    <span className="query-selected-file-name">{file.name}</span>
+                    <span className="query-selected-file-type">
+                      {file.type || 'File'}
+                    </span>
+                    <button
+                      type="button"
+                      className="query-selected-file-remove"
+                      aria-label="Remove document"
+                      data-tooltip="Remove document"
+                      onClick={handleRemoveDocument}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
 
-              {file && (
-                <div className="query-selected-file">
-                  <span className="query-selected-file-name">{file.name}</span>
-                  <span className="query-selected-file-type">
-                    {file.type || 'File'}
-                  </span>
+                <label className="query-attach" title="Attach document">
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    hidden
+                  />
+                  <span>+</span>
+                </label>
+
+                <textarea
+                  className="query-input"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                      e.preventDefault()
+                      e.currentTarget.form?.requestSubmit()
+                    }
+                  }}
+                  placeholder="What would you like to know about this document?"
+                  rows="2"
+                />
+
+                {queryError && (
+                  <div className="query-inline-error">
+                    {queryError}
+                  </div>
+                )}
+
+                <div className="ask-meta">
                   <button
-                    type="button"
-                    className="query-selected-file-remove"
-                    aria-label="Remove document"
-                    data-tooltip="Remove document"
-                    onClick={handleRemoveDocument}
+                    className="query-submit"
+                    type="submit"
+                    disabled={queryLoading}
+                    aria-label={queryLoading ? 'Searching' : 'Send question'}
                   >
-                    ×
+                    {queryLoading ? (
+                      <span className="spinner" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M12 19V5M6.5 10.5 12 5l5.5 5.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.9"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
                   </button>
                 </div>
-              )}
-
-              <textarea
-                className="query-input"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-                    e.preventDefault()
-                    e.currentTarget.form?.requestSubmit()
-                  }
-                }}
-                placeholder="What would you like to know about this document?"
-                rows="2"
-              />
-
-              {queryError && (
-                <div className="query-inline-error">
-                  {queryError}
-                </div>
-              )}
-
-              <div className="ask-meta">
-                <span className="query-hint">
-                  {documents.length ? 'Searching the active File' : 'Upload a File to enable document-grounded queries'}
-                </span>
-
-                <button
-                  className="query-submit"
-                  type="submit"
-                  disabled={queryLoading}
-                  aria-label={queryLoading ? 'Searching' : 'Send question'}
-                >
-                  {queryLoading ? (
-                    <span className="spinner" />
-                  ) : (
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M12 19V5M6.5 10.5 12 5l5.5 5.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.9"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
 
           </section>
 
