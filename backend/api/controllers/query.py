@@ -90,7 +90,12 @@ def query_documents(
         >= settings.retrieval_min_score
     ]
 
-    if not filtered_chunks:
+    # Retrieval score is not the final groundedness decision.
+    # If retrieval returned candidates below the threshold, still pass
+    # them to Gemini so it can determine whether they answer the question.
+    generation_chunks = retrieved_chunks
+
+    if not generation_chunks:
         response = QueryResponse(
             conversation_id=conversation.id,
             answer=(
@@ -100,7 +105,7 @@ def query_documents(
             citations=[],
             abstained=True,
             confidence=0.0,
-            retrieved_chunks=len(retrieved_chunks),
+            retrieved_chunks=0,
             model=settings.gemini_model,
         )
 
@@ -124,7 +129,7 @@ def query_documents(
 
     answer = generator.generate(
         query=query,
-        context=filtered_chunks,
+        context=generation_chunks,
     )
 
     citations = [

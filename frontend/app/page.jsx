@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import LoginPage from '../components/LoginPage'
 
@@ -141,92 +141,144 @@ function IconMoon() {
 function formatHumanReadableExcerpt(text) {
   if (!text) return ''
 
-  let trimmed = text
-    .trim()
+  let cleaned = String(text)
     .replace(/\[SOURCE\s+\d+\]/gi, '')
-    .replace(/(Document|Version|Chunk)\s+ID:\s*[a-f0-9\-]+/gi, '')
+    .replace(/\[source\s*:\s*[^\]]+\]/gi, '')
+    .replace(/\b(?:document|version|chunk|file)\s*id\s*:\s*[a-f0-9-]{8,}/gi, '')
+    .replace(/\bpage\s*id\s*:\s*[a-f0-9-]{8,}/gi, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
     .trim()
 
+  if (!cleaned) return ''
+
+  // Structured JSON
   if (
-    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    (cleaned.startsWith('{') && cleaned.endsWith('}')) ||
+    (cleaned.startsWith('[') && cleaned.endsWith(']'))
   ) {
     try {
-      const parsed = JSON.parse(trimmed)
-      return formatParsedJson(parsed)
+      return formatParsedJson(JSON.parse(cleaned))
     } catch {
-      /* fallback to regex cleaning */
+      // Continue with text-based cleaning if the JSON is incomplete.
     }
   }
 
-  const lines = trimmed.split('\n')
-  let sheetTitle = ''
-  const kvPairs = []
-  const recordRows = []
-  const regularSentences = []
+  // Keep citation formatting deterministic and document-agnostic.
+  // Do not infer field boundaries or document-specific schemas.
+  const lines = cleaned
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
 
-  for (let line of lines) {
-    const lineStr = line.trim()
-    if (!lineStr) continue
+  const output = []
+  let tableRows = []
 
-    if (lineStr.toLowerCase().startsWith('worksheet:')) {
-      sheetTitle = lineStr.split(':')[1]?.trim() || ''
+  const flushTable = () => {
+    if (!tableRows.length) return
+
+    const rows = tableRows.filter(Boolean)
+
+    if (rows.length === 1) {
+      output.push(rows[0])
+    } else {
+      const first = rows[0]
+      const isHeader =
+        /^(field|key|name|column|property|item|title|category|type|value)$/i.test(first)
+
+      if (isHeader) {
+        output.push(rows.slice(1).join('; '))
+      } else {
+        output.push(rows.join('; '))
+      }
+    }
+
+    tableRows = []
+  }
+
+  const cleanCell = (value) =>
+    value
+      .replace(/^[\s|:—\-]+|[\s|:—\-]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  for (const rawLine of lines) {
+    let line = rawLine
+      .replace(/^[•●▪◦‣►▶]\s*/, '')
+      .replace(/^\s*[-*]\s+/, '')
+      .trim()
+
+    if (!line) continue
+
+    // Markdown/table separators are extraction artifacts.
+    if (/^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(line)) {
       continue
     }
 
-    let cells = []
-    if (lineStr.includes('|')) {
-      cells = lineStr
+    // Pipe-separated tables.
+    if (line.includes('|')) {
+      const cells = line
         .split('|')
-        .map((c) => c.trim())
-        .filter((c) => c && !/^[\-\:\s\—]+$/.test(c))
-    } else if (lineStr.includes(' — ')) {
-      cells = lineStr
-        .split(' — ')
-        .map((c) => c.trim())
+        .map(cleanCell)
         .filter(Boolean)
-    }
 
-    if (cells.length > 0) {
-      if (cells.length === 2 && !['field', 'key', 'property'].includes(cells[0].toLowerCase())) {
-        kvPairs.push(`${cells[0]} is ${cells[1]}`)
-      } else if (cells.length > 2) {
-        if (['field', 'key', 'column', 'name'].some((h) => cells[0].toLowerCase().includes(h))) {
-          if (['department', 'value'].some((v) => cells[1]?.toLowerCase().includes(v))) {
-            continue
-          }
-        }
-        const firstCol = cells[0]
-        const rest = cells.slice(1).join(', ')
-        recordRows.push(`${firstCol} (${rest})`)
-      } else if (cells.length === 1) {
-        regularSentences.push(cells[0])
+      if (cells.length >= 2) {
+        tableRows.push(
+          cells.length === 2
+            ? `${cells[0]} is ${cells[1]}`
+            : `${cells[0]} (${cells.slice(1).join(', ')})`
+        )
+        continue
       }
-    } else {
-      regularSentences.push(lineStr)
     }
+
+    // Common extracted table/key-value delimiters.
+    const delimiterMatch = line.match(/^(.+?)\s+(?:—|–|-|:)\s+(.+)$/)
+
+    if (delimiterMatch) {
+      const key = cleanCell(delimiterMatch[1])
+      const value = cleanCell(delimiterMatch[2])
+
+      if (key && value) {
+        tableRows.push(`${key} is ${value}`)
+        continue
+      }
+    }
+
+    flushTable()
+
+    // Worksheet/sheet metadata is useful context, but present it naturally.
+    const worksheetMatch = line.match(/^worksheet\s*:\s*(.+)$/i)
+    if (worksheetMatch) {
+      output.push(`Worksheet: ${cleanCell(worksheetMatch[1])}.`)
+      continue
+    }
+
+    // Preserve headings while removing markdown decoration.
+    line = line
+      .replace(/^#{1,6}\s*/, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .trim()
+
+    // Normalize whitespace without changing the actual information.
+    line = line
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,.;!?])/g, '$1')
+      .replace(/([,.;!?])([A-Za-z])/g, '$1 $2')
+      .trim()
+
+    if (line) output.push(line)
   }
 
-  const parts = []
-  if (sheetTitle) {
-    parts.push(`Worksheet context: ${sheetTitle}.`)
-  }
-  if (kvPairs.length > 0) {
-    parts.push('Details: ' + kvPairs.join(', ') + '.')
-  }
-  if (recordRows.length > 0) {
-    parts.push('Recorded entries: ' + recordRows.join('; ') + '.')
-  }
-  if (regularSentences.length > 0) {
-    parts.push(regularSentences.join(' '))
-  }
+  flushTable()
 
-  if (parts.length > 0) {
-    let result = parts.join(' ').replace(/\s+/g, ' ').replace(/\.\s*\./g, '.')
-    return result.trim()
-  }
-
-  return trimmed
+  return output
+    .join('\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\.\s*\./g, '.')
+    .replace(/\s+([,.;!?])/g, '$1')
+    .trim()
 }
 
 function formatParsedJson(obj, indent = 0) {
@@ -304,6 +356,7 @@ function App() {
   const [answer, setAnswer] = useState(null)
   const [answerHistory, setAnswerHistory] = useState([])
   const [conversationMessages, setConversationMessages] = useState([])
+  const conversationViewportRef = useRef(null)
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
 
@@ -312,6 +365,20 @@ function App() {
     setTheme(stored)
     applyTheme(stored)
   }, [])
+
+  useEffect(() => {
+    if (!answer && answerHistory.length === 0) return
+
+    requestAnimationFrame(() => {
+      const viewport = conversationViewportRef.current
+      if (!viewport) return
+
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: 'smooth',
+      })
+    })
+  }, [answer, answerHistory.length])
 
   useEffect(() => {
     if (!token) {
@@ -450,6 +517,7 @@ function App() {
       setFile(null)
       setTitle('')
       setAnswer(null)
+      setAnswerHistory([])
       setQuestion('')
       setQueryError('')
     } catch (err) {
@@ -468,6 +536,8 @@ function App() {
       return
     }
 
+    const submittedQuestion = question.trim()
+
     setQueryLoading(true)
     setQueryError('')
     if (answer) {
@@ -483,7 +553,7 @@ function App() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          question: question.trim(),
+          question: submittedQuestion,
           conversation_id: conversationId,
           top_k: 5,
           filters: documents.length > 0
@@ -525,7 +595,11 @@ function App() {
         throw new Error('The server returned an invalid response.')
       }
 
-      setAnswer(data)
+      setAnswer({
+        ...data,
+        question: submittedQuestion,
+      })
+      setQuestion('')
       setConversationId(data.conversation_id || null)
 
       setConversationMessages((messages) => [
@@ -612,15 +686,24 @@ function App() {
         (message) => message.role === 'assistant'
       )
 
-      const answerResults = assistantMessages.map((message) => ({
-        conversation_id: data.id,
-        answer: message.content,
-        citations: message.citations || [],
-        abstained: message.metadata?.abstained || false,
-        confidence: message.metadata?.confidence ?? null,
-        retrieved_chunks: message.metadata?.retrieved_chunks ?? 0,
-        model: message.metadata?.model || null,
-      }))
+      const answerResults = assistantMessages.map((message) => {
+        const messageIndex = (data.messages || []).indexOf(message)
+        const precedingUser = (data.messages || [])
+          .slice(0, messageIndex)
+          .reverse()
+          .find((item) => item.role === 'user')
+
+        return {
+          conversation_id: data.id,
+          question: precedingUser?.content || '',
+          answer: message.content,
+          citations: message.citations || [],
+          abstained: message.metadata?.abstained || false,
+          confidence: message.metadata?.confidence ?? null,
+          retrieved_chunks: message.metadata?.retrieved_chunks ?? 0,
+          model: message.metadata?.model || null,
+        }
+      })
 
       const latestAssistant = answerResults[answerResults.length - 1]
 
@@ -867,77 +950,75 @@ function App() {
             </div>
 
             {(answerHistory.length > 0 || answer) && (
-              <div className="conversation-viewport">
-                {[...answerHistory, ...(answer ? [answer] : [])].map((result, resultIndex) => (
-                  <div className="answer-section" key={resultIndex}>
-                  <div className="answer-header">
-                    <div>
-                      <p className="eyebrow">Result</p>
-                      <h3>Answer</h3>
-                    </div>
-                    {result.abstained && (
-                      <span className="answer-badge abstained">
-                        <i /> Abstained
-                      </span>
-                    )}
-                  </div>
-
-                <div className="answer-box">{result.answer}</div>
-
-                <div className="answer-meta">
-                  <div className="metric">
-                    <span>Relevance score</span>
-                    <strong>
-                      {result.confidence !== null && result.confidence !== undefined
-                        ? `${Math.round(result.confidence * 100)}%`
-                        : '—'}
-                    </strong>
-                  </div>
-                  <div className="metric">
-                    <span>Reference sections</span>
-                    <strong>{result.retrieved_chunks}</strong>
-                  </div>
-                  <div className="metric">
-                    <span>AI Model</span>
-                    <strong>{result.model || 'Gemini'}</strong>
-                  </div>
-                </div>
-
-                <div id={resultIndex === answerHistory.length ? "sources" : undefined} className="sources-heading">
-                  <div>
-                    <p className="eyebrow">Document Evidence</p>
-                    <h3>Reference Sources</h3>
-                  </div>
-                  <span>{result.citations?.length ?? 0} reference{result.citations?.length === 1 ? '' : 's'}</span>
-                </div>
-
-
-
-                {result.citations?.length > 0 ? (
-                  <div className="citation-list">
-                    {result.citations.map((citation, index) => (
-                      <div className="citation-card" key={citation.chunk_id || `${citation.source}-${index}`}>
-                        <div className="citation-number">{index + 1}</div>
-                        <div className="citation-content">
-                          <div className="citation-header">
-                            <strong>{citation.source ? citation.source.replace(/^SOURCE\s+/i, 'Source ') : `Source ${index + 1}`}</strong>
-                            <span>Page {citation.page || index + 1}</span>
-                          </div>
-                          {citation.excerpt && <p className="citation-excerpt">{formatHumanReadableExcerpt(citation.excerpt)}</p>}
-                          <div className="citation-meta">
-                            {currentDocument?.file_name ? <span>Document: {currentDocument.file_name}</span> : null}
-                            <span>Page {citation.page || index + 1}</span>
-                            <span className="source-type">Verified reference</span>
+              <div ref={conversationViewportRef} className="conversation-viewport">
+                <div className="conversation-thread">
+                  {[...answerHistory, ...(answer ? [answer] : [])].map((result, resultIndex) => (
+                    <div className="conversation-exchange" key={resultIndex}>
+                      {result.question && (
+                        <div className="conversation-message conversation-message-user">
+                          <div className="conversation-message-label">You</div>
+                          <div className="conversation-message-content">
+                            {result.question}
                           </div>
                         </div>
+                      )}
+
+                      <div className="conversation-message conversation-message-assistant">
+                        <div className="conversation-message-label">Assistant</div>
+                        <div className="conversation-message-content">
+                          {result.answer}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="empty-citations">No reference sources returned for this response.</div>
-                )}
-                  </div>
-                ))}
+
+                      <div className="answer-section">
+                        <div
+                          id={resultIndex === answerHistory.length ? "sources" : undefined}
+                          className="sources-heading"
+                        >
+                          <div>
+                            <p className="eyebrow">Sources</p>
+                          </div>
+                          <span>
+                            {result.citations?.length ?? 0} reference
+                            {result.citations?.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+
+                        {result.citations?.length > 0 ? (
+                          <div className="citation-list">
+                            {result.citations.map((citation, index) => (
+                              <div
+                                className="citation-card"
+                                key={citation.chunk_id || `${citation.source}-${index}`}
+                              >
+                                <div className="citation-bullet" />
+                                <div className="citation-content">
+                                  {citation.excerpt && (
+                                    <p className="citation-excerpt">
+                                      {formatHumanReadableExcerpt(citation.excerpt)}
+                                    </p>
+                                  )}
+
+                                  <div className="citation-meta">
+                                    {currentDocument?.file_name ? (
+                                      <span>Document: {currentDocument.file_name}</span>
+                                    ) : null}
+                                    <span>Page {citation.page || index + 1}</span>
+                                    <span className="source-type">Verified reference</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="empty-citations">
+                            No reference sources returned for this response.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
