@@ -206,7 +206,7 @@ Retrieved document sources:
         # Keep citations for internal parsing, but hide [SOURCE N] markers
         # from the user-facing answer because provenance is displayed separately.
         clean_answer_text = re.sub(
-            r"\s*\[SOURCE\s+\d+\]",
+            r"\s*\[SOURCE\s+\d+(?:\s*,\s*SOURCE\s+\d+)*\]",
             "",
             answer_text,
             flags=re.IGNORECASE,
@@ -240,7 +240,7 @@ Retrieved document sources:
             [SOURCE 2]
         """
         matches = re.findall(
-            r"\[SOURCE\s+(\d+)\]",
+            r"SOURCE\s+(\d+)",
             answer,
             flags=re.IGNORECASE,
         )

@@ -138,6 +138,19 @@ function IconMoon() {
   )
 }
 
+function formatAnswerText(text) {
+  if (!text) return ''
+
+  return String(text)
+    .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^\s*[*+-]\s+/gm, '• ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 function formatHumanReadableExcerpt(text) {
   if (!text) return ''
 
@@ -360,6 +373,7 @@ function App() {
   const latestQuestionRef = useRef(null)
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
+  const [expandedSources, setExpandedSources] = useState({})
 
   useEffect(() => {
     const stored = readStoredTheme()
@@ -468,13 +482,30 @@ function App() {
   }, [])
 
   const handleFileChange = (e) => {
-    setFile(e.target.files?.[0] || null)
+    const selectedFile = e.target.files?.[0] || null
+    setFile(selectedFile)
+
+    if (selectedFile) {
+      handleSubmit(null, selectedFile)
+    }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleRemoveDocument = () => {
+    setFile(null)
+    setDocuments([])
+    setStatus('')
+    setAnswer(null)
+    setAnswerHistory([])
+    setQuestion('')
+    setQueryError('')
+    setConversationId(null)
+    setConversationMessages([])
+  }
 
-    if (!file) {
+  const handleSubmit = async (e, fileToUpload = file) => {
+    e?.preventDefault()
+
+    if (!fileToUpload) {
       setStatus('Please select a file.')
       return
     }
@@ -489,7 +520,7 @@ function App() {
         formData.append('title', title.trim())
       }
 
-      formData.append('file', file)
+      formData.append('file', fileToUpload)
 
       const res = await fetch('/api/v1/documents', {
         method: 'POST',
@@ -525,7 +556,6 @@ function App() {
 
       setDocuments([data])
       setStatus('Document uploaded successfully.')
-      setFile(null)
       setTitle('')
       setAnswer(null)
       setAnswerHistory([])
@@ -544,6 +574,11 @@ function App() {
 
     if (!question.trim()) {
       setQueryError('Please enter a question.')
+      return
+    }
+
+    if (!documents.length || !(documents[0]?.document_id || documents[0]?.id)) {
+      setQueryError('Please upload a document before asking a question.')
       return
     }
 
@@ -785,15 +820,6 @@ function App() {
           >
             <IconChatHistory />
           </button>
-          <a href="#library" title="Library">
-            <IconFile />
-          </a>
-          <a href="#query" title="Ask">
-            <IconAsk />
-          </a>
-          <a href="#sources" title="Sources">
-            <IconSources />
-          </a>
         </nav>
         <button
           type="button"
@@ -930,11 +956,6 @@ function App() {
             <h1>Knowledge workspace</h1>
           </div>
           <div className="topbar-actions">
-            <div className={`health-pill ${health?.ok ? 'healthy' : ''}`}>
-              <span className="dot" />
-              {health?.ok ? 'Systems online' : 'Checking services'}
-            </div>
-            <span className="stack-chip">BGE · pgvector · Gemini</span>
             <button
               type="button"
               className="theme-toggle"
@@ -980,7 +1001,7 @@ function App() {
                       <div className="conversation-message conversation-message-assistant">
                         <div className="conversation-message-label">Assistant</div>
                         <div className="conversation-message-content">
-                          {result.answer}
+                          {formatAnswerText(result.answer)}
                         </div>
                       </div>
 
@@ -992,42 +1013,83 @@ function App() {
                           <div>
                             <p className="eyebrow">Sources</p>
                           </div>
-                          <span>
-                            {result.citations?.length ?? 0} reference
-                            {result.citations?.length === 1 ? '' : 's'}
-                          </span>
+
+                          <div className="sources-heading-right">
+                            <span>
+                              {result.citations?.length ?? 0} reference
+                              {result.citations?.length === 1 ? '' : 's'}
+                            </span>
+
+                            {result.citations?.length > 0 && (
+                              <button
+                                type="button"
+                                className="sources-toggle"
+                                aria-label={
+                                  expandedSources[resultIndex]
+                                    ? 'Collapse sources'
+                                    : 'Expand sources'
+                                }
+                                aria-expanded={Boolean(expandedSources[resultIndex])}
+                                onClick={() =>
+                                  setExpandedSources((current) => ({
+                                    ...current,
+                                    [resultIndex]: !current[resultIndex],
+                                  }))
+                                }
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    d={
+                                      expandedSources[resultIndex]
+                                        ? 'm6 14 6-6 6 6'
+                                        : 'm6 10 6 6 6-6'
+                                    }
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                        {result.citations?.length > 0 ? (
-                          <div className="citation-list">
-                            {result.citations.map((citation, index) => (
-                              <div
-                                className="citation-card"
-                                key={citation.chunk_id || `${citation.source}-${index}`}
-                              >
-                                <div className="citation-bullet" />
-                                <div className="citation-content">
-                                  {citation.excerpt && (
-                                    <p className="citation-excerpt">
-                                      {formatHumanReadableExcerpt(citation.excerpt)}
-                                    </p>
-                                  )}
+                        {expandedSources[resultIndex] && (
+                          <>
+                            {result.citations?.length > 0 ? (
+                              <div className="citation-list">
+                                {result.citations.map((citation, index) => (
+                                  <div
+                                    className="citation-card"
+                                    key={citation.chunk_id || `${citation.source}-${index}`}
+                                  >
+                                    <div className="citation-bullet" />
+                                    <div className="citation-content">
+                                      {citation.excerpt && (
+                                        <p className="citation-excerpt">
+                                          {formatHumanReadableExcerpt(citation.excerpt)}
+                                        </p>
+                                      )}
 
-                                  <div className="citation-meta">
-                                    {currentDocument?.file_name ? (
-                                      <span>Document: {currentDocument.file_name}</span>
-                                    ) : null}
-                                    <span>Page {citation.page || index + 1}</span>
-                                    <span className="source-type">Verified reference</span>
+                                      <div className="citation-meta">
+                                        {currentDocument?.file_name ? (
+                                          <span>Document: {currentDocument.file_name}</span>
+                                        ) : null}
+                                        <span>Page {citation.page || index + 1}</span>
+                                        <span className="source-type">Verified reference</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="empty-citations">
-                            No reference sources returned for this response.
-                          </div>
+                            ) : (
+                              <div className="empty-citations">
+                                No reference sources returned for this response.
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -1037,156 +1099,85 @@ function App() {
             )}
 
             <form id="query" className="ask-bar" onSubmit={handleQuery}>
-              <label className="ask-field">
-                <span>Question</span>
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="What would you like to know about this document?"
-                  rows="2"
+              <label className="query-attach" title="Attach document">
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  hidden
                 />
+                <span>+</span>
               </label>
+
+              {file && (
+                <div className="query-selected-file">
+                  <span className="query-selected-file-name">{file.name}</span>
+                  <span className="query-selected-file-type">
+                    {file.type || 'File'}
+                  </span>
+                  <button
+                    type="button"
+                    className="query-selected-file-remove"
+                    aria-label="Remove document"
+                    data-tooltip="Remove document"
+                    onClick={handleRemoveDocument}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <textarea
+                className="query-input"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault()
+                    e.currentTarget.form?.requestSubmit()
+                  }
+                }}
+                placeholder="What would you like to know about this document?"
+                rows="2"
+              />
+
+              {queryError && (
+                <div className="query-inline-error">
+                  {queryError}
+                </div>
+              )}
+
               <div className="ask-meta">
                 <span className="query-hint">
                   {documents.length ? 'Searching the active File' : 'Upload a File to enable document-grounded queries'}
                 </span>
-                <button className="primary-button" type="submit" disabled={queryLoading}>
+
+                <button
+                  className="query-submit"
+                  type="submit"
+                  disabled={queryLoading}
+                  aria-label={queryLoading ? 'Searching' : 'Send question'}
+                >
                   {queryLoading ? (
-                    <>
-                      <span className="spinner" />
-                      Searching...
-                    </>
+                    <span className="spinner" />
                   ) : (
-                    'Ask question'
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M12 19V5M6.5 10.5 12 5l5.5 5.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.9"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   )}
                 </button>
               </div>
             </form>
 
-            {queryError && (
-              <div className="query-error">
-                <span>!</span>
-                {queryError}
-              </div>
-            )}
           </section>
 
-          <aside className="rail">
-            <section id="library" className="panel library-panel">
-              <div className="panel-heading">
-                <p className="eyebrow">Library</p>
-                <h2>Active File</h2>
-              </div>
 
-              {!currentDocument ? (
-                <div className="empty-state">
-                  <strong>No File uploaded yet</strong>
-                  <span>Ingest a document to ground later answers.</span>
-                </div>
-              ) : (
-                <div className="document-info">
-                  <div className="document-file-icon">{(currentDocument.mime_type || "").split("/")[1]?.toUpperCase() || "FILE"}</div>
-                  <div className="document-main">
-                    <strong>{currentDocument.title || 'Untitled document'}</strong>
-                    <span>{currentDocument.filename || currentDocument.file_name || '—'}</span>
-                  </div>
-                  <div className="document-meta-row">
-                    <div className="document-detail">
-                      <small>Type</small>
-                      <strong>{currentDocument.mime_type || 'application/pdf'}</strong>
-                    </div>
-                    <div className="document-detail">
-                      <small>Versions</small>
-                      <strong>{currentDocument.versions?.length ?? 0}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="upload-form">
-                <label className="field upload-field">
-                  <span>Document title <small>Optional</small></span>
-                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Product specification" />
-                </label>
-
-                <label className={`upload-zone${file ? ' has-file' : ''}${loading ? ' is-loading' : ''}`}>
-                  <input
-                    type="file"
-                    onChange={handleFileChange}
-                  />
-                  <span className="upload-icon"><IconUpload /></span>
-                  <strong>{file ? file.name : 'Choose a file'}</strong>
-                  <span>{file ? 'Ready to ingest' : 'Click to browse files'}</span>
-                </label>
-
-                {file && (
-                  <div className="selected-file">
-                    <span className="file-badge">{file?.name?.split(".").pop()?.toUpperCase() || "FILE"}</span>
-                    <div className="selected-file-meta">
-                      <strong>{file.name}</strong>
-                      <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
-                    </div>
-                    <span className="file-ready-pill">Ready</span>
-                  </div>
-                )}
-
-                <button className="primary-button full-width upload-submit" type="submit" disabled={loading}>
-                  {loading ? (<><span className="spinner" />Uploading...</>) : 'Upload document'}
-                </button>
-              </form>
-
-              {status && (
-                <div
-                  className={`status${
-                    status.toLowerCase().includes('success')
-                      ? ' success'
-                      : loading || status.toLowerCase().includes('uploading')
-                        ? ' pending'
-                        : ' error'
-                  }`}
-                >
-                  <span>
-                    {status.toLowerCase().includes('success')
-                      ? '✓'
-                      : loading || status.toLowerCase().includes('uploading')
-                        ? '…'
-                        : '!'}
-                  </span>
-                  {status}
-                </div>
-              )}
-            </section>
-
-  
-            <section className="panel system-card">
-              <div className="panel-heading">
-                <p className="eyebrow">System</p>
-                <h2>Service status</h2>
-              </div>
-              <div className="system-summary">
-                <span className={`status-orb ${health?.ok ? 'online' : ''}`} />
-                <div>
-                  <strong>{health?.ok ? 'System ready' : 'Checking system'}</strong>
-                  <span>{health?.ok ? 'Ready to process your file' : 'Connecting to backend services'}</span>
-                </div>
-              </div>
-              <div className="service-list">
-                {health?.services ? (
-                  Object.entries(health.services).map(([name, value]) => (
-                    <div key={name} className="service-row">
-                      <span>{name}</span>
-                      <span className={value.ok ? 'ok' : 'bad'}><i /> {value.ok ? 'Operational' : 'Unavailable'}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="muted">Loading service status...</p>
-                )}
-              </div>
-              <a className="docs-link" href="/docs" target="_blank" rel="noreferrer">
-                Open API documentation <span>↗</span>
-              </a>
-            </section>
-          </aside>
         </div>
       </div>
     </div>
