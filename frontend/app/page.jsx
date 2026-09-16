@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import LoginPage from '../components/LoginPage'
 
 const THEME_KEY = 'rag-theme'
@@ -138,17 +140,14 @@ function IconMoon() {
   )
 }
 
-function formatAnswerText(text) {
-  if (!text) return ''
+function renderMarkdown(text) {
+  if (!text) return null
 
-  return String(text)
-    .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/__(.*?)__/g, '$1')
-    .replace(/^#{1,6}\s*/gm, '')
-    .replace(/^\s*[*+-]\s+/gm, '• ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      {String(text).trim()}
+    </ReactMarkdown>
+  )
 }
 
 function formatHumanReadableExcerpt(text) {
@@ -374,6 +373,8 @@ function App() {
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryError, setQueryError] = useState('')
   const [expandedSources, setExpandedSources] = useState({})
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false)
+  const [documentPreview, setDocumentPreview] = useState(null)
 
   useEffect(() => {
     const stored = readStoredTheme()
@@ -500,7 +501,81 @@ function App() {
     setQueryError('')
     setConversationId(null)
     setConversationMessages([])
+    setShowDocumentViewer(false)
   }
+
+  useEffect(() => {
+    if (!file) {
+      setDocumentPreview(null)
+      return
+    }
+
+    let objectUrl = null
+
+    const loadPreview = async () => {
+      const type = file.type || ''
+      const name = file.name || ''
+      const extension = name.split('.').pop()?.toLowerCase() || ''
+
+      if (type === 'application/pdf' || extension === 'pdf') {
+        objectUrl = URL.createObjectURL(file)
+        setDocumentPreview({
+          kind: 'pdf',
+          url: objectUrl,
+          name,
+          type: type || 'application/pdf',
+        })
+        return
+      }
+
+      if (type.startsWith('image/')) {
+        objectUrl = URL.createObjectURL(file)
+        setDocumentPreview({
+          kind: 'image',
+          url: objectUrl,
+          name,
+          type,
+        })
+        return
+      }
+
+      if (
+        type.startsWith('text/') ||
+        ['md', 'markdown', 'txt', 'csv', 'json'].includes(extension)
+      ) {
+        const content = await file.text()
+
+        setDocumentPreview({
+          kind:
+            extension === 'json'
+              ? 'json'
+              : extension === 'csv'
+                ? 'csv'
+                : extension === 'md' || extension === 'markdown'
+                  ? 'markdown'
+                  : 'text',
+          content,
+          name,
+          type: type || 'text/plain',
+        })
+        return
+      }
+
+      setDocumentPreview({
+        kind: 'unsupported',
+        name,
+        type: type || 'Unknown file type',
+      })
+    }
+
+    loadPreview()
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+      }
+    }
+  }, [file])
 
   const handleSubmit = async (e, fileToUpload = file) => {
     e?.preventDefault()
@@ -802,6 +877,205 @@ function App() {
 
   return (
     <div className="app-shell" data-theme={theme}>
+      <style jsx global>{`
+        .workspace {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace:has(.document-viewer) {
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+        }
+
+        .document-viewer-toggle {
+          height: 36px;
+          padding: 0 14px;
+          border: 1px solid var(--border-strong);
+          border-radius: 999px;
+          background: rgba(124, 58, 237, 0.06);
+          color: var(--text);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.16s ease, border-color 0.16s ease;
+        }
+
+        .document-viewer-toggle:hover:not(:disabled) {
+          background: rgba(124, 58, 237, 0.12);
+        }
+
+        .document-viewer-toggle.is-active {
+          border-color: rgba(124, 58, 237, 0.35);
+          background: rgba(124, 58, 237, 0.14);
+          color: var(--accent);
+        }
+
+        .document-viewer-toggle:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .document-viewer {
+          min-width: 0;
+          min-height: 0;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          background: var(--panel);
+          box-shadow: var(--shadow);
+        }
+
+        .document-viewer-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 18px;
+          border-bottom: 1px solid var(--border);
+          flex-shrink: 0;
+        }
+
+        .document-viewer-header h2 {
+          max-width: 300px;
+          margin: 3px 0 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-family: var(--font-display);
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .document-viewer-close {
+          width: 30px;
+          height: 30px;
+          flex-shrink: 0;
+          padding: 0;
+          border: 1px solid var(--border);
+          border-radius: 50%;
+          background: transparent;
+          color: var(--text);
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .document-viewer-close:hover {
+          background: rgba(124, 58, 237, 0.08);
+        }
+
+        .document-viewer-body {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow: auto;
+          padding: 16px;
+          box-sizing: border-box;
+        }
+
+        .document-viewer-empty {
+          min-height: 180px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 24px;
+          border: 1px dashed var(--border);
+          border-radius: 14px;
+          color: var(--muted);
+          text-align: center;
+          font-size: 12px;
+        }
+
+        .document-viewer-empty strong {
+          color: var(--text);
+          font-size: 13px;
+        }
+
+        .document-preview-frame {
+          width: 100%;
+          height: 100%;
+          min-height: 600px;
+          border: 0;
+          border-radius: 12px;
+          background: #ffffff;
+        }
+
+        .document-image-preview {
+          width: 100%;
+          min-height: 100%;
+          display: grid;
+          place-items: center;
+        }
+
+        .document-image-preview img {
+          display: block;
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          border-radius: 10px;
+        }
+
+        .document-text-preview {
+          margin: 0;
+          padding: 16px;
+          overflow: auto;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          background: rgba(124, 58, 237, 0.025);
+          color: var(--text);
+          font-size: 12px;
+          line-height: 1.6;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .document-markdown-preview {
+          padding: 18px;
+        }
+
+        .document-markdown-preview h1,
+        .document-markdown-preview h2,
+        .document-markdown-preview h3,
+        .document-markdown-preview h4 {
+          color: var(--text);
+        }
+
+        .document-markdown-preview table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 14px 0;
+          font-size: 12px;
+        }
+
+        .document-markdown-preview th,
+        .document-markdown-preview td {
+          padding: 8px;
+          border: 1px solid var(--border);
+          text-align: left;
+          vertical-align: top;
+        }
+
+        .document-markdown-preview th {
+          background: rgba(124, 58, 237, 0.07);
+        }
+
+        @media (max-width: 900px) {
+          .workspace:has(.document-viewer) {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .document-viewer {
+            position: absolute;
+            z-index: 20;
+            inset: 16px;
+          }
+        }
+      `}</style>
+
       <aside className="sidebar">
         <a className="sidebar-logo" href="#workspace" aria-label="Workspace">
           <span>R</span>
@@ -957,6 +1231,16 @@ function App() {
           <div className="topbar-actions">
             <button
               type="button"
+              className={`document-viewer-toggle${showDocumentViewer ? ' is-active' : ''}`}
+              onClick={() => setShowDocumentViewer((open) => !open)}
+              disabled={!file}
+              aria-pressed={showDocumentViewer}
+            >
+              {showDocumentViewer ? 'Hide document' : 'View document'}
+            </button>
+
+            <button
+              type="button"
               className="theme-toggle"
               onClick={toggleTheme}
               aria-pressed={isLight}
@@ -999,7 +1283,7 @@ function App() {
                       <div className="conversation-message conversation-message-assistant">
                         <div className="conversation-message-label">Assistant</div>
                         <div className="conversation-message-content">
-                          {formatAnswerText(result.answer)}
+                          {renderMarkdown(result.answer)}
                         </div>
                       </div>
 
@@ -1173,6 +1457,94 @@ function App() {
 
           </section>
 
+          {showDocumentViewer && (
+            <aside className="document-viewer" aria-label="Document viewer">
+              <div className="document-viewer-header">
+                <div>
+                  <p className="eyebrow">Document viewer</p>
+                  <h2>{documentPreview?.name || 'No document'}</h2>
+                </div>
+
+                <button
+                  type="button"
+                  className="document-viewer-close"
+                  onClick={() => setShowDocumentViewer(false)}
+                  aria-label="Close document viewer"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="document-viewer-body">
+                {!documentPreview && (
+                  <div className="document-viewer-empty">
+                    Upload a document to preview it here.
+                  </div>
+                )}
+
+                {documentPreview?.kind === 'pdf' && (
+                  <iframe
+                    className="document-preview-frame"
+                    src={documentPreview.url}
+                    title={documentPreview.name}
+                  />
+                )}
+
+                {documentPreview?.kind === 'image' && (
+                  <div className="document-image-preview">
+                    <img
+                      src={documentPreview.url}
+                      alt={documentPreview.name}
+                    />
+                  </div>
+                )}
+
+                {documentPreview?.kind === 'markdown' && (
+                  <div className="document-text-preview document-markdown-preview">
+                    {renderMarkdown(documentPreview.content)}
+                  </div>
+                )}
+
+                {documentPreview?.kind === 'csv' && (
+                  <pre className="document-text-preview">
+                    {documentPreview.content}
+                  </pre>
+                )}
+
+                {documentPreview?.kind === 'json' && (
+                  <pre className="document-text-preview">
+                    {(() => {
+                      try {
+                        return JSON.stringify(
+                          JSON.parse(documentPreview.content),
+                          null,
+                          2
+                        )
+                      } catch {
+                        return documentPreview.content
+                      }
+                    })()}
+                  </pre>
+                )}
+
+                {documentPreview?.kind === 'text' && (
+                  <pre className="document-text-preview">
+                    {documentPreview.content}
+                  </pre>
+                )}
+
+                {documentPreview?.kind === 'unsupported' && (
+                  <div className="document-viewer-empty">
+                    <strong>Preview unavailable</strong>
+                    <span>
+                      {documentPreview.type} files cannot be previewed directly
+                      in the browser.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
 
         </div>
       </div>
