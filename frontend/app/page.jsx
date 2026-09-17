@@ -4,7 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import mammoth from 'mammoth'
+import { parsePPTXToSlides } from 'pptx-json-parser'
 import LoginPage from '../components/LoginPage'
+import * as XLSX from 'xlsx'
 
 const THEME_KEY = 'rag-theme'
 
@@ -237,6 +240,130 @@ function renderJsonValue(value, key = null, level = 0) {
   )
 }
 
+function renderPptxElement(element) {
+  if (!element) return null
+
+  const style = {
+    position: 'absolute',
+    left: element.left,
+    top: element.top,
+    width: element.width,
+    height: element.height,
+    transform: element.rotate ? `rotate(${element.rotate}deg)` : undefined,
+  }
+
+  if (element.type === 'text') {
+    return (
+      <div
+        key={element.id}
+        className="pptx-element pptx-text-element"
+        style={{
+          ...style,
+          color: element.defaultColor,
+          fontFamily: element.defaultFontName,
+          fontSize: element.fontSize,
+          fontWeight: element.fontWeight,
+          fontStyle: element.fontStyle,
+          textDecoration: element.textDecoration,
+          textAlign: element.textAlign,
+          lineHeight: element.lineHeight,
+        }}
+        dangerouslySetInnerHTML={{ __html: element.content || '' }}
+      />
+    )
+  }
+
+  if (element.type === 'image') {
+    return (
+      <img
+        key={element.id}
+        className="pptx-element pptx-image-element"
+        src={element.src}
+        alt={element.alt || 'Presentation image'}
+        style={{
+          ...style,
+          objectFit: element.objectFit || 'cover',
+        }}
+      />
+    )
+  }
+
+  if (element.type === 'shape') {
+    return (
+      <div
+        key={element.id}
+        className="pptx-element pptx-shape-element"
+        style={{
+          ...style,
+          background: element.fill || 'transparent',
+          border:
+            element.outline?.width
+              ? `${element.outline.width}px ${element.outline.style || 'solid'} ${element.outline.color || '#000'}`
+              : 'none',
+        }}
+      >
+        {element.text?.content ? (
+          <div
+            className="pptx-shape-text"
+            style={{
+              color: element.text.defaultColor,
+              fontFamily: element.text.defaultFontName,
+              textAlign: element.text.align || 'center',
+            }}
+            dangerouslySetInnerHTML={{ __html: element.text.content }}
+          />
+        ) : null}
+      </div>
+    )
+  }
+
+  if (element.type === 'table') {
+    return (
+      <div
+        key={element.id}
+        className="pptx-element pptx-table-element"
+        style={style}
+      >
+        <table>
+          <tbody>
+            {(element.data || []).map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {(row || []).map((cell, cellIndex) => (
+                  <td key={cellIndex}>
+                    {typeof cell === 'string'
+                      ? cell
+                      : cell?.text || cell?.content || ''}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function renderPptxSlide(slide) {
+  if (!slide) return null
+
+  const background =
+    slide.background?.type === 'solid'
+      ? slide.background.color
+      : '#ffffff'
+
+  return (
+    <div
+      className="pptx-slide"
+      style={{ background }}
+    >
+      {(slide.elements || []).map(renderPptxElement)}
+    </div>
+  )
+}
+
 function renderMarkdown(text) {
   if (!text) return null
 
@@ -462,6 +589,7 @@ function App() {
   const [historySort, setHistorySort] = useState('recent')
 
   const [question, setQuestion] = useState('')
+  const [pendingQuestion, setPendingQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
   const [answerHistory, setAnswerHistory] = useState([])
   const [conversationMessages, setConversationMessages] = useState([])
@@ -591,13 +719,7 @@ function App() {
   const handleRemoveDocument = () => {
     setFile(null)
     setDocuments([])
-    setStatus('')
-    setAnswer(null)
-    setAnswerHistory([])
-    setQuestion('')
-    setQueryError('')
-    setConversationId(null)
-    setConversationMessages([])
+    setDocumentPreview(null)
     setShowDocumentViewer(false)
   }
 
@@ -652,26 +774,102 @@ function App() {
   }
 
   if (
-    type.startsWith('text/') ||
-    ['md', 'markdown', 'txt', 'csv', 'json'].includes(extension)
+    extension === 'pptx' ||
+    type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   ) {
-    const content = await file.text()
+    const arrayBuffer = await file.arrayBuffer()
+    const slides = await parsePPTXToSlides(arrayBuffer)
 
     setDocumentPreview({
-      kind:
-        extension === 'json'
-          ? 'json'
-          : extension === 'csv'
-            ? 'csv'
-            : extension === 'md' || extension === 'markdown'
-              ? 'markdown'
-                : 'text',
-      content,
+      kind: 'pptx',
+      slides,
+      slideIndex: 0,
       name,
-      type: type || 'text/plain',
+      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     })
+
     return
   }
+
+  if (
+  extension === 'docx' ||
+  type ===
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+) {
+  const arrayBuffer = await file.arrayBuffer()
+  const result = await mammoth.convertToHtml({ arrayBuffer })
+
+  setDocumentPreview({
+    kind: 'docx',
+    content: result.value,
+    name,
+    type: 'text/html',
+  })
+
+  return
+}
+
+if (
+  extension === 'xlsx' ||
+  extension === 'xls' ||
+  type ===
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+  type === 'application/vnd.ms-excel'
+) {
+  const arrayBuffer = await file.arrayBuffer()
+
+  const workbook = XLSX.read(arrayBuffer, {
+    type: 'array',
+    cellDates: true,
+  })
+
+  const sheets = workbook.SheetNames.map((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName]
+
+    return {
+      name: sheetName,
+      rows: XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: '',
+        raw: false,
+      }),
+    }
+  })
+
+  setDocumentPreview({
+    kind: 'xlsx',
+    sheets,
+    sheetIndex: 0,
+    name,
+    type:
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+
+  return
+}
+
+if (
+  type.startsWith('text/') ||
+  ['md', 'markdown', 'txt', 'csv', 'json'].includes(extension)
+) {
+  const content = await file.text()
+
+  setDocumentPreview({
+    kind:
+      extension === 'json'
+        ? 'json'
+        : extension === 'csv'
+          ? 'csv'
+          : extension === 'md' || extension === 'markdown'
+            ? 'markdown'
+            : 'text',
+    content,
+    name,
+    type: type || 'text/plain',
+  })
+
+  return
+}
 
   setDocumentPreview({
     kind: 'unsupported',
@@ -768,6 +966,8 @@ function App() {
     }
 
     const submittedQuestion = question.trim()
+    setPendingQuestion(submittedQuestion)
+    setQuestion('')
 
     setQueryLoading(true)
     setQueryError('')
@@ -830,7 +1030,7 @@ function App() {
         ...data,
         question: submittedQuestion,
       })
-      setQuestion('')
+      setPendingQuestion('')
       setConversationId(data.conversation_id || null)
 
       setConversationMessages((messages) => [
@@ -873,16 +1073,41 @@ function App() {
 
   const formatConversationTime = (value) => {
     if (!value) return ''
-    const date = new Date(value)
+
+    const normalizedValue =
+      typeof value === 'string' && !/[zZ]|[+-]\\d{2}:\\d{2}$/.test(value)
+        ? `${value.replace(' ', 'T')}Z`
+        : value
+
+    const date = new Date(normalizedValue)
+    if (Number.isNaN(date.getTime())) return ''
+
     const seconds = Math.max(
       0,
       Math.floor((Date.now() - date.getTime()) / 1000)
     )
 
-    if (seconds < 60) return 'just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`
+    if (seconds < 60) {
+      return 'just now'
+    }
+
+    const minutes = Math.floor(seconds / 60)
+
+    if (minutes < 60) {
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+    }
+
+    const hours = Math.floor(minutes / 60)
+
+    if (hours < 24) {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+    }
+
+    const days = Math.floor(hours / 24)
+
+    if (days < 7) {
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`
+    }
 
     return date.toLocaleDateString()
   }
@@ -1021,8 +1246,11 @@ function App() {
         }
 
         .document-viewer-toggle:disabled {
-          opacity: 0.45;
+          opacity: 1;
           cursor: not-allowed;
+          color: var(--muted);
+          border-color: var(--border-strong);
+          background: rgba(255, 255, 255, 0.04);
         }
 
         .document-viewer {
@@ -1373,7 +1601,7 @@ function App() {
               </div>
             </div>
 
-            {(answerHistory.length > 0 || answer) && (
+            {(answerHistory.length > 0 || answer || pendingQuestion) && (
               <div ref={conversationViewportRef} className="conversation-viewport">
                 <div className="conversation-thread">
                   {[...answerHistory, ...(answer ? [answer] : [])].map((result, resultIndex) => (
@@ -1486,6 +1714,33 @@ function App() {
                       </div>
                     </div>
                   ))}
+
+                  {pendingQuestion && (
+                    <div className="conversation-exchange pending-exchange">
+                      <div
+                        ref={latestQuestionRef}
+                        className="conversation-message conversation-message-user"
+                      >
+                        <div className="conversation-message-label">You</div>
+                        <div className="conversation-message-content">
+                          {pendingQuestion}
+                        </div>
+                      </div>
+
+                      {queryLoading && (
+                        <div className="conversation-message conversation-message-assistant conversation-thinking">
+                          <div className="conversation-message-label">Assistant</div>
+                          <div className="conversation-message-content">
+                            <div className="thinking-indicator" aria-label="Thinking">
+                              <span />
+                              <span />
+                              <span />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1613,6 +1868,121 @@ function App() {
                   <div className="document-text-preview document-markdown-preview">
                     {renderMarkdown(documentPreview.content)}
                   </div>
+                )}
+
+                {documentPreview?.kind === 'pptx' && (
+                  <div className="document-pptx-preview">
+                    {documentPreview.slides?.length > 0 ? (
+                      <>
+                        <div className="pptx-slide-stage">
+                          {renderPptxSlide(
+                            documentPreview.slides[documentPreview.slideIndex || 0]
+                          )}
+                        </div>
+
+                        <div className="pptx-controls">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocumentPreview((preview) => ({
+                                ...preview,
+                                slideIndex: Math.max(
+                                  0,
+                                  (preview.slideIndex || 0) - 1
+                                ),
+                              }))
+                            }
+                            disabled={(documentPreview.slideIndex || 0) === 0}
+                          >
+                            Previous
+                          </button>
+
+                          <span>
+                            Slide {(documentPreview.slideIndex || 0) + 1} of{' '}
+                            {documentPreview.slides.length}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocumentPreview((preview) => ({
+                                ...preview,
+                                slideIndex: Math.min(
+                                  preview.slides.length - 1,
+                                  (preview.slideIndex || 0) + 1
+                                ),
+                              }))
+                            }
+                            disabled={
+                              (documentPreview.slideIndex || 0) ===
+                              documentPreview.slides.length - 1
+                            }
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="document-viewer-empty">
+                        <strong>Preview unavailable</strong>
+                        <span>No readable slides were found in this presentation.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {documentPreview?.kind === 'xlsx' && (
+  <div className="document-xlsx-preview">
+    <div className="xlsx-sheet-tabs">
+      {documentPreview.sheets.map((sheet, index) => (
+        <button
+          key={sheet.name}
+          type="button"
+          className={
+            index === (documentPreview.sheetIndex || 0)
+              ? 'xlsx-sheet-tab active'
+              : 'xlsx-sheet-tab'
+          }
+          onClick={() =>
+            setDocumentPreview((preview) => ({
+              ...preview,
+              sheetIndex: index,
+            }))
+          }
+        >
+          {sheet.name}
+        </button>
+      ))}
+    </div>
+
+    <div className="document-csv-preview">
+      <table className="document-csv-table document-xlsx-table">
+        <tbody>
+          {(
+            documentPreview.sheets[
+              documentPreview.sheetIndex || 0
+            ]?.rows || []
+          ).map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, columnIndex) => (
+                <td key={columnIndex}>
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+
+                {documentPreview?.kind === 'docx' && (
+                  <div
+                    className="document-text-preview document-docx-preview"
+                    dangerouslySetInnerHTML={{
+                      __html: documentPreview.content,
+                    }}
+                  />
                 )}
 
                 {documentPreview?.kind === 'html' && (

@@ -9,11 +9,14 @@
   },
   "dependencies": {
     "@react-three/fiber": "^9.1.2",
+    "mammoth": "^1.12.3",
     "next": "15.5.0",
+    "pptx-json-parser": "^1.0.1",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "three": "^0.170.0"
+    "three": "^0.170.0",
+    "xlsx": "^0.18.5"
   }
 }
