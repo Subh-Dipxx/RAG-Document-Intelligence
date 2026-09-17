@@ -562,7 +562,7 @@ button { cursor: pointer; }
 }
 
 .conversation-message-assistant .conversation-message-content p {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .conversation-message-assistant .conversation-message-content h1,
@@ -571,7 +571,7 @@ button { cursor: pointer; }
 .conversation-message-assistant .conversation-message-content h4,
 .conversation-message-assistant .conversation-message-content h5,
 .conversation-message-assistant .conversation-message-content h6 {
-  margin: 14px 0 6px;
+  margin: 8px 0 4px;
   color: var(--text);
   font-weight: 700;
   line-height: 1.3;
@@ -591,25 +591,30 @@ button { cursor: pointer; }
 
 .conversation-message-assistant .conversation-message-content ul,
 .conversation-message-assistant .conversation-message-content ol {
-  margin: 6px 0 10px;
+  margin: 4px 0 6px;
   padding-left: 22px;
 }
 
 .conversation-message-assistant .conversation-message-content li {
-  margin: 3px 0;
+  margin: 2px 0;
   padding-left: 2px;
 }
 
 .conversation-message-assistant .conversation-message-content li > p {
+  display: inline;
   margin: 0;
+}
+
+.conversation-message-assistant .conversation-message-content li::marker {
+  color: var(--text);
 }
 
 .conversation-message-assistant .conversation-message-content ul ul,
 .conversation-message-assistant .conversation-message-content ul ol,
 .conversation-message-assistant .conversation-message-content ol ul,
 .conversation-message-assistant .conversation-message-content ol ol {
-  margin-top: 3px;
-  margin-bottom: 3px;
+  margin-top: 2px;
+  margin-bottom: 4px;
 }
 
 .conversation-message-assistant .conversation-message-content blockquote {
@@ -811,7 +816,7 @@ button { cursor: pointer; }
   display: grid;
   grid-template-columns: 8px 1fr;
   gap: 11px;
-  padding: 12px 10px;
+  padding: 6px 10px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -836,10 +841,10 @@ button { cursor: pointer; }
 }
 
 .citation-excerpt {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   color: var(--text);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -848,7 +853,7 @@ button { cursor: pointer; }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 4px 10px;
   color: var(--muted);
   font-size: 11px;
   word-break: break-word;
@@ -1688,9 +1693,6 @@ html[data-theme="light"] .login-form input:focus {
 html[data-theme="light"] .login-form input:disabled { background: rgba(243, 240, 248, 0.8); }
 html[data-theme="light"] .login-error span { background: rgba(124, 58, 237, 0.08); }
 
-.conversation-message-content li > p {
-  margin: 0;
-}
 
 .conversation-message-content ul,
 .conversation-message-content ol {
@@ -1700,4 +1702,169 @@ html[data-theme="light"] .login-error span { background: rgba(124, 58, 237, 0.08
 
 .conversation-message-content li {
   margin-bottom: 6px;
+}
+
+.document-csv-preview {
+  padding: 8px;
+  overflow: auto;
+}
+
+.document-csv-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.document-csv-table th,
+.document-csv-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.document-csv-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  z-index: 1;
+}
+
+.document-csv-table td {
+  color: var(--text);
+}
+
+.document-csv-table tbody tr:nth-child(even) {
+  background: rgba(124, 58, 237, 0.025);
+}
+.document-html-preview {
+  padding: 8px;
+  overflow: hidden;
+}
+
+.document-html-frame {
+  display: block;
+  width: 100%;
+  min-height: 600px;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+}
+.document-csv-preview {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid rgba(124, 58, 237, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.document-csv-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.document-csv-table th,
+.document-csv-table td {
+  padding: 9px 11px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  white-space: nowrap;
+}
+
+.document-csv-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(245, 240, 255, 0.96);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.document-csv-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.document-csv-table tbody tr:hover {
+  background: rgba(124, 58, 237, 0.045);
+}
+
+.document-json-preview {
+  width: 100%;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid rgba(124, 58, 237, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.document-json-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.document-json-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.document-json-key {
+  min-width: 125px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.document-json-value {
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.document-json-section-title {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.document-json-array {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.document-json-item {
+  padding: 9px 10px;
+  border-left: 2px solid rgba(124, 58, 237, 0.22);
+  background: rgba(124, 58, 237, 0.035);
+}
+
+.document-json-item-title {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.document-json-group {
+  margin-bottom: 8px;
+}
+
+.document-json-group:last-child {
+  margin-bottom: 0;
 }

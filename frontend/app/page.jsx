@@ -140,6 +140,103 @@ function IconMoon() {
   )
 }
 
+function parseCsvContent(text) {
+  const rows = []
+  let row = []
+  let cell = ''
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    const next = text[i + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        cell += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (char === ',' && !inQuotes) {
+      row.push(cell)
+      cell = ''
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') {
+        i++
+      }
+      row.push(cell)
+      rows.push(row)
+      row = []
+      cell = ''
+    } else {
+      cell += char
+    }
+  }
+
+  if (cell !== '' || row.length > 0) {
+    row.push(cell)
+    rows.push(row)
+  }
+
+  return rows.filter((currentRow) =>
+    currentRow.some((value) => value.trim() !== '')
+  )
+}
+
+function formatJsonKey(key) {
+  if (key === null || key === undefined) return ''
+
+  return String(key)
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function renderJsonValue(value, key = null, level = 0) {
+  if (value === null || typeof value !== 'object') {
+    return (
+      <div className="document-json-row" key={key ?? level}>
+        {key !== null && <span className="document-json-key">{formatJsonKey(key)}</span>}
+        <span className="document-json-value">
+          {value === null ? '—' : String(value)}
+        </span>
+      </div>
+    )
+  }
+
+  if (Array.isArray(value)) {
+    return (
+      <div className="document-json-group" key={key ?? level}>
+        {key !== null && (
+          <div className="document-json-section-title">{formatJsonKey(key)}</div>
+        )}
+        <div className="document-json-array">
+          {value.map((item, index) => (
+            <div className="document-json-item" key={index}>
+              {renderJsonValue(item, null, level + 1)}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="document-json-group" key={key ?? level}>
+      {key !== null && (
+        <div className="document-json-section-title">{key}</div>
+      )}
+      <div className="document-json-fields">
+        {Object.entries(value).map(([childKey, childValue]) =>
+          renderJsonValue(childValue, childKey, level + 1)
+        )}
+      </div>
+    </div>
+  )
+}
+
 function renderMarkdown(text) {
   if (!text) return null
 
@@ -513,70 +610,83 @@ function App() {
     let objectUrl = null
 
     const loadPreview = async () => {
-      const type = file.type || ''
-      const name = file.name || ''
-      const extension = name.split('.').pop()?.toLowerCase() || ''
+  const type = file.type || ''
+  const name = file.name || ''
+  const extension = name.split('.').pop()?.toLowerCase() || ''
 
-      if (type === 'application/pdf' || extension === 'pdf') {
-        objectUrl = URL.createObjectURL(file)
-        setDocumentPreview({
-          kind: 'pdf',
-          url: objectUrl,
-          name,
-          type: type || 'application/pdf',
-        })
-        return
-      }
+  if (type === 'application/pdf' || extension === 'pdf') {
+    objectUrl = URL.createObjectURL(file)
+    setDocumentPreview({
+      kind: 'pdf',
+      url: objectUrl,
+      name,
+      type: type || 'application/pdf',
+    })
+    return
+  }
 
-      if (type.startsWith('image/')) {
-        objectUrl = URL.createObjectURL(file)
-        setDocumentPreview({
-          kind: 'image',
-          url: objectUrl,
-          name,
-          type,
-        })
-        return
-      }
+  if (type.startsWith('image/')) {
+    objectUrl = URL.createObjectURL(file)
+    setDocumentPreview({
+      kind: 'image',
+      url: objectUrl,
+      name,
+      type,
+    })
+    return
+  }
 
-      if (
-        type.startsWith('text/') ||
-        ['md', 'markdown', 'txt', 'csv', 'json'].includes(extension)
-      ) {
-        const content = await file.text()
+  if (extension === 'html' || extension === 'htm') {
+    objectUrl = URL.createObjectURL(
+      new Blob([await file.arrayBuffer()], { type: 'text/html' })
+    )
 
-        setDocumentPreview({
-          kind:
-            extension === 'json'
-              ? 'json'
-              : extension === 'csv'
-                ? 'csv'
-                : extension === 'md' || extension === 'markdown'
-                  ? 'markdown'
-                  : 'text',
-          content,
-          name,
-          type: type || 'text/plain',
-        })
-        return
-      }
+    setDocumentPreview({
+      kind: 'html',
+      url: objectUrl,
+      name,
+      type: 'text/html',
+    })
 
-      setDocumentPreview({
-        kind: 'unsupported',
-        name,
-        type: type || 'Unknown file type',
-      })
+    return
+  }
+
+  if (
+    type.startsWith('text/') ||
+    ['md', 'markdown', 'txt', 'csv', 'json'].includes(extension)
+  ) {
+    const content = await file.text()
+
+    setDocumentPreview({
+      kind:
+        extension === 'json'
+          ? 'json'
+          : extension === 'csv'
+            ? 'csv'
+            : extension === 'md' || extension === 'markdown'
+              ? 'markdown'
+                : 'text',
+      content,
+      name,
+      type: type || 'text/plain',
+    })
+    return
+  }
+
+  setDocumentPreview({
+    kind: 'unsupported',
+    name,
+    type: type || 'Unknown file type',
+  })
+}
+  loadPreview()
+
+  return () => {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl)
     }
-
-    loadPreview()
-
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [file])
-
+  }
+}, [file])
   const handleSubmit = async (e, fileToUpload = file) => {
     e?.preventDefault()
 
@@ -1505,28 +1615,62 @@ function App() {
                   </div>
                 )}
 
+                {documentPreview?.kind === 'html' && (
+                  <div className="document-text-preview document-html-preview">
+                    <iframe
+                      className="document-html-frame"
+                      src={documentPreview.url}
+                      title={documentPreview.name}
+                    />
+                  </div>
+                )}    
                 {documentPreview?.kind === 'csv' && (
-                  <pre className="document-text-preview">
-                    {documentPreview.content}
-                  </pre>
+                  <div className="document-csv-preview">
+                    <table className="document-csv-table">
+                      <thead>
+                        <tr>
+                          {(parseCsvContent(documentPreview.content)[0] || []).map(
+                            (header, index) => (
+                              <th key={index}>{header}</th>
+                            )
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parseCsvContent(documentPreview.content)
+                          .slice(1)
+                          .map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {(parseCsvContent(documentPreview.content)[0] || []).map(
+                                (_, columnIndex) => (
+                                  <td key={columnIndex}>
+                                    {row[columnIndex] ?? ''}
+                                  </td>
+                                )
+                              )}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
 
                 {documentPreview?.kind === 'json' && (
-                  <pre className="document-text-preview">
+                  <div className="document-json-preview">
                     {(() => {
                       try {
-                        return JSON.stringify(
-                          JSON.parse(documentPreview.content),
-                          null,
-                          2
-                        )
+                        const parsed = JSON.parse(documentPreview.content)
+                        return renderJsonValue(parsed)
                       } catch {
-                        return documentPreview.content
+                        return (
+                          <pre className="document-text-preview">
+                            {documentPreview.content}
+                          </pre>
+                        )
                       }
                     })()}
-                  </pre>
+                  </div>
                 )}
-
                 {documentPreview?.kind === 'text' && (
                   <pre className="document-text-preview">
                     {documentPreview.content}
