@@ -55,7 +55,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         throw new Error(data?.detail || 'Login failed')
       }
 
-      onLogin(data.access_token)
+      onLogin(data.access_token, username.trim())
     } catch (err) {
       console.error(err)
       setError(err.message || 'Login failed.')
@@ -86,8 +86,8 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
       <div className="login-card">
         <div className="login-brand" aria-hidden="true">R</div>
         <div className="login-header">
-          <p className="eyebrow">Document intelligence</p>
-          <h1>RAG Document Intelligence</h1>
+          
+          <h1>DocGPT</h1>
           <p>Sign in to access the knowledge workspace.</p>
         </div>
 

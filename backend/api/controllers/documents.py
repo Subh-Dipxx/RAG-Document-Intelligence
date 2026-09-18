@@ -96,6 +96,41 @@ def list_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     return docs
 
 
+@router.get("/{document_id}/content")
+def get_document_content(document_id: str, db: Session = Depends(get_db)):
+    """Return the stored file bytes for a document."""
+    from fastapi.responses import Response
+
+    doc = crud.get_document(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    versions = crud.get_versions(db, document_id)
+    if not versions:
+        raise HTTPException(status_code=404, detail="Document version not found")
+
+    version = versions[0]
+
+    try:
+        content = minio_storage.download_bytes(
+            bucket_name=RAW_DOCUMENTS_BUCKET,
+            object_name=version.storage_key,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Document content could not be retrieved: {e}",
+        )
+
+    return Response(
+        content=content,
+        media_type=doc.mime_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'inline; filename="{doc.file_name}"'
+        },
+    )
+
+
 @router.get("/{document_id}", response_model=DocumentResponse)
 def get_document(document_id: str, db: Session = Depends(get_db)):
     """Get document details including version history."""

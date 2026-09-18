@@ -565,16 +565,21 @@ function readStoredTheme() {
 
 function App() {
   const [token, setToken] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
+  const [username, setUsername] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('username') : null)
   const [theme, setTheme] = useState('dark')
 
-  const handleLogin = (accessToken) => {
+  const handleLogin = (accessToken, loggedInUsername) => {
     localStorage.setItem('access_token', accessToken)
+    localStorage.setItem('username', loggedInUsername)
     setToken(accessToken)
+    setUsername(loggedInUsername)
   }
 
   const handleLogout = () => {
     localStorage.removeItem('access_token')
+    localStorage.removeItem('username')
     setToken(null)
+    setUsername(null)
   }
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
@@ -585,6 +590,7 @@ function App() {
   const [conversations, setConversations] = useState([])
   const [conversationId, setConversationId] = useState(null)
   const [showChatHistory, setShowChatHistory] = useState(false)
+  const [showDocuments, setShowDocuments] = useState(false)
   const [historySearch, setHistorySearch] = useState('')
   const [historySort, setHistorySort] = useState('recent')
 
@@ -599,6 +605,8 @@ function App() {
   const [queryError, setQueryError] = useState('')
   const [expandedSources, setExpandedSources] = useState({})
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [documentPreview, setDocumentPreview] = useState(null)
 
   useEffect(() => {
@@ -675,6 +683,63 @@ function App() {
 
     fetchConversations()
   }, [token])
+
+  const fetchDocuments = async () => {
+    if (!token) return
+
+    try {
+      const res = await fetch('/api/v1/documents?skip=0&limit=100', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const contentType = res.headers.get('content-type') || ''
+      const rawBody = await res.text()
+
+      let data = null
+      if (contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(rawBody)
+        } catch {
+          data = null
+        }
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail || rawBody || `Failed to load documents (${res.status})`
+        )
+      }
+
+      const uniqueDocuments = []
+      const seenHashes = new Set()
+
+      for (const document of Array.isArray(data) ? data : []) {
+        const latestVersion = document.versions?.[0]
+        const fileHash = latestVersion?.file_hash
+
+        if (fileHash) {
+          if (seenHashes.has(fileHash)) {
+            continue
+          }
+
+          seenHashes.add(fileHash)
+        }
+
+        uniqueDocuments.push(document)
+      }
+
+      setDocuments(uniqueDocuments)
+    } catch (err) {
+      console.error('Failed to fetch documents:', err)
+    }
+  }
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -1211,7 +1276,10 @@ if (
   const isLight = theme === 'light'
 
   return (
-    <div className="app-shell" data-theme={theme}>
+    <div
+      className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+      data-theme={theme}
+    >
       <style jsx global>{`
         .workspace {
           grid-template-columns: minmax(0, 1fr);
@@ -1415,36 +1483,282 @@ if (
       `}</style>
 
       <aside className="sidebar">
-        <a className="sidebar-logo" href="#workspace" aria-label="Workspace">
-          <span>R</span>
-        </a>
-        <nav className="sidebar-nav">
-          <a href="#workspace" className="is-active" title="Workspace">
-            <IconMark />
-          </a>
-          <button
-            type="button"
-            className={`sidebar-history${showChatHistory ? ' is-active' : ''}`}
-            title="Chat History"
-            aria-label="Chat History"
-            aria-expanded={showChatHistory}
-            onClick={() => setShowChatHistory((open) => !open)}
-          >
-            <IconChatHistory />
-          </button>
-        </nav>
         <button
           type="button"
-          className="sidebar-theme"
-          onClick={toggleTheme}
-          title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
-          aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+          className="sidebar-collapse-toggle"
+          onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!sidebarCollapsed}
         >
-          {isLight ? <IconMoon /> : <IconSun />}
+          <span>☰</span>
         </button>
-        <button type="button" className="sidebar-logout" onClick={handleLogout} title="Logout">
-          <IconLogout />
+        <button
+          type="button"
+          className="sidebar-new-chat"
+          onClick={handleNewConversation}
+        >
+          <span className="sidebar-new-chat-icon">+</span>
+          <span className="sidebar-new-chat-text">New Chat</span>
         </button>
+        
+        <button
+          type="button"
+          className="sidebar-history"
+          aria-label="Open Chat History"
+          onClick={() => setShowChatHistory(true)}
+        >
+          <IconChatHistory />
+          <span className="sidebar-history-text">Chat History</span>
+        </button>
+<button
+          type="button"
+          className="sidebar-documents"
+          aria-label="Open Documents"
+          onClick={() => {
+            setShowDocuments(true)
+            fetchDocuments()
+          }}
+        >
+          <span className="sidebar-documents-icon">▣</span>
+          <span className="sidebar-documents-text">Documents</span>
+        </button>
+
+        <div className="sidebar-profile">
+          {showProfileMenu && (
+            <div className="sidebar-profile-menu">
+              <div className="sidebar-profile-menu-user">
+                <div className="sidebar-profile-menu-avatar">
+                  <span>{username ? username.charAt(0).toUpperCase() : 'U'}</span>
+                </div>
+                <span>{username || 'User'}</span>
+              </div>
+
+              <div className="sidebar-profile-menu-divider" />
+
+              <button
+                type="button"
+                className="sidebar-profile-logout"
+                onClick={() => {
+                  setShowProfileMenu(false)
+                  handleLogout()
+                }}
+              >
+                <IconLogout />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="sidebar-profile-avatar"
+            onClick={() => setShowProfileMenu((open) => !open)}
+            aria-label="Open profile menu"
+            aria-expanded={showProfileMenu}
+          >
+            <span>{username ? username.charAt(0).toUpperCase() : 'U'}</span>
+          </button>
+
+          <span className="sidebar-profile-name">
+            {username || 'User'}
+          </span>
+
+          <button
+            type="button"
+            className="sidebar-profile-theme"
+            onClick={toggleTheme}
+            title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+            aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {isLight ? <IconMoon /> : <IconSun />}
+          </button>
+        </div>
+      </aside>
+
+      {showDocuments && (
+        <button
+          type="button"
+          className="documents-backdrop"
+          aria-label="Close Documents"
+          onClick={() => setShowDocuments(false)}
+        />
+      )}
+
+      <aside
+        className={`documents-drawer${showDocuments ? ' is-open' : ''}`}
+        aria-label="Documents"
+      >
+        <div className="documents-drawer-header">
+          <div>
+            <p className="eyebrow">Documents</p>
+            <h2>Your documents</h2>
+          </div>
+
+          <button
+            type="button"
+            className="documents-drawer-close"
+            onClick={() => setShowDocuments(false)}
+            aria-label="Close Documents"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="documents-drawer-list">
+          {documents.length > 0 ? (
+            documents.map((document) => (
+              <div
+                className="document-list-item"
+                key={document.document_id || document.id}
+              >
+                <button
+                  type="button"
+                  className="document-list-select"
+                  onClick={async () => {
+                    const documentId = document.document_id || document.id
+
+                    setShowDocuments(false)
+                    setDocuments([document])
+
+                    try {
+                      const res = await fetch(
+                        `/api/v1/documents/${documentId}/content`,
+                        {
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                          },
+                        }
+                      )
+
+                      if (!res.ok) {
+                        throw new Error(`Failed to load document (${res.status})`)
+                      }
+
+                      const blob = await res.blob()
+                      const selectedFile = new File(
+                        [blob],
+                        document.file_name || 'document',
+                        {
+                          type:
+                            document.mime_type ||
+                            blob.type ||
+                            'application/octet-stream',
+                        }
+                      )
+
+                      setFile(selectedFile)
+                      setShowDocumentViewer(false)
+
+                      requestAnimationFrame(() => {
+                        document
+                          .getElementById('upload-form')
+                          ?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start',
+                          })
+                      })
+                    } catch (err) {
+                      console.error('Failed to load selected document:', err)
+                      setQueryError('Failed to load the selected document.')
+                    }
+                  }}
+                >
+                  <span className="document-list-icon">▤</span>
+                  <span className="document-list-content">
+                    <span className="document-list-title">
+                      {document.title || document.file_name || 'Untitled document'}
+                    </span>
+                    <span className="document-list-filename">
+                      {document.file_name || 'Unknown file'}
+                    </span>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="document-list-delete"
+                  aria-label={`Delete ${document.file_name || 'document'}`}
+                  title="Delete document"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+
+                    const documentId = document.document_id || document.id
+
+                    if (!window.confirm(
+                      `Delete "${document.file_name || document.title || 'this document'}"?`
+                    )) {
+                      return
+                    }
+
+                    try {
+                      const res = await fetch(
+                        `/api/v1/documents/${documentId}`,
+                        {
+                          method: 'DELETE',
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                          },
+                        }
+                      )
+
+                      if (res.status === 401) {
+                        handleLogout()
+                        return
+                      }
+
+                      if (!res.ok) {
+                        const rawBody = await res.text()
+                        let data = null
+
+                        try {
+                          data = JSON.parse(rawBody)
+                        } catch {
+                          data = null
+                        }
+
+                        throw new Error(
+                          data?.detail ||
+                          rawBody ||
+                          `Failed to delete document (${res.status})`
+                        )
+                      }
+
+                      await fetchDocuments()
+                    } catch (err) {
+                      console.error('Failed to delete document:', err)
+                      setQueryError(
+                        err.message || 'Failed to delete the document.'
+                      )
+                    }
+                  }}
+                >
+                  <svg
+                      viewBox="0 0 24 24"
+                      width="15"
+                      height="15"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M19 6l-1 14H6L5 6" />
+                      <path d="M10 11v5" />
+                      <path d="M14 11v5" />
+                    </svg>
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="documents-empty">
+              <span className="documents-empty-icon">▤</span>
+              <p>No documents uploaded yet.</p>
+            </div>
+          )}
+        </div>
       </aside>
 
       {showChatHistory && (
@@ -1551,20 +1865,12 @@ if (
           )}
         </div>
 
-        <button
-          type="button"
-          className="history-new-chat"
-          onClick={handleNewConversation}
-        >
-          <span>+</span>
-          New chat
-        </button>
       </aside>
 
       <div className="stage">
         <header className="topbar">
           <div className="brand">
-            <h1>Knowledge workspace</h1>
+            <h1>DocGPT</h1>
           </div>
           <div className="topbar-actions">
             <button
@@ -1577,18 +1883,6 @@ if (
               {showDocumentViewer ? 'Hide document' : 'View document'}
             </button>
 
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={toggleTheme}
-              aria-pressed={isLight}
-              aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              <span className={`theme-toggle-knob ${isLight ? 'is-light' : ''}`}>
-                {isLight ? <IconSun /> : <IconMoon />}
-              </span>
-              <span className="theme-toggle-label">{isLight ? 'Light' : 'Dark'}</span>
-            </button>
           </div>
         </header>
 

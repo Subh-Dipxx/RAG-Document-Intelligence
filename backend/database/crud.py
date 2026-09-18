@@ -129,7 +129,13 @@ def get_document(db: Session, doc_id: str) -> Optional[DocumentModel]:
 
 
 def list_documents(db: Session, skip: int = 0, limit: int = 100) -> List[DocumentModel]:
-    return db.query(DocumentModel).offset(skip).limit(limit).all()
+    return (
+        db.query(DocumentModel)
+        .order_by(DocumentModel.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 def delete_document(

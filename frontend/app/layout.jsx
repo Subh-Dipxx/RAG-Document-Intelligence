@@ -14,7 +14,7 @@ const manrope = Manrope({
 })
 
 export const metadata = {
-  title: 'RAG Document Intelligence',
+  title: 'DocGPT',
   description: 'PDF-focused RAG document intelligence platform',
 }
 
