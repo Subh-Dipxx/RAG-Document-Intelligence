@@ -168,23 +168,28 @@ Retrieved document sources:
             if 1 <= source_number <= len(context)
         ]
 
-        # A grounded answer without valid source references is not considered valid.
+        # If Gemini generated a valid answer from context but did not explicitly
+        # include inline [SOURCE N] tags (e.g. for summaries), attribute the answer to
+        # the supplied context chunks rather than discarding the answer.
         if not used_sources:
-            return Answer(
-                text=self.ABSTENTION_TEXT,
-                citations=[],
-                is_generated=True,
-                abstained=True,
-                confidence=0.0,
-                metadata={
-                    "model": self.model_name,
-                    "retrieved_chunks": len(context),
-                    "used_sources": [],
-                    "generation_error": (
-                        "Gemini returned an answer without valid source citations"
-                    ),
-                },
-            )
+            if context:
+                used_sources = list(range(1, len(context) + 1))
+            else:
+                return Answer(
+                    text=self.ABSTENTION_TEXT,
+                    citations=[],
+                    is_generated=True,
+                    abstained=True,
+                    confidence=0.0,
+                    metadata={
+                        "model": self.model_name,
+                        "retrieved_chunks": len(context),
+                        "used_sources": [],
+                        "generation_error": (
+                            "Gemini returned an answer without valid source citations"
+                        ),
+                    },
+                )
 
         # Show all retrieved sources in the UI, while preserving the model's
         # explicitly referenced sources separately in metadata.
