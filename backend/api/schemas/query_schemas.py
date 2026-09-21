@@ -10,6 +10,7 @@ class QueryRequest(BaseModel):
     user_id: Optional[str] = None
     tenant_id: Optional[str] = None
     corpus_id: Optional[str] = None
+    conversation_id: Optional[str] = None
 
     top_k: Optional[int] = Field(
         default=None,
@@ -18,6 +19,7 @@ class QueryRequest(BaseModel):
     )
 
     filters: Dict[str, Any] = Field(default_factory=dict)
+    history: List[Dict[str, str]] = Field(default_factory=list)
 
 
 class CitationResponse(BaseModel):

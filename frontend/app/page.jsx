@@ -682,6 +682,15 @@ function App() {
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordChanging, setPasswordChanging] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [documentPreview, setDocumentPreview] = useState(null)
 
@@ -1183,38 +1192,64 @@ if (
       }
     }
 
-    if (!targetDoc && documents.length > 0) {
-      targetDoc = documents[0]
-    }
 
-    if (!targetDoc) {
-      try {
-        const fetched = await fetchDocuments()
-        if (Array.isArray(fetched) && fetched.length > 0) {
-          targetDoc = fetched[0]
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (!targetDoc || !(targetDoc.document_id || targetDoc.id)) {
-      setQueryError('Please upload or select a document before asking a question.')
-      return
-    }
-
-    const targetDocId = targetDoc.document_id || targetDoc.id
-
-    const submittedQuestion = question.trim()
-    setPendingQuestion(submittedQuestion)
-    setQuestion('')
-
-    setQueryLoading(true)
+       setQueryLoading(true)
     setQueryError('')
+
     if (answer) {
       setAnswerHistory((history) => [...history, answer])
     }
+
     setAnswer(null)
+
+    const history = conversationMessages
+  .filter((message) => {
+    // Without an active document, do not leak previous
+    // document-grounded assistant responses into normal chat.
+    if (selectedDocument) {
+      return true
+    }
+
+    if (message.role !== 'assistant') {
+      return true
+    }
+
+    const hasCitations =
+      Array.isArray(message.citations) && message.citations.length > 0
+
+    const hasRetrievedChunks =
+      Number(message.metadata?.retrieved_chunks || 0) > 0
+
+    return !hasCitations && !hasRetrievedChunks
+  })
+  .filter((message) => message?.role && message?.content)
+  .map((message) => ({
+    role: message.role,
+    content: String(message.content),
+  }))
+
+    const filters = {}
+
+    if (targetDoc) {
+      const targetDocId = targetDoc.document_id || targetDoc.id
+
+      if (targetDocId) {
+        filters.document_id = targetDocId
+      }
+    }
+
+    const submittedQuestion = question.trim()
+
+    setPendingQuestion(submittedQuestion)
+    setQuestion('')
+    setQueryLoading(true)
+    setQueryError('')
+    setAnswer(null)
+
+    // Allow React to paint the submitted question and thinking indicator
+    // before starting the API request.
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
 
     try {
       const res = await fetch('/api/v1/query', {
@@ -1227,9 +1262,8 @@ if (
           question: submittedQuestion,
           conversation_id: conversationId,
           top_k: 10,
-          filters: {
-            document_id: targetDocId,
-          },
+          filters,
+          history,
         }),
       })
 
@@ -1476,7 +1510,91 @@ if (
     }
   }
 
-  const handleNewConversation = () => {
+  
+  const handleChangePassword = async (event) => {
+    event.preventDefault()
+
+    setPasswordError('')
+    setPasswordMessage('')
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Please fill in all password fields.')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.')
+      return
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError(
+        'New password must be different from the current password.'
+      )
+      return
+    }
+
+    setPasswordChanging(true)
+
+    try {
+      const token =
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token') ||
+        sessionStorage.getItem('access_token') ||
+        sessionStorage.getItem('token') ||
+        sessionStorage.getItem('auth_token')
+
+      if (!token) {
+        throw new Error('Your session has expired. Please log in again.')
+      }
+
+      const response = await fetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail || 'Unable to change password.'
+        )
+      }
+
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordMessage(
+        data?.message || 'Password changed successfully.'
+      )
+
+      setTimeout(() => {
+        setShowChangePassword(false)
+        setPasswordMessage('')
+      }, 1500)
+    } catch (error) {
+      setPasswordError(
+        error?.message || 'Unable to change password.'
+      )
+    } finally {
+      setPasswordChanging(false)
+    }
+  }
+
+const handleNewConversation = () => {
     setConversationId(null)
     setAnswer(null)
     setAnswerHistory([])
@@ -1493,15 +1611,33 @@ if (
     })
   }
 
-  const currentDocument = selectedDocument || documents[0]
-  const activeDocument = file
-    ? { name: file.name, type: file.type || 'File' }
+  const currentDocument = file
+    ? {
+        ...selectedDocument,
+        file_name: file.name,
+        title: selectedDocument?.title || file.name,
+        mime_type: file.type || selectedDocument?.mime_type || 'application/octet-stream',
+      }
     : selectedDocument
       ? {
-          name: selectedDocument.file_name || selectedDocument.title || 'Selected document',
-          type: selectedDocument.mime_type || 'Document',
+          ...selectedDocument,
+          file_name:
+            selectedDocument.file_name ||
+            selectedDocument.filename ||
+            selectedDocument.title ||
+            'Unknown file',
         }
       : null
+
+  const activeDocument = currentDocument
+    ? {
+        name:
+          currentDocument.file_name ||
+          currentDocument.title ||
+          'Selected document',
+        type: currentDocument.mime_type || 'Document',
+      }
+    : null
 
   if (!token) {
     return <LoginPage onLogin={handleLogin} theme={theme} onToggleTheme={toggleTheme} />
@@ -1771,6 +1907,18 @@ if (
 
               <button
                 type="button"
+                className="sidebar-profile-settings"
+                onClick={() => {
+                  setShowProfileMenu(false)
+                  setShowSettings(true)
+                }}
+              >
+                <span className="sidebar-profile-settings-icon">⚙</span>
+                <span>Settings</span>
+              </button>
+
+              <button
+                type="button"
                 className="sidebar-profile-logout"
                 onClick={() => {
                   setShowProfileMenu(false)
@@ -1808,6 +1956,200 @@ if (
           </button>
         </div>
       </aside>
+
+
+      {showSettings && (
+        <div
+          className="settings-overlay"
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="settings-panel"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="settings-header">
+              <div>
+                <h2>Settings</h2>
+                <p>Manage your application preferences</p>
+              </div>
+
+              <button
+                type="button"
+                className="settings-close"
+                onClick={() => setShowSettings(false)}
+                aria-label="Close settings"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="settings-content">
+              <div className="settings-section">
+                <h3>Appearance</h3>
+
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">Theme</div>
+                    <div className="settings-row-description">
+                      Switch between light and dark mode.
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="settings-theme-button"
+                    onClick={toggleTheme}
+                  >
+                    {isLight ? 'Dark mode' : 'Light mode'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3>Account</h3>
+
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">Username</div>
+                    <div className="settings-row-description">
+                      Your current account name.
+                    </div>
+                  </div>
+
+                  <span className="settings-value">
+                    {username || 'User'}
+                  </span>
+                </div>
+
+                {!showChangePassword ? (
+                  <div className="settings-row settings-password-action">
+                    <div>
+                      <div className="settings-row-title">
+                        Password
+                      </div>
+                      <div className="settings-row-description">
+                        Change your account password securely.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="settings-theme-button"
+                      onClick={() => {
+                        setShowChangePassword(true)
+                        setPasswordError('')
+                        setPasswordMessage('')
+                      }}
+                    >
+                      Change Password
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    className="change-password-form"
+                    onSubmit={handleChangePassword}
+                  >
+                    <div className="change-password-title">
+                      Change Password
+                    </div>
+
+                    <div className="change-password-field">
+                      <label htmlFor="current-password">
+                        Current password
+                      </label>
+                      <input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(event) =>
+                          setCurrentPassword(event.target.value)
+                        }
+                        autoComplete="current-password"
+                        placeholder="Enter current password"
+                        disabled={passwordChanging}
+                      />
+                    </div>
+
+                    <div className="change-password-field">
+                      <label htmlFor="new-password">
+                        New password
+                      </label>
+                      <input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(event) =>
+                          setNewPassword(event.target.value)
+                        }
+                        autoComplete="new-password"
+                        placeholder="Minimum 8 characters"
+                        disabled={passwordChanging}
+                      />
+                    </div>
+
+                    <div className="change-password-field">
+                      <label htmlFor="confirm-password">
+                        Confirm new password
+                      </label>
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) =>
+                          setConfirmPassword(event.target.value)
+                        }
+                        autoComplete="new-password"
+                        placeholder="Re-enter new password"
+                        disabled={passwordChanging}
+                      />
+                    </div>
+
+                    {passwordError && (
+                      <div className="change-password-error">
+                        {passwordError}
+                      </div>
+                    )}
+
+                    {passwordMessage && (
+                      <div className="change-password-success">
+                        {passwordMessage}
+                      </div>
+                    )}
+
+                    <div className="change-password-actions">
+                      <button
+                        type="button"
+                        className="settings-cancel-button"
+                        onClick={() => {
+                          setShowChangePassword(false)
+                          setCurrentPassword('')
+                          setNewPassword('')
+                          setConfirmPassword('')
+                          setPasswordError('')
+                          setPasswordMessage('')
+                        }}
+                        disabled={passwordChanging}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="settings-save-button"
+                        disabled={passwordChanging}
+                      >
+                        {passwordChanging
+                          ? 'Changing...'
+                          : 'Change Password'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLogoutConfirm && (
         <div

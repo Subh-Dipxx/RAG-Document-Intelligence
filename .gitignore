@@ -4,3 +4,13 @@ __pycache__/
 .env
 .env.local
 node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class

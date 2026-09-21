@@ -360,4 +360,51 @@ Retrieved document sources:
                     lines.append(f"{prefix}• {item}")
             return "\n".join(lines)
         return str(obj)
+    def generate_conversational(
+        self,
+        message: str,
+        history: list[dict[str, str]] | None = None,
+    ) -> str:
 
+        history = history or []
+
+        history_text = "\n".join(
+            f"{item.get('role', 'user')}: {item.get('content', '')}"
+            for item in history[-8:]
+        )
+
+        prompt = f"""
+    You are DocGPT, a friendly conversational assistant.
+
+    The user is having a normal conversational interaction with you.
+
+    You may:
+    - greet the user
+    - acknowledge messages
+    - answer conversational questions about yourself
+    - maintain natural conversational context
+    - respond naturally to thanks, confirmations, and similar interactions
+
+    You must NOT provide factual knowledge about the outside world.
+    Do not answer general knowledge questions, current events, people,
+    places, products, programming facts, medical facts, or other external
+    information here.
+
+    Previous conversation:
+    {history_text}
+
+    Latest user message:
+    {message}
+
+    Respond naturally and briefly.
+    """
+
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.4,
+            ),
+        )
+
+        return (response.text or "").strip()

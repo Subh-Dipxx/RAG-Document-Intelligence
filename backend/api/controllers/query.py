@@ -18,6 +18,7 @@ from backend.config import get_settings
 from backend.domain.models import Query
 from sqlalchemy.orm import Session
 from backend.generation.gemini import GeminiGenerator
+from backend.generation.intent_router import IntentRouter
 from backend.retrieval.pgvector import PgVectorRetriever
 
 
@@ -34,6 +35,80 @@ def query_documents(
     db: Session = Depends(get_db),
 ) -> QueryResponse:
     settings = get_settings()
+
+    # ---------------------------------------------------------
+    # Semantic intent routing happens BEFORE RAG retrieval.
+    # ---------------------------------------------------------
+    intent_router = IntentRouter()
+
+    has_document = bool(
+        payload.filters
+        and payload.filters.get("document_id")
+    )
+
+    intent_result = intent_router.classify(
+        message=payload.question,
+        history=payload.history,
+        has_document=has_document,
+    )
+
+    intent = intent_result["intent"]
+
+    generator = GeminiGenerator()
+
+    # ---------------------------------------------------------
+    # A document query cannot be answered without a document.
+    # Do this BEFORE retrieval and BEFORE the document-grounded
+    # Gemini generator is called.
+    # ---------------------------------------------------------
+    if intent == "DOCUMENT_QUERY" and not has_document:
+        return QueryResponse(
+            answer=(
+                "Please upload a document first so I can answer "
+                "that from its contents."
+            ),
+            citations=[],
+            abstained=True,
+            confidence=0.0,
+            retrieved_chunks=0,
+            model=settings.gemini_model,
+        )
+
+    # Normal conversation:
+    # Never run retrieval and never mention documents.
+    if intent == "CONVERSATIONAL":
+        conversational_answer = generator.generate_conversational(
+            message=payload.question,
+            history=payload.history,
+        )
+
+        return QueryResponse(
+            answer=conversational_answer,
+            citations=[],
+            abstained=False,
+            confidence=None,
+            retrieved_chunks=0,
+            model=settings.gemini_model,
+        )
+
+    # Outside-world factual request:
+    # Do not send it into RAG and do not claim it was missing
+    # from a document.
+    if intent == "OUTSIDE_SCOPE":
+        return QueryResponse(
+            answer=(
+                "I can help with conversation and information "
+                "available in this workspace, but I don't provide "
+                "outside-world factual information."
+            ),
+            citations=[],
+            abstained=True,
+            confidence=0.0,
+            retrieved_chunks=0,
+            model=settings.gemini_model,
+        )
+
+    # DOCUMENT_QUERY continues into the existing RAG pipeline.
 
     if payload.conversation_id:
         conversation = get_chat_conversation(
@@ -124,8 +199,6 @@ def query_documents(
         )
 
         return response
-
-    generator = GeminiGenerator()
 
     answer = generator.generate(
         query=query,
