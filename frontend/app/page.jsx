@@ -662,6 +662,7 @@ function App() {
         const rawBody = await res.text()
 
         let data = null
+
         if (contentType.includes('application/json')) {
           try {
             data = JSON.parse(rawBody)
@@ -676,17 +677,67 @@ function App() {
         }
 
         if (!res.ok) {
-          throw new Error(data?.detail || rawBody || `Failed to load conversations (${res.status})`)
+          throw new Error(
+            data?.detail ||
+            rawBody ||
+            `Failed to load conversations (${res.status})`
+          )
         }
 
-        setConversations(Array.isArray(data) ? data : [])
+        const conversationList = Array.isArray(data) ? data : []
+
+        const conversationsWithCounts = await Promise.all(
+          conversationList.map(async (conversation) => {
+            if (typeof conversation.message_count === 'number') {
+              return conversation
+            }
+
+            try {
+              const detailRes = await fetch(
+                `/api/v1/chat/${conversation.id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              )
+
+              if (!detailRes.ok) {
+                return {
+                  ...conversation,
+                  message_count: 0,
+                }
+              }
+
+              const detail = await detailRes.json()
+
+              return {
+                ...conversation,
+                message_count: Array.isArray(detail.messages)
+                  ? detail.messages.length
+                  : 0,
+              }
+            } catch (error) {
+              console.error(
+                `Failed to load message count for conversation ${conversation.id}:`,
+                error
+              )
+
+              return {
+                ...conversation,
+                message_count: 0,
+              }
+            }
+          })
+        )
+
+        setConversations(conversationsWithCounts)
       } catch (err) {
         console.error('Failed to fetch conversations:', err)
       }
     }
 
     fetchConversations()
-    fetchDocuments()
   }, [token])
 
   const fetchDocuments = async () => {
@@ -1147,6 +1198,59 @@ if (
       })
       setPendingQuestion('')
       setConversationId(data.conversation_id || null)
+
+      // Refresh Chat History with the real number of stored messages.
+      try {
+        const historyRes = await fetch('/api/v1/chat', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (historyRes.ok) {
+          const historyData = await historyRes.json()
+          const conversationList = Array.isArray(historyData)
+            ? historyData
+            : []
+
+          const refreshedConversations = await Promise.all(
+            conversationList.map(async (conversation) => {
+              try {
+                const detailRes = await fetch(
+                  `/api/v1/chat/${conversation.id}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                )
+
+                if (!detailRes.ok) {
+                  return conversation
+                }
+
+                const detail = await detailRes.json()
+
+                return {
+                  ...conversation,
+                  message_count: Array.isArray(detail.messages)
+                    ? detail.messages.length
+                    : 0,
+                }
+              } catch {
+                return conversation
+              }
+            })
+          )
+
+          setConversations(refreshedConversations)
+        }
+      } catch (historyError) {
+        console.error(
+          'Failed to refresh chat history:',
+          historyError
+        )
+      }
 
       setConversationMessages((messages) => [
         ...messages,
