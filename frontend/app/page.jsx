@@ -589,6 +589,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [health, setHealth] = useState(null)
   const [documents, setDocuments] = useState([])
+  const [selectedDocument, setSelectedDocument] = useState(null)
   const [conversations, setConversations] = useState([])
   const [conversationId, setConversationId] = useState(null)
   const [showChatHistory, setShowChatHistory] = useState(false)
@@ -685,10 +686,11 @@ function App() {
     }
 
     fetchConversations()
+    fetchDocuments()
   }, [token])
 
   const fetchDocuments = async () => {
-    if (!token) return
+    if (!token) return []
 
     try {
       const res = await fetch('/api/v1/documents?skip=0&limit=100', {
@@ -711,7 +713,7 @@ function App() {
 
       if (res.status === 401) {
         handleLogout()
-        return
+        return []
       }
 
       if (!res.ok) {
@@ -721,26 +723,30 @@ function App() {
       }
 
       const uniqueDocuments = []
-      const seenHashes = new Set()
+      const seenIds = new Set()
 
       for (const document of Array.isArray(data) ? data : []) {
-        const latestVersion = document.versions?.[0]
-        const fileHash = latestVersion?.file_hash
-
-        if (fileHash) {
-          if (seenHashes.has(fileHash)) {
+        const docId = document?.document_id || document?.id
+        if (docId) {
+          if (seenIds.has(docId)) {
             continue
           }
-
-          seenHashes.add(fileHash)
+          seenIds.add(docId)
         }
-
         uniqueDocuments.push(document)
       }
 
+      uniqueDocuments.sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+        return bTime - aTime
+      })
+
       setDocuments(uniqueDocuments)
+      return uniqueDocuments
     } catch (err) {
       console.error('Failed to fetch documents:', err)
+      return []
     }
   }
 
@@ -786,7 +792,7 @@ function App() {
 
   const handleRemoveDocument = () => {
     setFile(null)
-    setDocuments([])
+    setSelectedDocument(null)
     setDocumentPreview(null)
     setShowDocumentViewer(false)
   }
@@ -953,12 +959,10 @@ if (
     }
   }
 }, [file])
-  const handleSubmit = async (e, fileToUpload = file) => {
-    e?.preventDefault()
-
+  const performUpload = async (fileToUpload = file) => {
     if (!fileToUpload) {
       setStatus('Please select a file.')
-      return
+      return null
     }
 
     setLoading(true)
@@ -994,7 +998,7 @@ if (
       if (res.status === 401) {
         handleLogout()
         setStatus('Session expired. Please sign in again.')
-        return
+        return null
       }
 
       if (!res.ok) {
@@ -1005,18 +1009,35 @@ if (
         throw new Error('The server returned an invalid response.')
       }
 
-      setDocuments([data])
+      setSelectedDocument(data)
+      setDocuments((prev) => {
+        const docId = data.document_id || data.id
+        const filtered = Array.isArray(prev) ? prev.filter((d) => (d.document_id || d.id) !== docId) : []
+        return [data, ...filtered]
+      })
       setStatus('Document uploaded successfully.')
       setTitle('')
-      setAnswer(null)
-      setAnswerHistory([])
-      setQuestion('')
       setQueryError('')
+      await fetchDocuments()
+      return data
     } catch (err) {
       console.error(err)
       setStatus(err.message || 'Upload failed.')
+      throw err
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e, fileToUpload = file) => {
+    e?.preventDefault()
+    try {
+      await performUpload(fileToUpload)
+      setAnswer(null)
+      setAnswerHistory([])
+      setQuestion('')
+    } catch {
+      /* Status updated in performUpload */
     }
   }
 
@@ -1028,10 +1049,38 @@ if (
       return
     }
 
-    if (!documents.length || !(documents[0]?.document_id || documents[0]?.id)) {
-      setQueryError('Please upload a document before asking a question.')
+    let targetDoc = selectedDocument
+
+    if (!targetDoc && file) {
+      try {
+        targetDoc = await performUpload(file)
+      } catch (err) {
+        setQueryError(err.message || 'Failed to upload attached document.')
+        return
+      }
+    }
+
+    if (!targetDoc && documents.length > 0) {
+      targetDoc = documents[0]
+    }
+
+    if (!targetDoc) {
+      try {
+        const fetched = await fetchDocuments()
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          targetDoc = fetched[0]
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (!targetDoc || !(targetDoc.document_id || targetDoc.id)) {
+      setQueryError('Please upload or select a document before asking a question.')
       return
     }
+
+    const targetDocId = targetDoc.document_id || targetDoc.id
 
     const submittedQuestion = question.trim()
     setPendingQuestion(submittedQuestion)
@@ -1054,12 +1103,10 @@ if (
         body: JSON.stringify({
           question: submittedQuestion,
           conversation_id: conversationId,
-          top_k: 5,
-          filters: documents.length > 0
-            ? {
-                document_id: documents[0].document_id || documents[0].id,
-              }
-            : {},
+          top_k: 10,
+          filters: {
+            document_id: targetDocId,
+          },
         }),
       })
 
@@ -1270,7 +1317,15 @@ if (
     })
   }
 
-  const currentDocument = documents[0]
+  const currentDocument = selectedDocument || documents[0]
+  const activeDocument = file
+    ? { name: file.name, type: file.type || 'File' }
+    : selectedDocument
+      ? {
+          name: selectedDocument.file_name || selectedDocument.title || 'Selected document',
+          type: selectedDocument.mime_type || 'Document',
+        }
+      : null
 
   if (!token) {
     return <LoginPage onLogin={handleLogin} theme={theme} onToggleTheme={toggleTheme} />
@@ -1667,7 +1722,22 @@ if (
                     const documentId = document.document_id || document.id
 
                     setShowDocuments(false)
-                    setDocuments([document])
+                    setQueryError('')
+                    setSelectedDocument(document)
+
+                    setDocuments((prev) => {
+                      const filtered = Array.isArray(prev) ? prev.filter((d) => (d.document_id || d.id) !== documentId) : []
+                      return [document, ...filtered]
+                    })
+
+                    requestAnimationFrame(() => {
+                      document
+                        .getElementById('query')
+                        ?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'center',
+                        })
+                    })
 
                     try {
                       const res = await fetch(
@@ -1679,36 +1749,24 @@ if (
                         }
                       )
 
-                      if (!res.ok) {
-                        throw new Error(`Failed to load document (${res.status})`)
+                      if (res.ok) {
+                        const blob = await res.blob()
+                        const selectedFile = new File(
+                          [blob],
+                          document.file_name || document.title || 'document',
+                          {
+                            type:
+                              document.mime_type ||
+                              blob.type ||
+                              'application/octet-stream',
+                          }
+                        )
+
+                        setFile(selectedFile)
+                        setShowDocumentViewer(false)
                       }
-
-                      const blob = await res.blob()
-                      const selectedFile = new File(
-                        [blob],
-                        document.file_name || 'document',
-                        {
-                          type:
-                            document.mime_type ||
-                            blob.type ||
-                            'application/octet-stream',
-                        }
-                      )
-
-                      setFile(selectedFile)
-                      setShowDocumentViewer(false)
-
-                      requestAnimationFrame(() => {
-                        document
-                          .getElementById('upload-form')
-                          ?.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start',
-                          })
-                      })
                     } catch (err) {
-                      console.error('Failed to load selected document:', err)
-                      setQueryError('Failed to load the selected document.')
+                      console.error('Failed to load document content:', err)
                     }
                   }}
                 >
@@ -1770,6 +1828,14 @@ if (
                           rawBody ||
                           `Failed to delete document (${res.status})`
                         )
+                      }
+
+                      if (
+                        (selectedDocument?.document_id || selectedDocument?.id) === documentId ||
+                        (file && (file.name === document.file_name || file.name === document.title)) ||
+                        (documentPreview && (documentPreview.name === document.file_name || documentPreview.name === document.title))
+                      ) {
+                        handleRemoveDocument()
                       }
 
                       await fetchDocuments()
@@ -2090,11 +2156,11 @@ if (
 
             <div className="composer-area">
               <form id="query" className="ask-bar" onSubmit={handleQuery}>
-                {file && (
+                {activeDocument && (
                   <div className="query-selected-file">
-                    <span className="query-selected-file-name">{file.name}</span>
+                    <span className="query-selected-file-name">{activeDocument.name}</span>
                     <span className="query-selected-file-type">
-                      {file.type || 'File'}
+                      {activeDocument.type || 'File'}
                     </span>
                     <button
                       type="button"
