@@ -564,8 +564,9 @@ function readStoredTheme() {
 }
 
 function App() {
-  const [token, setToken] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
-  const [username, setUsername] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('username') : null)
+  const [token, setToken] = useState(null)
+  const [username, setUsername] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
   const [theme, setTheme] = useState('dark')
 
   const handleLogin = (accessToken, loggedInUsername) => {
@@ -583,6 +584,15 @@ function App() {
     setToken(null)
     setUsername(null)
   }
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('access_token')
+    const storedUsername = localStorage.getItem('username')
+
+    setToken(storedToken)
+    setUsername(storedUsername)
+    setAuthReady(true)
+  }, [])
   const [file, setFile] = useState(null)
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState('')
@@ -683,7 +693,19 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+const [pendingDeleteDocument, setPendingDeleteDocument] = useState(null)
+const [deletingDocument, setDeletingDocument] = useState(false)
+const [deleteError, setDeleteError] = useState('')
+
+
   const [showChangePassword, setShowChangePassword] = useState(false)
+const [showChangeUsername, setShowChangeUsername] = useState(false)
+const [newUsername, setNewUsername] = useState('')
+const [usernamePassword, setUsernamePassword] = useState('')
+const [usernameChanging, setUsernameChanging] = useState(false)
+const [usernameMessage, setUsernameMessage] = useState('')
+const [usernameError, setUsernameError] = useState('')
+
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -1165,8 +1187,6 @@ if (
     e?.preventDefault()
     try {
       await performUpload(fileToUpload)
-      setAnswer(null)
-      setAnswerHistory([])
       setQuestion('')
     } catch {
       /* Status updated in performUpload */
@@ -1511,7 +1531,161 @@ if (
   }
 
   
-  const handleChangePassword = async (event) => {
+  const handleDeleteDocument = async () => {
+  if (!pendingDeleteDocument || deletingDocument) {
+    return
+  }
+
+  const documentId = pendingDeleteDocument.id
+
+  setDeleteError('')
+  setDeletingDocument(true)
+
+  try {
+    const res = await fetch(
+      `/api/v1/documents/${documentId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    if (res.status === 401) {
+      handleLogout()
+      return
+    }
+
+    if (!res.ok) {
+      const rawBody = await res.text()
+      let data = null
+
+      try {
+        data = JSON.parse(rawBody)
+      } catch {
+        data = null
+      }
+
+      throw new Error(
+        data?.detail ||
+        rawBody ||
+        `Failed to delete document (${res.status})`
+      )
+    }
+
+    if (
+      (selectedDocument?.document_id || selectedDocument?.id) === documentId ||
+      (file && (
+        file.name === pendingDeleteDocument.name
+      )) ||
+      (documentPreview && (
+        documentPreview.name === pendingDeleteDocument.name
+      ))
+    ) {
+      handleRemoveDocument()
+    }
+
+    await fetchDocuments()
+
+    setPendingDeleteDocument(null)
+    setDeleteError('')
+  } catch (err) {
+    console.error('Failed to delete document:', err)
+    setDeleteError(
+      err.message || 'Failed to delete the document.'
+    )
+  } finally {
+    setDeletingDocument(false)
+  }
+}
+
+const handleChangeUsername = async (event) => {
+  event.preventDefault()
+
+  setUsernameError('')
+  setUsernameMessage('')
+
+  const trimmedUsername = newUsername.trim()
+
+  if (!trimmedUsername) {
+    setUsernameError('Please enter a new username.')
+    return
+  }
+
+  if (trimmedUsername === username) {
+    setUsernameError(
+      'New username must be different from the current username.'
+    )
+    return
+  }
+
+  if (!usernamePassword) {
+    setUsernameError('Please enter your current password.')
+    return
+  }
+
+  setUsernameChanging(true)
+
+  try {
+    const token =
+      localStorage.getItem('access_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('auth_token') ||
+      sessionStorage.getItem('access_token') ||
+      sessionStorage.getItem('token') ||
+      sessionStorage.getItem('auth_token')
+
+    if (!token) {
+      throw new Error('Your session has expired. Please log in again.')
+    }
+
+    const response = await fetch('/api/v1/auth/change-username', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        new_username: trimmedUsername,
+        current_password: usernamePassword,
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail || 'Unable to change username.'
+      )
+    }
+
+    const updatedUsername =
+      data?.username || trimmedUsername
+
+    localStorage.setItem('username', updatedUsername)
+    setUsername(updatedUsername)
+
+    setNewUsername('')
+    setUsernamePassword('')
+    setUsernameMessage(
+      data?.message || 'Username changed successfully.'
+    )
+
+    setTimeout(() => {
+      setShowChangeUsername(false)
+      setUsernameMessage('')
+    }, 1500)
+  } catch (error) {
+    setUsernameError(
+      error?.message || 'Unable to change username.'
+    )
+  } finally {
+    setUsernameChanging(false)
+  }
+}
+
+const handleChangePassword = async (event) => {
     event.preventDefault()
 
     setPasswordError('')
@@ -1639,8 +1813,18 @@ const handleNewConversation = () => {
       }
     : null
 
+  if (!authReady) {
+    return <div className="auth-loading-screen" />
+  }
+
   if (!token) {
-    return <LoginPage onLogin={handleLogin} theme={theme} onToggleTheme={toggleTheme} />
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    )
   }
 
   const isLight = theme === 'light'
@@ -1958,7 +2142,67 @@ const handleNewConversation = () => {
       </aside>
 
 
-      {showSettings && (
+      {pendingDeleteDocument && (
+  <div
+    className="delete-confirm-overlay"
+    onClick={() => {
+      if (!deletingDocument) {
+        setPendingDeleteDocument(null)
+        setDeleteError('')
+      }
+    }}
+  >
+    <div
+      className="delete-confirm-panel"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="delete-confirm-title">
+        Delete document?
+      </div>
+
+      <div className="delete-confirm-document">
+        {pendingDeleteDocument.name}
+      </div>
+
+      <div className="delete-confirm-message">
+        Are you sure you want to delete this document?
+      </div>
+
+      {deleteError && (
+        <div className="delete-confirm-error">
+          {deleteError}
+        </div>
+      )}
+
+      <div className="delete-confirm-actions">
+        <button
+          type="button"
+          className="delete-confirm-cancel"
+          onClick={() => {
+            if (!deletingDocument) {
+              setPendingDeleteDocument(null)
+              setDeleteError('')
+            }
+          }}
+          disabled={deletingDocument}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          className="delete-confirm-delete"
+          onClick={handleDeleteDocument}
+          disabled={deletingDocument}
+        >
+          {deletingDocument ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showSettings && (
         <div
           className="settings-overlay"
           onClick={() => setShowSettings(false)}
@@ -2008,18 +2252,117 @@ const handleNewConversation = () => {
               <div className="settings-section">
                 <h3>Account</h3>
 
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-title">Username</div>
-                    <div className="settings-row-description">
-                      Your current account name.
-                    </div>
-                  </div>
+                {!showChangeUsername ? (
+  <div className="settings-row settings-account-action">
+    <div>
+      <div className="settings-row-title">Username</div>
+      <div className="settings-row-description">
+        Your current account name.
+      </div>
+    </div>
 
-                  <span className="settings-value">
-                    {username || 'User'}
-                  </span>
-                </div>
+    <div className="settings-action-group">
+      <span className="settings-value">
+        {username || 'User'}
+      </span>
+
+      <button
+        type="button"
+        className="settings-theme-button"
+        onClick={() => {
+          setShowChangeUsername(true)
+          setUsernameError('')
+          setUsernameMessage('')
+          setNewUsername('')
+          setUsernamePassword('')
+        }}
+      >
+        Change Username
+      </button>
+    </div>
+  </div>
+) : (
+  <form
+    className="change-password-form"
+    onSubmit={handleChangeUsername}
+  >
+    <div className="change-password-title">
+      Change Username
+    </div>
+
+    <div className="change-password-field">
+      <label htmlFor="new-username">
+        New username
+      </label>
+      <input
+        id="new-username"
+        type="text"
+        value={newUsername}
+        onChange={(event) =>
+          setNewUsername(event.target.value)
+        }
+        autoComplete="username"
+        placeholder="Enter new username"
+        maxLength={100}
+        disabled={usernameChanging}
+      />
+    </div>
+
+    <div className="change-password-field">
+      <label htmlFor="username-current-password">
+        Current password
+      </label>
+      <input
+        id="username-current-password"
+        type="password"
+        value={usernamePassword}
+        onChange={(event) =>
+          setUsernamePassword(event.target.value)
+        }
+        autoComplete="current-password"
+        placeholder="Enter current password"
+        disabled={usernameChanging}
+      />
+    </div>
+
+    {usernameError && (
+      <div className="change-password-error">
+        {usernameError}
+      </div>
+    )}
+
+    {usernameMessage && (
+      <div className="change-password-success">
+        {usernameMessage}
+      </div>
+    )}
+
+    <div className="change-password-actions">
+      <button
+        type="button"
+        className="settings-secondary-button"
+        onClick={() => {
+          setShowChangeUsername(false)
+          setUsernameError('')
+          setUsernameMessage('')
+          setNewUsername('')
+          setUsernamePassword('')
+        }}
+        disabled={usernameChanging}
+      >
+        Cancel
+      </button>
+
+      <button
+        type="submit"
+        className="settings-save-button"
+        disabled={usernameChanging}
+      >
+        {usernameChanging ? 'Changing...' : 'Change Username'}
+      </button>
+    </div>
+  </form>
+)}
 
                 {!showChangePassword ? (
                   <div className="settings-row settings-password-action">
@@ -2172,14 +2515,14 @@ const handleNewConversation = () => {
               </p>
 
               <p className="logout-confirm-message">
-                You'll need to log in again to access your workspace.
+                Are you sure you want to logout?
               </p>
             </div>
 
             <div className="logout-confirm-actions">
               <button
                 type="button"
-                className="logout-confirm-primary"
+                className="logout-confirm-primary logout-confirm-button"
                 onClick={handleLogout}
               >
                 Log out
@@ -2304,65 +2647,21 @@ const handleNewConversation = () => {
                   className="document-list-delete"
                   aria-label={`Delete ${document.file_name || 'document'}`}
                   title="Delete document"
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.stopPropagation()
 
-                    const documentId = document.document_id || document.id
+                    const documentId =
+                      document.document_id || document.id
 
-                    if (!window.confirm(
-                      `Delete "${document.file_name || document.title || 'this document'}"?`
-                    )) {
-                      return
-                    }
+                    setDeleteError('')
 
-                    try {
-                      const res = await fetch(
-                        `/api/v1/documents/${documentId}`,
-                        {
-                          method: 'DELETE',
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                          },
-                        }
-                      )
-
-                      if (res.status === 401) {
-                        handleLogout()
-                        return
-                      }
-
-                      if (!res.ok) {
-                        const rawBody = await res.text()
-                        let data = null
-
-                        try {
-                          data = JSON.parse(rawBody)
-                        } catch {
-                          data = null
-                        }
-
-                        throw new Error(
-                          data?.detail ||
-                          rawBody ||
-                          `Failed to delete document (${res.status})`
-                        )
-                      }
-
-                      if (
-                        (selectedDocument?.document_id || selectedDocument?.id) === documentId ||
-                        (file && (file.name === document.file_name || file.name === document.title)) ||
-                        (documentPreview && (documentPreview.name === document.file_name || documentPreview.name === document.title))
-                      ) {
-                        handleRemoveDocument()
-                      }
-
-                      await fetchDocuments()
-                    } catch (err) {
-                      console.error('Failed to delete document:', err)
-                      setQueryError(
-                        err.message || 'Failed to delete the document.'
-                      )
-                    }
+                    setPendingDeleteDocument({
+                      id: documentId,
+                      name:
+                        document.file_name ||
+                        document.title ||
+                        'this document',
+                    })
                   }}
                 >
                   <svg
@@ -2552,22 +2851,23 @@ const handleNewConversation = () => {
                         </div>
                       </div>
 
-                      <div className="answer-section">
-                        <div
-                          id={resultIndex === answerHistory.length ? "sources" : undefined}
-                          className="sources-heading"
-                        >
-                          <div>
-                            <p className="eyebrow">Sources</p>
-                          </div>
+                      {result.citations?.length > 0 && (
+                        <div className="answer-section">
+                          <div
+                            id={resultIndex === answerHistory.length ? "sources" : undefined}
+                            className="sources-heading"
+                          >
+                            <div>
+                              <p className="eyebrow">Sources</p>
+                            </div>
 
-                          <div className="sources-heading-right">
-                            <span>
-                              {result.citations?.length ?? 0} reference
-                              {result.citations?.length === 1 ? '' : 's'}
-                            </span>
+                            <div className="sources-heading-right">
+                              <span>
+                                {result.citations.length} reference
+                                {result.citations.length === 1 ? '' : 's'}
+                              </span>
 
-                            {result.citations?.length > 0 && (
+                              {result.citations.length > 0 && (
                               <button
                                 type="button"
                                 className="sources-toggle"
@@ -2636,9 +2936,10 @@ const handleNewConversation = () => {
                                 No reference sources returned for this response.
                               </div>
                             )}
-                          </>
-                        )}
-                      </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
 

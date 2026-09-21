@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.api.schemas.auth_schemas import LoginRequest, TokenResponse, ChangePasswordRequest
+from backend.api.schemas.auth_schemas import (
+    ChangePasswordRequest,
+    ChangeUsernameRequest,
+    LoginRequest,
+    TokenResponse,
+)
 from backend.auth.security import create_access_token, verify_password, hash_password
 from backend.auth.dependencies import get_current_user
 from backend.database.database import get_db
@@ -90,3 +95,69 @@ def change_password(
     return {
         "message": "Password changed successfully",
     }
+
+@router.post("/change-username")
+def change_username(
+    payload: ChangeUsernameRequest,
+    current_user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.id == current_user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive",
+        )
+
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    new_username = payload.new_username.strip()
+
+    if not new_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username cannot be empty",
+        )
+
+    if new_username == user.username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New username must be different from the current username",
+        )
+
+    existing_user = (
+        db.query(UserModel)
+        .filter(UserModel.username == new_username)
+        .first()
+    )
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username is already taken",
+        )
+
+    user.username = new_username
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": "Username changed successfully",
+        "username": user.username,
+    }
+
