@@ -589,6 +589,78 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [health, setHealth] = useState(null)
   const [documents, setDocuments] = useState([])
+
+  useEffect(() => {
+    setDocuments((current) => {
+      const unique = deduplicateDocuments(current)
+
+      if (unique.length === current.length) {
+        return current
+      }
+
+      return unique
+    })
+  }, [documents])
+
+
+  const deduplicateDocuments = (items) => {
+    const sorted = [...(Array.isArray(items) ? items : [])].sort((a, b) => {
+      const aTime = new Date(
+        a?.updated_at || a?.created_at || 0
+      ).getTime()
+
+      const bTime = new Date(
+        b?.updated_at || b?.created_at || 0
+      ).getTime()
+
+      return bTime - aTime
+    })
+
+    const seenHashes = new Set()
+    const seenNames = new Set()
+    const unique = []
+
+    for (const document of sorted) {
+      const versions = Array.isArray(document?.versions)
+        ? document.versions
+        : []
+
+      const hashes = versions
+        .map((version) => version?.file_hash)
+        .filter(Boolean)
+
+      const fileName = String(
+        document?.file_name ||
+        document?.filename ||
+        document?.title ||
+        ''
+      )
+        .trim()
+        .toLowerCase()
+
+      const hasDuplicateHash = hashes.some((hash) =>
+        seenHashes.has(hash)
+      )
+
+      const hasDuplicateName =
+        fileName && seenNames.has(fileName)
+
+      if (hasDuplicateHash || hasDuplicateName) {
+        continue
+      }
+
+      hashes.forEach((hash) => seenHashes.add(hash))
+
+      if (fileName) {
+        seenNames.add(fileName)
+      }
+
+      unique.push(document)
+    }
+
+    return unique
+  }
+
   const [selectedDocument, setSelectedDocument] = useState(null)
   const [conversations, setConversations] = useState([])
   const [conversationId, setConversationId] = useState(null)
