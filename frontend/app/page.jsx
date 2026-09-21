@@ -578,6 +578,8 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('username')
+    setShowLogoutConfirm(false)
+    setShowProfileMenu(false)
     setToken(null)
     setUsername(null)
   }
@@ -607,6 +609,7 @@ function App() {
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [documentPreview, setDocumentPreview] = useState(null)
 
   useEffect(() => {
@@ -1540,7 +1543,7 @@ if (
                 className="sidebar-profile-logout"
                 onClick={() => {
                   setShowProfileMenu(false)
-                  handleLogout()
+                  setShowLogoutConfirm(true)
                 }}
               >
                 <IconLogout />
@@ -1574,6 +1577,52 @@ if (
           </button>
         </div>
       </aside>
+
+      {showLogoutConfirm && (
+        <div
+          className="logout-confirm-backdrop"
+          role="presentation"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="logout-confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="logout-confirm-content">
+              <h2 id="logout-confirm-title">Log out of DocGPT?</h2>
+
+              <p className="logout-confirm-user">
+                {username || 'User'}
+              </p>
+
+              <p className="logout-confirm-message">
+                You'll need to log in again to access your workspace.
+              </p>
+            </div>
+
+            <div className="logout-confirm-actions">
+              <button
+                type="button"
+                className="logout-confirm-primary"
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
+
+              <button
+                type="button"
+                className="logout-confirm-secondary"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDocuments && (
         <button

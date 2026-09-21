@@ -141,20 +141,50 @@ def list_documents(db: Session, skip: int = 0, limit: int = 100) -> List[Documen
 def delete_document(
     db: Session, doc_id: str, actor_id: Optional[str] = None, reason: Optional[str] = None
 ) -> bool:
-    """Hard-delete document content. Keep only a deletion audit row (no payload)."""
+    """Delete a document and any duplicate records for the same file hash."""
     doc = get_document(db, doc_id)
     if not doc:
         return False
-    audit = DeletionAuditModel(
-        id=generate_uuid(),
-        tenant_id=doc.tenant_id,
-        corpus_id=doc.corpus_id,
-        document_id=doc.id,
-        actor_id=actor_id,
-        reason=reason,
+
+    # Find the hash of the selected document's latest version.
+    latest_version = (
+        db.query(VersionModel)
+        .filter(VersionModel.document_id == doc.id)
+        .order_by(VersionModel.version_number.desc())
+        .first()
     )
-    db.add(audit)
-    db.delete(doc)
+
+    document_ids = {doc.id}
+
+    # The UI treats identical file hashes as duplicate uploads,
+    # so deleting one should remove all records for that same file.
+    if latest_version and latest_version.file_hash:
+        duplicate_rows = (
+            db.query(VersionModel.document_id)
+            .filter(VersionModel.file_hash == latest_version.file_hash)
+            .all()
+        )
+
+        document_ids.update(row[0] for row in duplicate_rows)
+
+    documents_to_delete = (
+        db.query(DocumentModel)
+        .filter(DocumentModel.id.in_(document_ids))
+        .all()
+    )
+
+    for current_doc in documents_to_delete:
+        audit = DeletionAuditModel(
+            id=generate_uuid(),
+            tenant_id=current_doc.tenant_id,
+            corpus_id=current_doc.corpus_id,
+            document_id=current_doc.id,
+            actor_id=actor_id,
+            reason=reason,
+        )
+        db.add(audit)
+        db.delete(current_doc)
+
     db.commit()
     return True
 

@@ -3162,9 +3162,6 @@ html[data-theme="light"] .sidebar-profile-menu {
 }
 
 
-.app-shell.documents-open .sidebar {
-  filter: blur(6px);
-}
 \n.documents-drawer {
   position: fixed;
   top: 0;
@@ -3407,9 +3404,6 @@ html[data-theme="light"] .sidebar-profile-menu {
 }
 
 /* Only the underlying navbar is blurred */
-.app-shell.documents-open .sidebar {
-  filter: blur(6px);
-}
 
 /* Documents drawer itself stays sharp */
 .documents-drawer,
@@ -3437,12 +3431,124 @@ html[data-theme="light"] .sidebar-profile-menu {
   transform: translateX(0) !important;
 }
 
-.app-shell.documents-open .sidebar {
-  filter: blur(6px);
-}
 
 
 .documents-drawer:not(.is-open) {
   visibility: hidden !important;
   pointer-events: none !important;
+}
+
+/* Blur the visible left navbar whenever a drawer is open */
+.app-shell:has(.chat-history-drawer.is-open) .sidebar > *,
+.app-shell:has(.documents-drawer.is-open) .sidebar > * {
+  filter: blur(6px);
+}
+
+/* Keep the drawer itself and all of its contents sharp */
+.chat-history-drawer,
+.chat-history-drawer *,
+.documents-drawer,
+.documents-drawer * {
+  filter: none !important;
+}
+
+
+/* Logout confirmation dialog */
+.logout-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 6, 18, 0.38);
+}
+
+.logout-confirm-dialog {
+  width: min(420px, calc(100vw - 40px));
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 80px rgba(20, 12, 45, 0.22);
+}
+
+.logout-confirm-content {
+  text-align: center;
+}
+
+.logout-confirm-content h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.logout-confirm-user {
+  margin: 18px 0 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.logout-confirm-message {
+  margin: 10px 0 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.logout-confirm-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.logout-confirm-primary,
+.logout-confirm-secondary {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease,
+    border-color 0.15s ease, color 0.15s ease;
+}
+
+.logout-confirm-primary {
+  border: 1px solid var(--accent-deep);
+  background: var(--accent-deep);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
+}
+
+.logout-confirm-primary:hover {
+  transform: translateY(-1px);
+  background: #7c3aed;
+}
+
+.logout-confirm-secondary {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.logout-confirm-secondary:hover {
+  background: rgba(124, 58, 237, 0.06);
+}
+
+html[data-theme="light"] .logout-confirm-dialog {
+  background: #ffffff;
+}
+
+html[data-theme="dark"] .logout-confirm-dialog {
+  background: var(--surface);
 }
