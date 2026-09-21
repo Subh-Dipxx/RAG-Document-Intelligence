@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from typing import Any
@@ -67,13 +67,27 @@ answered from the available workspace knowledge, such as unrelated
 outside-world information.
 
 Important:
-- Do not classify based on specific keywords alone.
-- Use semantic meaning and conversation context.
-- A greeting remains CONVERSATIONAL even when a document is uploaded.
-- A casual message must never become DOCUMENT_QUERY merely because a
-  document exists.
-- A DOCUMENT_QUERY requires an actual request for document/workspace
-  information.
+- Do not classify based on specific keywords or exact phrases alone.
+- Determine the semantic intent from the complete conversational context.
+- Use the recent conversation history to resolve incomplete, elliptical,
+  abbreviated, or follow-up user messages.
+- The latest user message does not need to explicitly mention a document.
+- If the latest message is a follow-up to a previous document-related
+  request, interpret it in the context of that previous request.
+- If the latest message asks for additional information, explanation,
+  elaboration, clarification, or details about something previously
+  established as document-related, classify it as DOCUMENT_QUERY.
+- If the latest message is ambiguous in isolation, use the preceding
+  user and assistant messages and the current document availability to
+  determine its intended meaning.
+- Do not classify a message as DOCUMENT_QUERY merely because a document
+  exists.
+- A greeting, acknowledgement, thanks, or ordinary social conversation
+  remains CONVERSATIONAL unless the surrounding context clearly makes it
+  a document-related request.
+- A request about the assistant itself remains CONVERSATIONAL.
+- A request for unrelated outside-world factual information is
+  OUTSIDE_SCOPE.
 - Do not answer the user.
 - Return JSON only.
 
@@ -119,3 +133,4 @@ Return exactly:
                 "intent": "OUTSIDE_SCOPE",
                 "reason": "Intent classification failed safely.",
             }
+
