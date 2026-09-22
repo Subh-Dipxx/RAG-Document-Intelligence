@@ -1,22 +1,102 @@
+import hashlib
+import os
+import secrets
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from email_validator import EmailNotValidError, validate_email
 
 from backend.api.schemas.auth_schemas import (
     ChangePasswordRequest,
     ChangeUsernameRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     LoginRequest,
+    SignupRequest,
     TokenResponse,
 )
 from backend.auth.security import create_access_token, verify_password, hash_password
 from backend.auth.dependencies import get_current_user
 from backend.database.database import get_db
-from backend.database.models import UserModel
+from backend.database.models import PasswordResetTokenModel, UserModel, utc_now
+from backend.auth.email_service import send_password_reset_email
 
 
 router = APIRouter(
     prefix="/auth",
     tags=["auth"],
 )
+
+
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
+def signup(
+    payload: SignupRequest,
+    db: Session = Depends(get_db),
+):
+    username = payload.username.strip()
+    email = payload.email.strip()
+
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username cannot be empty",
+        )
+
+    if payload.password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match",
+        )
+
+    try:
+        email_info = validate_email(
+            email,
+            check_deliverability=True,
+            allow_display_name=False,
+        )
+        normalized_email = email_info.normalized
+    except EmailNotValidError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    existing_username = (
+        db.query(UserModel)
+        .filter(UserModel.username == username)
+        .first()
+    )
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username is already taken",
+        )
+
+    existing_email = (
+        db.query(UserModel)
+        .filter(UserModel.email == normalized_email)
+        .first()
+    )
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email address is already registered",
+        )
+
+    user = UserModel(
+        username=username,
+        email=normalized_email,
+        password_hash=hash_password(payload.password),
+        is_active=True,
+    )
+
+    db.add(user)
+    db.commit()
+
+    return {
+        "message": "Account created successfully",
+    }
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -161,3 +241,151 @@ def change_username(
         "username": user.username,
     }
 
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    generic_response = {
+        "message": "If an account with that email exists, a password reset link has been sent.",
+    }
+
+    email = payload.email.strip()
+
+    try:
+        email_info = validate_email(
+            email,
+            check_deliverability=False,
+            allow_display_name=False,
+        )
+        normalized_email = email_info.normalized
+    except EmailNotValidError:
+        return generic_response
+
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.email == normalized_email)
+        .first()
+    )
+
+    if not user or not user.is_active:
+        return generic_response
+
+    now = utc_now()
+
+    # Invalidate any previous unused reset tokens for this user.
+    (
+        db.query(PasswordResetTokenModel)
+        .filter(
+            PasswordResetTokenModel.user_id == user.id,
+            PasswordResetTokenModel.used_at.is_(None),
+        )
+        .update(
+            {"used_at": now},
+            synchronize_session=False,
+        )
+    )
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    reset_token = PasswordResetTokenModel(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=now + timedelta(minutes=30),
+    )
+
+    db.add(reset_token)
+    db.commit()
+
+    reset_url = (
+        os.getenv("FRONTEND_URL", "http://localhost:3001").rstrip("/")
+        + "/reset-password?token="
+        + raw_token
+    )
+
+    try:
+        send_password_reset_email(
+            recipient_email=normalized_email,
+            reset_url=reset_url,
+        )
+    except Exception:
+        db.delete(reset_token)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to send password reset email",
+        )
+
+    return generic_response
+
+
+@router.post("/reset-password")
+def reset_password(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match",
+        )
+
+    token_hash = hashlib.sha256(
+        payload.token.encode("utf-8")
+    ).hexdigest()
+
+    now = utc_now()
+
+    reset_token = (
+        db.query(PasswordResetTokenModel)
+        .filter(
+            PasswordResetTokenModel.token_hash == token_hash,
+            PasswordResetTokenModel.used_at.is_(None),
+            PasswordResetTokenModel.expires_at > now,
+        )
+        .first()
+    )
+
+    if not reset_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset link",
+        )
+
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.id == reset_token.user_id)
+        .first()
+    )
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset link",
+        )
+
+    user.password_hash = hash_password(payload.new_password)
+    reset_token.used_at = now
+
+    # Invalidate any other unused reset tokens for this user.
+    (
+        db.query(PasswordResetTokenModel)
+        .filter(
+            PasswordResetTokenModel.user_id == user.id,
+            PasswordResetTokenModel.id != reset_token.id,
+            PasswordResetTokenModel.used_at.is_(None),
+        )
+        .update(
+            {"used_at": now},
+            synchronize_session=False,
+        )
+    )
+
+    db.commit()
+
+    return {
+        "message": "Password reset successfully",
+    }

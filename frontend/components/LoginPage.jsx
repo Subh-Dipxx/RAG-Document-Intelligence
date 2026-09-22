@@ -22,11 +22,26 @@ function IconMoon() {
 function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [forgotEmail, setForgotEmail] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const isLight = theme === 'light'
+  const isSignup = mode === 'signup'
+  const isForgot = mode === 'forgot'
 
-  const handleSubmit = async (e) => {
+  const switchMode = (nextMode) => {
+    setMode(nextMode)
+    setError('')
+    setSuccess('')
+    setPassword('')
+    setConfirmPassword('')
+  }
+
+  const handleLogin = async (e) => {
     e.preventDefault()
 
     if (!username.trim() || !password) {
@@ -64,6 +79,87 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
     }
   }
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+
+    if (!forgotEmail.trim()) {
+      setError('Please enter your email address.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const res = await fetch('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.detail || 'Unable to send reset link')
+      }
+
+      setSuccess(data?.message || 'If an account with that email exists, a password reset link has been sent.')
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Unable to send reset link.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignup = async (e) => {
+    e.preventDefault()
+
+    if (!username.trim() || !email.trim() || !password || !confirmPassword) {
+      setError("Please fill in all fields.")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const res = await fetch("/api/v1/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+          confirm_password: confirmPassword,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.detail || "Signup failed")
+      }
+
+      setSuccess("Account created successfully. You can now sign in.")
+      setMode("login")
+      setPassword("")
+      setConfirmPassword("")
+    } catch (err) {
+      console.error(err)
+      setError(err.message || "Signup failed.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="login-page">
       <div className="login-glow" aria-hidden="true" />
@@ -88,31 +184,93 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         <div className="login-header">
           
           <h1>DocGPT</h1>
-          <p>Sign in to access the knowledge workspace.</p>
+          <p>{isForgot ? "Reset your password securely." : isSignup ? "Create your account to access the knowledge workspace." : "Sign in to access the knowledge workspace."}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter username"
-            autoComplete="username"
-            disabled={loading}
-          />
+        <form onSubmit={isForgot ? handleForgotPassword : isSignup ? handleSignup : handleLogin} className="login-form">
+          {!isForgot && (
+            <>
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+                autoComplete="username"
+                disabled={loading}
+              />
+            </>
+          )}
 
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
-            autoComplete="current-password"
-            disabled={loading}
-          />
+          {isSignup && (
+            <>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email address"
+                autoComplete="email"
+                disabled={loading}
+              />
+            </>
+          )}
+
+          {isForgot ? (
+            <>
+              <label htmlFor="forgotEmail">Email</label>
+              <input
+                id="forgotEmail"
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder="Enter your registered email"
+                autoComplete="email"
+                disabled={loading}
+              />
+            </>
+          ) : (
+            <>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete={isSignup ? "new-password" : "current-password"}
+                disabled={loading}
+              />
+
+              {isSignup && (
+                <>
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    autoComplete="new-password"
+                    disabled={loading}
+                  />
+                </>
+              )}
+            </>
+          )}
+
+          {!isForgot && !isSignup && (
+            <button
+              type="button"
+              className="login-mode-link login-forgot-link"
+              onClick={() => switchMode("forgot")}
+              disabled={loading}
+            >
+              Forgot Password?
+            </button>
+          )}
 
           {error && (
             <div className="login-error">
@@ -121,16 +279,62 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
             </div>
           )}
 
+          {success && (
+            <div className="login-success">
+              {success}
+            </div>
+          )}
+
           <button type="submit" className="primary-button full-width" disabled={loading}>
             {loading ? (
               <>
                 <span className="spinner" />
-                Signing in...
+                {isForgot ? "Sending reset link..." : isSignup ? "Creating account..." : "Signing in..."}
               </>
             ) : (
-              'Sign In'
+              isForgot ? "Send Reset Link" : isSignup ? "Create Account" : "Sign In"
             )}
           </button>
+
+          <div className="login-mode-switch">
+            {isForgot ? (
+              <>
+                Remember your password?
+                <button
+                  type="button"
+                  className="login-mode-link"
+                  onClick={() => switchMode("login")}
+                  disabled={loading}
+                >
+                  Sign In
+                </button>
+              </>
+            ) : isSignup ? (
+              <>
+                Already have an account?
+                <button
+                  type="button"
+                  className="login-mode-link"
+                  onClick={() => switchMode("login")}
+                  disabled={loading}
+                >
+                  Sign In
+                </button>
+              </>
+            ) : (
+              <>
+                Don't have an account?
+                <button
+                  type="button"
+                  className="login-mode-link"
+                  onClick={() => switchMode("signup")}
+                  disabled={loading}
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
         </form>
       </div>
     </main>

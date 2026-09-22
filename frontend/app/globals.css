@@ -1127,6 +1127,18 @@ button { cursor: pointer; }
 }
 .login-form input:disabled { opacity: 0.65; cursor: not-allowed; }
 .login-form .primary-button { margin-top: 10px; }
+.login-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 4px 0 2px;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 12px;
+  background: rgba(74, 222, 128, 0.08);
+  color: #4ade80;
+  font-size: 13px;
+}
 .login-error {
   display: flex;
   align-items: center;
@@ -1148,6 +1160,35 @@ button { cursor: pointer; }
   background: rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
+.login-mode-switch {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.login-mode-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-mode-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.login-mode-link:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 @media (max-width: 520px) {
   .login-page { padding: 20px; }
   .login-theme-toggle { top: 16px; right: 16px; }

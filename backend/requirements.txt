@@ -36,3 +36,5 @@ openpyxl
 python-pptx
 lxml
 Pillow
+
+email-validator>=2.2,<3

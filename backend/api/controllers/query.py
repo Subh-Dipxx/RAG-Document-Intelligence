@@ -12,6 +12,7 @@ from backend.database.crud import (
     create_chat_conversation,
     create_chat_message,
     get_chat_conversation,
+    get_document,
 )
 from backend.database.database import get_db
 from backend.config import get_settings
@@ -35,6 +36,29 @@ def query_documents(
     db: Session = Depends(get_db),
 ) -> QueryResponse:
     settings = get_settings()
+
+    # ---------------------------------------------------------
+    # Validate document ownership before intent routing/retrieval.
+    # The client may provide a document_id, but ownership is always
+    # determined by the authenticated JWT user.
+    # ---------------------------------------------------------
+    requested_document_id = (
+        payload.filters.get("document_id")
+        if payload.filters
+        else None
+    )
+
+    if requested_document_id:
+        owned_document = get_document(
+            db,
+            requested_document_id,
+            owner_id=current_user_id,
+        )
+        if owned_document is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found",
+            )
 
     # ---------------------------------------------------------
     # Semantic intent routing happens BEFORE RAG retrieval.

@@ -2259,19 +2259,18 @@ const handleNewConversation = () => {
     <div>
       <div className="settings-row-title">Username</div>
       <div className="settings-row-description">
-        Your current account name.
+        Change your current username.
       </div>
     </div>
 
     <div className="settings-action-group">
-      <span className="settings-value">
-        {username || 'User'}
-      </span>
+      
 
       <button
         type="button"
         className="settings-theme-button"
         onClick={() => {
+          setShowChangePassword(false)
           setShowChangeUsername(true)
           setUsernameError('')
           setUsernameMessage('')
@@ -2381,6 +2380,7 @@ const handleNewConversation = () => {
                       type="button"
                       className="settings-theme-button"
                       onClick={() => {
+                        setShowChangeUsername(false)
                         setShowChangePassword(true)
                         setPasswordError('')
                         setPasswordMessage('')

@@ -32,8 +32,20 @@ class UserModel(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     username = Column(String, nullable=False, unique=True, index=True)
+    email = Column(String, nullable=True, unique=True, index=True)
     password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=utc_now)
+
+
+class PasswordResetTokenModel(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utc_now)
 
 

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 import json
 
 from backend.database.database import get_db
+from backend.auth.dependencies import get_current_user
 from backend.database import crud
 from backend.domain.models import Document, Version
 from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
@@ -22,6 +23,7 @@ async def upload_document(
     permissions: Optional[str] = Form("[]"),  # JSON string of permissions list
     metadata_json: Optional[str] = Form("{}"),
     db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
 ):
     """Upload a document file, store in MinIO, create DB records, and trigger async processing job."""
     content = await file.read()
@@ -64,6 +66,7 @@ async def upload_document(
         file_name=file_name,
         mime_type=file.content_type,
         file_size=len(content),
+        owner_id=current_user,
         permissions=perms_list,
         metadata=meta_dict,
     )
@@ -90,18 +93,23 @@ async def upload_document(
 
 
 @router.get("", response_model=List[DocumentResponse])
-def list_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_documents(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
     """List documents metadata stored in database."""
-    docs = crud.list_documents(db, skip=skip, limit=limit)
+    docs = crud.list_documents(db, skip=skip, limit=limit, owner_id=current_user)
     return docs
 
 
 @router.get("/{document_id}/content")
-def get_document_content(document_id: str, db: Session = Depends(get_db)):
+def get_document_content(document_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     """Return the stored file bytes for a document."""
     from fastapi.responses import Response
 
-    doc = crud.get_document(db, document_id)
+    doc = crud.get_document(db, document_id, owner_id=current_user)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -132,18 +140,18 @@ def get_document_content(document_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document(document_id: str, db: Session = Depends(get_db)):
+def get_document(document_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     """Get document details including version history."""
-    doc = crud.get_document(db, document_id)
+    doc = crud.get_document(db, document_id, owner_id=current_user)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(document_id: str, db: Session = Depends(get_db)):
+def delete_document(document_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     """Delete a document and its database records."""
-    success = crud.delete_document(db, document_id)
+    success = crud.delete_document(db, document_id, owner_id=current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
     return None

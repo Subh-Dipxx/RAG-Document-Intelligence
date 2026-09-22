@@ -124,13 +124,28 @@ def create_document(db: Session, doc: Document) -> DocumentModel:
     return db_doc
 
 
-def get_document(db: Session, doc_id: str) -> Optional[DocumentModel]:
-    return db.query(DocumentModel).filter(DocumentModel.id == doc_id).first()
+def get_document(
+    db: Session,
+    doc_id: str,
+    owner_id: Optional[str] = None,
+) -> Optional[DocumentModel]:
+    query = db.query(DocumentModel).filter(DocumentModel.id == doc_id)
+    if owner_id is not None:
+        query = query.filter(DocumentModel.owner_id == owner_id)
+    return query.first()
 
 
-def list_documents(db: Session, skip: int = 0, limit: int = 100) -> List[DocumentModel]:
+def list_documents(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    owner_id: Optional[str] = None,
+) -> List[DocumentModel]:
+    query = db.query(DocumentModel)
+    if owner_id is not None:
+        query = query.filter(DocumentModel.owner_id == owner_id)
     return (
-        db.query(DocumentModel)
+        query
         .order_by(DocumentModel.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -139,10 +154,14 @@ def list_documents(db: Session, skip: int = 0, limit: int = 100) -> List[Documen
 
 
 def delete_document(
-    db: Session, doc_id: str, actor_id: Optional[str] = None, reason: Optional[str] = None
+    db: Session,
+    doc_id: str,
+    actor_id: Optional[str] = None,
+    reason: Optional[str] = None,
+    owner_id: Optional[str] = None,
 ) -> bool:
     """Delete a document and any duplicate records for the same file hash."""
-    doc = get_document(db, doc_id)
+    doc = get_document(db, doc_id, owner_id=owner_id)
     if not doc:
         return False
 
