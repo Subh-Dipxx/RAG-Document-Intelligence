@@ -132,6 +132,27 @@ services:
       timeout: 15s
       retries: 5
 
+  mcp-email:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command:
+      [
+        "python",
+        "-m",
+        "backend.mcp.email_server"
+      ]
+    env_file:
+      - .env
+    environment:
+      <<: *app_env
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   worker:
     build:
       context: .
@@ -160,6 +181,7 @@ services:
       MINIO_ENDPOINT: "http://minio:9000"
       QDRANT_URL: "http://qdrant:6333"
       OPENSEARCH_URL: "http://opensearch:9200"
+      MCP_SERVER_URL: "http://mcp-email:8000/mcp"
     volumes:
       - rag_huggingface_cache:/root/.cache/huggingface
 

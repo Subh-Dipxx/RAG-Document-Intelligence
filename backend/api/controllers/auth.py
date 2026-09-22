@@ -294,7 +294,7 @@ def forgot_password(
     reset_token = PasswordResetTokenModel(
         user_id=user.id,
         token_hash=token_hash,
-        expires_at=now + timedelta(minutes=30),
+        expires_at=now + timedelta(minutes=10),
     )
 
     db.add(reset_token)

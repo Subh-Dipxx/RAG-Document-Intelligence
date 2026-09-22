@@ -20,6 +20,8 @@ from backend.domain.models import Query
 from sqlalchemy.orm import Session
 from backend.generation.gemini import GeminiGenerator
 from backend.generation.intent_router import IntentRouter
+from backend.generation.email_action import EmailActionExtractor
+from backend.mcp.client import send_email
 from backend.retrieval.pgvector import PgVectorRetriever
 
 
@@ -64,6 +66,7 @@ def query_documents(
     # Semantic intent routing happens BEFORE RAG retrieval.
     # ---------------------------------------------------------
     intent_router = IntentRouter()
+    email_action_extractor = EmailActionExtractor()
 
     has_document = bool(
         payload.filters
@@ -79,6 +82,63 @@ def query_documents(
     intent = intent_result["intent"]
 
     generator = GeminiGenerator()
+
+    # ---------------------------------------------------------
+    # Email send action:
+    # Extract only email details already established in the
+    # conversation, then execute the internal MCP email tool.
+    # ---------------------------------------------------------
+    if intent == "EMAIL_SEND":
+        email_data = email_action_extractor.extract(
+            message=payload.question,
+            history=payload.history,
+        )
+
+        recipient = email_data.get("to")
+        subject = email_data.get("subject")
+        body = email_data.get("body")
+
+        if not recipient or not subject or not body:
+            return QueryResponse(
+                answer=(
+                    "I can send the email, but I need the recipient, "
+                    "subject, and email body to be established in the conversation first."
+                ),
+                citations=[],
+                abstained=True,
+                confidence=0.0,
+                retrieved_chunks=0,
+                model=settings.gemini_model,
+            )
+
+        try:
+            mcp_result = send_email(
+                to=recipient,
+                subject=subject,
+                body=body,
+            )
+
+            return QueryResponse(
+                answer="Email sent successfully.",
+                citations=[],
+                abstained=False,
+                confidence=1.0,
+                retrieved_chunks=0,
+                model=settings.gemini_model,
+            )
+
+        except Exception:
+            return QueryResponse(
+                answer=(
+                    "I couldn't send the email because the email service "
+                    "encountered an error. Please try again."
+                ),
+                citations=[],
+                abstained=True,
+                confidence=0.0,
+                retrieved_chunks=0,
+                model=settings.gemini_model,
+            )
 
     # ---------------------------------------------------------
     # A document query cannot be answered without a document.

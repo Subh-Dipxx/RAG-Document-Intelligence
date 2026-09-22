@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 function IconSun() {
   return (
@@ -26,12 +26,28 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
   const [email, setEmail] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [forgotEmail, setForgotEmail] = useState('')
+  const [resetToken, setResetToken] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const isLight = theme === 'light'
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot'
+  const isReset = mode === 'reset'
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('reset_token')
+
+    if (token) {
+      setResetToken(token)
+      setMode('reset')
+      setError('')
+      setSuccess('')
+      setPassword('')
+      setConfirmPassword('')
+    }
+  }, [])
 
   const switchMode = (nextMode) => {
     setMode(nextMode)
@@ -113,6 +129,66 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
     }
   }
 
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+
+    if (!resetToken) {
+      setError('This password reset link is invalid or incomplete.')
+      return
+    }
+
+    if (!password || !confirmPassword) {
+      setError('Please enter and confirm your new password.')
+      return
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const res = await fetch('/api/v1/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: resetToken,
+          new_password: password,
+          confirm_password: confirmPassword,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.detail || 'Unable to reset password.')
+      }
+
+      setSuccess('Password reset successfully. You can now sign in with your new password.')
+      setPassword('')
+      setConfirmPassword('')
+      setResetToken('')
+      setMode('login')
+      window.history.replaceState({}, '', '/')
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Unable to reset password.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSignup = async (e) => {
     e.preventDefault()
 
@@ -184,11 +260,30 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         <div className="login-header">
           
           <h1>DocGPT</h1>
-          <p>{isForgot ? "Reset your password securely." : isSignup ? "Create your account to access the knowledge workspace." : "Sign in to access the knowledge workspace."}</p>
+          <p>
+            {isReset
+              ? "Set a new password for your account."
+              : isForgot
+                ? "Reset your password securely."
+                : isSignup
+                  ? "Create your account to access the knowledge workspace."
+                  : "Sign in to access the knowledge workspace."}
+          </p>
         </div>
 
-        <form onSubmit={isForgot ? handleForgotPassword : isSignup ? handleSignup : handleLogin} className="login-form">
-          {!isForgot && (
+        <form
+          onSubmit={
+            isReset
+              ? handleResetPassword
+              : isForgot
+                ? handleForgotPassword
+                : isSignup
+                  ? handleSignup
+                  : handleLogin
+          }
+          className="login-form"
+        >
+          {!isForgot && !isReset && (
             <>
               <label htmlFor="username">Username</label>
               <input
@@ -244,7 +339,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
                 disabled={loading}
               />
 
-              {isSignup && (
+              {(isSignup || isReset) && (
                 <>
                   <label htmlFor="confirmPassword">Confirm Password</label>
                   <input
@@ -261,7 +356,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
             </>
           )}
 
-          {!isForgot && !isSignup && (
+          {!isForgot && !isSignup && !isReset && (
             <button
               type="button"
               className="login-mode-link login-forgot-link"
@@ -292,7 +387,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
                 {isForgot ? "Sending reset link..." : isSignup ? "Creating account..." : "Signing in..."}
               </>
             ) : (
-              isForgot ? "Send Reset Link" : isSignup ? "Create Account" : "Sign In"
+              isReset ? "Reset Password" : isForgot ? "Send Reset Link" : isSignup ? "Create Account" : "Sign In"
             )}
           </button>
 

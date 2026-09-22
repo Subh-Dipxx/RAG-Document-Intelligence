@@ -38,3 +38,5 @@ lxml
 Pillow
 
 email-validator>=2.2,<3
+
+mcp

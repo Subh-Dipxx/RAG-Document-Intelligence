@@ -15,6 +15,7 @@ class IntentRouter:
     VALID_INTENTS = {
         "CONVERSATIONAL",
         "DOCUMENT_QUERY",
+        "EMAIL_SEND",
         "OUTSIDE_SCOPE",
     }
 
@@ -57,6 +58,14 @@ The user is simply interacting with the assistant naturally.
 This includes greetings, thanks, acknowledgements, casual conversation,
 follow-ups about the conversation, and questions about the assistant.
 
+EMAIL_SEND
+The user is asking the assistant to send an email that has been
+drafted, discussed, or otherwise established in the conversation.
+This includes natural confirmations or follow-up instructions such as
+asking to send, submit, deliver, or proceed with an email.
+Determine this from the semantic meaning and conversation context,
+not from specific keywords.
+
 DOCUMENT_QUERY
 The user is asking for information that should be answered from the
 available uploaded-document knowledge.
@@ -86,6 +95,11 @@ Important:
   remains CONVERSATIONAL unless the surrounding context clearly makes it
   a document-related request.
 - A request about the assistant itself remains CONVERSATIONAL.
+- If the user is asking to actually send an email that has been
+  drafted or established in the conversation, classify it as
+  EMAIL_SEND.
+- A request to draft or compose an email without asking to send it
+  remains CONVERSATIONAL.
 - A request for unrelated outside-world factual information is
   OUTSIDE_SCOPE.
 - When a document is active, an ambiguous information-seeking request such as asking for details, explanation, elaboration, clarification, summary, or more information should be interpreted as referring to the active document and classified as DOCUMENT_QUERY.
@@ -102,7 +116,7 @@ Latest user message:
 
 Return exactly:
 {{
-  "intent": "CONVERSATIONAL" | "DOCUMENT_QUERY" | "OUTSIDE_SCOPE",
+  "intent": "CONVERSATIONAL" | "DOCUMENT_QUERY" | "EMAIL_SEND" | "OUTSIDE_SCOPE",
   "reason": "brief explanation"
 }}
 """

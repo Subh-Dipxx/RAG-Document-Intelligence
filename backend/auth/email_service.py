@@ -3,9 +3,10 @@ import smtplib
 from email.message import EmailMessage
 
 
-def send_password_reset_email(
+def send_email(
     recipient_email: str,
-    reset_url: str,
+    subject: str,
+    body: str,
 ) -> None:
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
@@ -17,12 +18,27 @@ def send_password_reset_email(
         raise RuntimeError("SMTP configuration is incomplete")
 
     message = EmailMessage()
-    message["Subject"] = "Reset your RAG Intelligence Platform password"
+    message["Subject"] = subject
     message["From"] = smtp_from
     message["To"] = recipient_email
+    message.set_content(body)
 
-    message.set_content(
-        f"""Hello,
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(smtp_username, smtp_password)
+        server.send_message(message)
+
+
+def send_password_reset_email(
+    recipient_email: str,
+    reset_url: str,
+) -> None:
+    send_email(
+        recipient_email=recipient_email,
+        subject="Reset your RAG Intelligence Platform password",
+        body=f"""Hello,
 
 We received a request to reset your password for RAG Intelligence Platform.
 
@@ -36,12 +52,5 @@ If you did not request a password reset, you can safely ignore this email.
 
 Regards,
 RAG Intelligence Platform
-"""
+""",
     )
-
-    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(smtp_username, smtp_password)
-        server.send_message(message)
