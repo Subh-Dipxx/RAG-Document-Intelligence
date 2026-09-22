@@ -88,6 +88,9 @@ Important:
 - A request about the assistant itself remains CONVERSATIONAL.
 - A request for unrelated outside-world factual information is
   OUTSIDE_SCOPE.
+- When a document is active, an ambiguous information-seeking request such as asking for details, explanation, elaboration, clarification, summary, or more information should be interpreted as referring to the active document and classified as DOCUMENT_QUERY.
+- Do not classify an ambiguous information-seeking request as CONVERSATIONAL merely because there is no previous conversation history.
+- Keep clearly social messages, greetings, acknowledgements, thanks, and questions about the assistant as CONVERSATIONAL even when a document is active.
 - Do not answer the user.
 - Return JSON only.
 

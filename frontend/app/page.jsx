@@ -1203,7 +1203,9 @@ if (
 
     let targetDoc = selectedDocument
 
-    if (!targetDoc && file) {
+    // If a file is attached to this message, it is the document
+    // context for this query. Always upload/use the current attachment.
+    if (file) {
       try {
         targetDoc = await performUpload(file)
       } catch (err) {
@@ -1226,7 +1228,7 @@ if (
   .filter((message) => {
     // Without an active document, do not leak previous
     // document-grounded assistant responses into normal chat.
-    if (selectedDocument) {
+    if (targetDoc) {
       return true
     }
 
