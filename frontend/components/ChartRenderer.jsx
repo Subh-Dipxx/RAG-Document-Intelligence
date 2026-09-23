@@ -112,6 +112,13 @@ export default function ChartRenderer({ chart }) {
     },
   }
 
+  const chartExpandButtonStyle = {
+    background: 'var(--chart-expand-bg)',
+    border: '1px solid var(--chart-expand-border)',
+    color: 'var(--chart-expand-icon)',
+    boxShadow: '0 0 0 1px var(--chart-expand-glow), 0 4px 14px rgba(124, 58, 237, 0.18)',
+  }
+
   const maxWidth = expanded ? 940 : 560
 
  const chartFrameStyle = {
@@ -256,7 +263,7 @@ export default function ChartRenderer({ chart }) {
             border: '1px solid rgba(124, 58, 237, 0.22)',
             borderRadius: 8,
             background: 'transparent',
-            color: '#4c1d95',
+            color: 'var(--chart-expand-icon)',
             cursor: 'pointer',
             padding: 0,
             flexShrink: 0,
