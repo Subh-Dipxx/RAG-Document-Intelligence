@@ -606,7 +606,8 @@ button { cursor: pointer; }
 
 .conversation-message-user 
 .conversation-message-assistant .conversation-message-content {
-  max-width: min(820px, 100%);
+  width: 100%;
+  max-width: 1100px;
 }
 
 .conversation-message-assistant .conversation-message-content > *:first-child {
@@ -4400,4 +4401,13 @@ html[data-theme="dark"] .logout-confirm-dialog {
 
 [data-theme='light'] .auth-loading-screen {
   background: #ffffff;
+}
+
+/* Allow expanded charts to extend beyond the normal assistant message width */
+.conversation-message-assistant:has(.document-chart) {
+  overflow: visible;
+}
+
+.conversation-message-assistant .conversation-message-content {
+  overflow: visible;
 }

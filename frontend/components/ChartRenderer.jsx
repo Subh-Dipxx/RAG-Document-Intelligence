@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 import {
   Bar,
   BarChart,
@@ -18,16 +20,14 @@ import {
 } from 'recharts'
 
 export default function ChartRenderer({ chart }) {
+  const [expanded, setExpanded] = useState(false)
+
   if (!chart || !Array.isArray(chart.data)) {
     return null
   }
 
   const series = Array.isArray(chart.series) ? chart.series : []
 
-  /*
-   * Keep charts compact while ensuring categorical labels are
-   * actually rendered instead of being automatically skipped.
-   */
   const xValues =
     chart.chart_type === 'pie'
       ? []
@@ -58,14 +58,6 @@ export default function ChartRenderer({ chart }) {
     0
   )
 
-  /*
-   * Dynamic label configuration:
-   *
-   * - Every categorical label is rendered.
-   * - Normal labels use a compact -45 degree angle.
-   * - Dense/long labels use a steeper angle and smaller font.
-   * - No category names or values are hard-coded.
-   */
   const xAxisProps = isCategoricalXAxis
     ? {
         dataKey: chart.x_key,
@@ -95,23 +87,19 @@ export default function ChartRenderer({ chart }) {
         },
       }
 
-  /*
-   * Keep the chart compact like the reference UI.
-   * The max width prevents a chart from stretching across the
-   * entire conversation area when the page is wide.
-   */
-  const chartFrameStyle = {
-    width: '100%',
-    maxWidth: 560,
-    height: 360,
-    margin: '0 auto',
-  }
+  const maxWidth = expanded ? 940 : 560
 
-  if (chart.chart_type === 'pie') {
-    return (
-      <div className="document-chart">
-        <h3>{chart.title}</h3>
+ const chartFrameStyle = {
+  width: '100%',
+  maxWidth,
+  height: 360,
+  margin: '0 auto',
+  transition: 'width 0.2s ease, max-width 0.2s ease',
+}
 
+  const renderChart = () => {
+    if (chart.chart_type === 'pie') {
+      return (
         <div style={chartFrameStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -127,20 +115,15 @@ export default function ChartRenderer({ chart }) {
                   <Cell key={`cell-${index}`} />
                 ))}
               </Pie>
-
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
-  if (chart.chart_type === 'line') {
-    return (
-      <div className="document-chart">
-        <h3>{chart.title}</h3>
-
+    if (chart.chart_type === 'line') {
+      return (
         <div style={chartFrameStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chart.data}>
@@ -161,15 +144,11 @@ export default function ChartRenderer({ chart }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
-  if (chart.chart_type === 'scatter') {
-    return (
-      <div className="document-chart">
-        <h3>{chart.title}</h3>
-
+    if (chart.chart_type === 'scatter') {
+      return (
         <div style={chartFrameStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart>
@@ -189,14 +168,10 @@ export default function ChartRenderer({ chart }) {
             </ScatterChart>
           </ResponsiveContainer>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
-  return (
-    <div className="document-chart">
-      <h3>{chart.title}</h3>
-
+    return (
       <div style={chartFrameStyle}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chart.data}>
@@ -215,6 +190,92 @@ export default function ChartRenderer({ chart }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+    )
+  }
+
+  return (
+    <div
+      className="document-chart"
+      style={{
+  width: expanded ? 'min(940px, calc(100vw - 80px))' : '100%',
+  maxWidth: expanded ? '940px' : '600px',
+  margin: '0 auto',
+  transition: 'width 0.2s ease, max-width 0.2s ease',
+}}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <h3 style={{ margin: 0 }}>{chart.title}</h3>
+
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          aria-label={expanded ? 'Collapse chart' : 'Expand chart'}
+          title={expanded ? 'Collapse chart' : 'Expand chart'}
+          style={{
+            width: 30,
+            height: 30,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid rgba(124, 58, 237, 0.22)',
+            borderRadius: 8,
+            background: 'transparent',
+            color: '#4c1d95',
+            cursor: 'pointer',
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >
+          {expanded ? (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="11"
+                cy="11"
+                r="6.5"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="M16 16L21 21"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {renderChart()}
     </div>
   )
 }
