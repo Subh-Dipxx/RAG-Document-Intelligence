@@ -4411,3 +4411,54 @@ html[data-theme="dark"] .logout-confirm-dialog {
 .conversation-message-assistant .conversation-message-content {
   overflow: visible;
 }
+
+/* =========================================================
+   Chart theme
+   ========================================================= */
+
+html {
+  --chart-series: #7c3aed;
+  --chart-series-secondary: #a78bfa;
+  --chart-axis: #475569;
+  --chart-grid: rgba(71, 85, 105, 0.24);
+
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-text: #111827;
+  --chart-tooltip-label: #6d28d9;
+  --chart-tooltip-border: rgba(71, 85, 105, 0.22);
+}
+
+html[data-theme="dark"] {
+  --chart-series: #8b5cf6;
+  --chart-series-secondary: #a78bfa;
+  --chart-axis: #cbd5e1;
+  --chart-grid: rgba(203, 213, 225, 0.24);
+
+  --chart-tooltip-bg: #11111f;
+  --chart-tooltip-text: #f8fafc;
+  --chart-tooltip-label: #c4b5fd;
+  --chart-tooltip-border: rgba(167, 139, 250, 0.35);
+}
+
+/* Chart theme */
+html {
+  --chart-series: #7c3aed;
+  --chart-series-secondary: #a78bfa;
+  --chart-axis: #475569;
+  --chart-grid: rgba(71, 85, 105, 0.24);
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-text: #111827;
+  --chart-tooltip-label: #6d28d9;
+  --chart-tooltip-border: rgba(71, 85, 105, 0.22);
+}
+
+html[data-theme="dark"] {
+  --chart-series: #8b5cf6;
+  --chart-series-secondary: #a78bfa;
+  --chart-axis: #cbd5e1;
+  --chart-grid: rgba(203, 213, 225, 0.24);
+  --chart-tooltip-bg: #11111f;
+  --chart-tooltip-text: #f8fafc;
+  --chart-tooltip-label: #c4b5fd;
+  --chart-tooltip-border: rgba(167, 139, 250, 0.35);
+}

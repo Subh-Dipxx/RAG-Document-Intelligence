@@ -73,6 +73,7 @@ export default function ChartRenderer({ chart }) {
             : 80,
         tickMargin: 8,
         tick: {
+          fill: 'var(--chart-axis)',
           fontSize:
             xLabels.length > 24 || longestXLabel > 24
               ? 9
@@ -83,9 +84,33 @@ export default function ChartRenderer({ chart }) {
         dataKey: chart.x_key,
         tickMargin: 8,
         tick: {
+          fill: 'var(--chart-axis)',
           fontSize: 11,
         },
       }
+
+  const chartAxisTick = {
+    fill: 'var(--chart-axis)',
+    fontSize: 11,
+  }
+
+  const chartTooltipProps = {
+    contentStyle: {
+      backgroundColor: 'var(--chart-tooltip-bg)',
+      border: '1px solid var(--chart-tooltip-border)',
+      borderRadius: 8,
+      color: 'var(--chart-tooltip-text)',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.18)',
+    },
+    labelStyle: {
+      color: 'var(--chart-tooltip-label)',
+      fontWeight: 600,
+      marginBottom: 4,
+    },
+    itemStyle: {
+      color: 'var(--chart-tooltip-text)',
+    },
+  }
 
   const maxWidth = expanded ? 940 : 560
 
@@ -112,10 +137,10 @@ export default function ChartRenderer({ chart }) {
                 labelLine
               >
                 {chart.data.map((_, index) => (
-                  <Cell key={`cell-${index}`} />
+                  <Cell key={`cell-${index}`} fill="var(--chart-series)" />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip {...chartTooltipProps} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -127,10 +152,10 @@ export default function ChartRenderer({ chart }) {
         <div style={chartFrameStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chart.data}>
-              <CartesianGrid />
+              <CartesianGrid stroke="var(--chart-grid)" />
               <XAxis {...xAxisProps} />
-              <YAxis />
-              <Tooltip />
+              <YAxis tick={chartAxisTick} />
+              <Tooltip {...chartTooltipProps} />
 
               {series.map((item) => (
                 <Line
@@ -138,6 +163,8 @@ export default function ChartRenderer({ chart }) {
                   type="monotone"
                   dataKey={item.data_key}
                   name={item.label || item.data_key}
+                  stroke="var(--chart-series)"
+                  strokeWidth={2.5}
                   dot={false}
                 />
               ))}
@@ -152,10 +179,10 @@ export default function ChartRenderer({ chart }) {
         <div style={chartFrameStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart>
-              <CartesianGrid />
+              <CartesianGrid stroke="var(--chart-grid)" />
               <XAxis {...xAxisProps} />
-              <YAxis />
-              <Tooltip />
+              <YAxis tick={chartAxisTick} />
+              <Tooltip {...chartTooltipProps} />
 
               {series.map((item) => (
                 <Scatter
@@ -163,6 +190,7 @@ export default function ChartRenderer({ chart }) {
                   name={item.label || item.data_key}
                   data={chart.data}
                   dataKey={item.data_key}
+                  fill="var(--chart-series)"
                 />
               ))}
             </ScatterChart>
@@ -175,16 +203,17 @@ export default function ChartRenderer({ chart }) {
       <div style={chartFrameStyle}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chart.data}>
-            <CartesianGrid />
+            <CartesianGrid stroke="var(--chart-grid)" />
             <XAxis {...xAxisProps} />
-            <YAxis />
-            <Tooltip />
+            <YAxis tick={chartAxisTick} />
+            <Tooltip {...chartTooltipProps} />
 
             {series.map((item) => (
               <Bar
                 key={item.data_key}
                 dataKey={item.data_key}
                 name={item.label || item.data_key}
+                fill="var(--chart-series)"
               />
             ))}
           </BarChart>
