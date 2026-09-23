@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.schemas.query_schemas import (
@@ -13,6 +15,7 @@ from backend.database.crud import (
     create_chat_message,
     get_chat_conversation,
     get_document,
+    get_versions,
 )
 from backend.database.database import get_db
 from backend.config import get_settings
@@ -23,6 +26,7 @@ from backend.generation.intent_router import IntentRouter
 from backend.generation.email_action import EmailActionExtractor
 from backend.mcp.client import send_email
 from backend.retrieval.pgvector import PgVectorRetriever
+from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 
 
 router = APIRouter(
@@ -89,20 +93,81 @@ def query_documents(
     # conversation, then execute the internal MCP email tool.
     # ---------------------------------------------------------
     if intent == "EMAIL_SEND":
+        # ---------------------------------------------------------
+        # If an active document exists, retrieve from it so the
+        # email action can resolve names -> email addresses from
+        # the uploaded document.
+        # ---------------------------------------------------------
+        document_context = ""
+
+        if has_document:
+            history_text = "\n".join(
+                f"{item.get('role', 'user')}: {item.get('content', '')}"
+                for item in (payload.history or [])[-12:]
+                if item.get("content")
+            )
+
+            retrieval_text = f"""
+Conversation:
+{history_text}
+
+Latest user request:
+{payload.question}
+""".strip()
+
+            email_query = Query(
+                text=retrieval_text,
+                user_id=current_user_id,
+                tenant_id=payload.tenant_id,
+                corpus_id=payload.corpus_id,
+                top_k=(
+                    payload.top_k
+                    if payload.top_k is not None
+                    else settings.retrieval_top_k
+                ),
+                filters=payload.filters,
+            )
+
+            email_retriever = PgVectorRetriever()
+
+            email_chunks = email_retriever.retrieve(
+                query=email_query,
+                filters=payload.filters,
+            )
+
+            context_parts = []
+
+            for chunk in email_chunks:
+                chunk_text = getattr(chunk, "text", None)
+
+                if not chunk_text:
+                    chunk_text = getattr(chunk, "content", None)
+
+                if chunk_text:
+                    context_parts.append(str(chunk_text))
+
+            document_context = "\n\n---\n\n".join(context_parts)
+
         email_data = email_action_extractor.extract(
             message=payload.question,
             history=payload.history,
+            document_context=document_context,
         )
 
-        recipient = email_data.get("to")
+        recipients = email_data.get("to") or []
         subject = email_data.get("subject")
         body = email_data.get("body")
+        attach_current_document = email_data.get(
+            "attach_current_document",
+            False,
+        )
 
-        if not recipient or not subject or not body:
+        if not recipients or not subject or not body:
             return QueryResponse(
                 answer=(
                     "I can send the email, but I need the recipient, "
-                    "subject, and email body to be established in the conversation first."
+                    "subject, and email body to be established in the "
+                    "conversation or available in the active document."
                 ),
                 citations=[],
                 abstained=True,
@@ -111,11 +176,123 @@ def query_documents(
                 model=settings.gemini_model,
             )
 
+        attachments = []
+
+        if attach_current_document:
+            if not requested_document_id:
+                return QueryResponse(
+                    answer=(
+                        "I can send the email, but there is no selected "
+                        "document to attach."
+                    ),
+                    citations=[],
+                    abstained=True,
+                    confidence=0.0,
+                    retrieved_chunks=0,
+                    model=settings.gemini_model,
+                )
+
+            versions = get_versions(
+                db,
+                requested_document_id,
+            )
+
+            if not versions:
+                return QueryResponse(
+                    answer=(
+                        "I can send the email, but the selected document "
+                        "does not have an available version to attach."
+                    ),
+                    citations=[],
+                    abstained=True,
+                    confidence=0.0,
+                    retrieved_chunks=0,
+                    model=settings.gemini_model,
+                )
+
+            current_version = next(
+                (
+                    version
+                    for version in versions
+                    if version.id == owned_document.current_version_id
+                ),
+                None,
+            )
+
+            if current_version is None:
+                current_version = next(
+                    (
+                        version
+                        for version in versions
+                        if version.is_current
+                    ),
+                    versions[0],
+                )
+
+            if not current_version.storage_key:
+                return QueryResponse(
+                    answer=(
+                        "I can send the email, but the selected "
+                        "document file is not available in storage."
+                    ),
+                    citations=[],
+                    abstained=True,
+                    confidence=0.0,
+                    retrieved_chunks=0,
+                    model=settings.gemini_model,
+                )
+
+            try:
+                file_bytes = minio_storage.download_bytes(
+                    bucket_name=RAW_DOCUMENTS_BUCKET,
+                    object_name=current_version.storage_key,
+                )
+            except Exception:
+                return QueryResponse(
+                    answer=(
+                        "I can send the email, but the selected "
+                        "document could not be retrieved from storage."
+                    ),
+                    citations=[],
+                    abstained=True,
+                    confidence=0.0,
+                    retrieved_chunks=0,
+                    model=settings.gemini_model,
+                )
+
+            if not file_bytes:
+                return QueryResponse(
+                    answer=(
+                        "I can send the email, but the selected "
+                        "document file is empty."
+                    ),
+                    citations=[],
+                    abstained=True,
+                    confidence=0.0,
+                    retrieved_chunks=0,
+                    model=settings.gemini_model,
+                )
+
+            attachments.append(
+                {
+                    "filename": owned_document.file_name
+                    or "document",
+                    "content_type": (
+                        owned_document.mime_type
+                        or "application/octet-stream"
+                    ),
+                    "content_base64": base64.b64encode(
+                        file_bytes
+                    ).decode("ascii"),
+                }
+            )
+
         try:
             mcp_result = send_email(
-                to=recipient,
+                to=recipients,
                 subject=subject,
                 body=body,
+                attachments=attachments,
             )
 
             return QueryResponse(

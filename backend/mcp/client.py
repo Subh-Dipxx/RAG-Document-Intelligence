@@ -51,9 +51,10 @@ class MCPClient:
 
 
 def send_email(
-    to: str,
+    to: list[str],
     subject: str,
     body: str,
+    attachments: list[dict] | None = None,
 ):
     return MCPClient().call_tool(
         "send_email",
@@ -61,5 +62,6 @@ def send_email(
             "to": to,
             "subject": subject,
             "body": body,
+            "attachments": attachments or [],
         },
     )

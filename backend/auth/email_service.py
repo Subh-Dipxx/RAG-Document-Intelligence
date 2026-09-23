@@ -4,9 +4,10 @@ from email.message import EmailMessage
 
 
 def send_email(
-    recipient_email: str,
+    recipient_email: str | list[str],
     subject: str,
     body: str,
+    attachments: list[dict] | None = None,
 ) -> None:
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
@@ -20,19 +21,45 @@ def send_email(
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = smtp_from
-    message["To"] = recipient_email
+    recipients = (
+        [recipient_email]
+        if isinstance(recipient_email, str)
+        else [email.strip() for email in recipient_email if email and email.strip()]
+    )
+
+    if not recipients:
+        raise ValueError("At least one recipient email is required")
+
+    message["To"] = ", ".join(recipients)
     message.set_content(body)
+
+    for attachment in attachments or []:
+        filename = attachment.get("filename")
+        content_type = attachment.get("content_type") or "application/octet-stream"
+        content = attachment.get("content")
+
+        if not filename or not isinstance(content, bytes):
+            raise ValueError("Invalid email attachment")
+
+        maintype, subtype = content_type.split("/", 1)
+
+        message.add_attachment(
+            content,
+            maintype=maintype,
+            subtype=subtype,
+            filename=filename,
+        )
 
     with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
         server.ehlo()
         server.starttls()
         server.ehlo()
         server.login(smtp_username, smtp_password)
-        server.send_message(message)
+        server.send_message(message, to_addrs=recipients)
 
 
 def send_password_reset_email(
-    recipient_email: str,
+    recipient_email: str | list[str],
     reset_url: str,
 ) -> None:
     send_email(
