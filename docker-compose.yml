@@ -153,6 +153,24 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  mcp-chart:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command:
+      [
+        "python",
+        "-m",
+        "backend.mcp.chart_server"
+      ]
+    env_file:
+      - .env
+    environment:
+      <<: *app_env
+    expose:
+      - "8000"
+    restart: unless-stopped
+
   worker:
     build:
       context: .
@@ -182,6 +200,7 @@ services:
       QDRANT_URL: "http://qdrant:6333"
       OPENSEARCH_URL: "http://opensearch:9200"
       MCP_SERVER_URL: "http://mcp-email:8000/mcp"
+      MCP_CHART_SERVER_URL: "http://mcp-chart:8000/mcp"
     volumes:
       - rag_huggingface_cache:/root/.cache/huggingface
 

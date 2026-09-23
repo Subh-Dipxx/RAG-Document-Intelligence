@@ -25,6 +25,7 @@ from backend.generation.gemini import GeminiGenerator
 from backend.generation.intent_router import IntentRouter
 from backend.generation.email_action import EmailActionExtractor
 from backend.mcp.client import send_email
+from backend.mcp.chart_client import create_chart
 from backend.retrieval.pgvector import PgVectorRetriever
 from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 
@@ -368,6 +369,117 @@ Latest user request:
             retrieved_chunks=0,
             model=settings.gemini_model,
         )
+
+    # ---------------------------------------------------------
+    # Chart request:
+    # Retrieve only from the explicitly selected document, then
+    # delegate chart generation to the MCP chart tool.
+    # ---------------------------------------------------------
+    if intent == "CHART_REQUEST":
+        if not has_document:
+            return QueryResponse(
+                answer=(
+                    "Please upload or select a document first so I can "
+                    "create a chart from its contents."
+                ),
+                citations=[],
+                abstained=True,
+                confidence=0.0,
+                retrieved_chunks=0,
+                model=settings.gemini_model,
+                chart=None,
+            )
+
+        chart_query = Query(
+            text=payload.question,
+            user_id=current_user_id,
+            tenant_id=payload.tenant_id,
+            corpus_id=payload.corpus_id,
+            top_k=(
+                payload.top_k
+                if payload.top_k is not None
+                else settings.retrieval_top_k
+            ),
+            filters=payload.filters,
+        )
+
+        chart_retriever = PgVectorRetriever()
+
+        chart_chunks = chart_retriever.retrieve(
+            query=chart_query,
+            filters=payload.filters,
+        )
+
+        context_parts = []
+
+        for chunk in chart_chunks:
+            chunk_text = getattr(chunk, "text", None)
+
+            if not chunk_text:
+                chunk_text = getattr(chunk, "content", None)
+
+            if chunk_text:
+                context_parts.append(str(chunk_text))
+
+        document_context = "\n\n---\n\n".join(context_parts)
+
+        if not document_context.strip():
+            return QueryResponse(
+                answer=(
+                    "I couldn't find enough structured information in the "
+                    "selected document to create that chart."
+                ),
+                citations=[],
+                abstained=True,
+                confidence=0.0,
+                retrieved_chunks=0,
+                model=settings.gemini_model,
+                chart=None,
+            )
+
+        try:
+            chart = create_chart(
+                question=payload.question,
+                document_context=document_context,
+            )
+
+            if chart.get("error") == "INSUFFICIENT_DATA":
+                return QueryResponse(
+                    answer=(
+                        "I couldn't find enough information in the selected "
+                        "document to create that chart."
+                    ),
+                    citations=[],
+                    abstained=True,
+                    confidence=0.0,
+                    retrieved_chunks=len(chart_chunks),
+                    model=settings.gemini_model,
+                    chart=None,
+                )
+
+            return QueryResponse(
+                answer="Here is the chart based on the selected document.",
+                citations=[],
+                abstained=False,
+                confidence=1.0,
+                retrieved_chunks=len(chart_chunks),
+                model=settings.gemini_model,
+                chart=chart,
+            )
+
+        except Exception:
+            return QueryResponse(
+                answer=(
+                    "I couldn't create the chart from the selected "
+                    "document."
+                ),
+                citations=[],
+                abstained=True,
+                confidence=0.0,
+                retrieved_chunks=len(chart_chunks),
+                model=settings.gemini_model,
+                chart=None,
+            )
 
     # DOCUMENT_QUERY continues into the existing RAG pipeline.
 

@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import mammoth from 'mammoth'
 import { parsePPTXToSlides } from 'pptx-json-parser'
 import LoginPage from '../components/LoginPage'
+import ChartRenderer from '../components/ChartRenderer'
 import * as XLSX from 'xlsx'
 
 const THEME_KEY = 'rag-theme'
@@ -1396,6 +1397,7 @@ if (
             retrieved_chunks: data.retrieved_chunks ?? 0,
             model: data.model || null,
           },
+          chart: data.chart || null,
         },
       ])
     } catch (err) {
@@ -2850,6 +2852,9 @@ const handleNewConversation = () => {
                         <div className="conversation-message-label">Assistant</div>
                         <div className="conversation-message-content">
                           {renderMarkdown(result.answer)}
+                          {result.chart && (
+                            <ChartRenderer chart={result.chart} />
+                          )}
                         </div>
                       </div>
 

@@ -16,6 +16,7 @@ class IntentRouter:
         "CONVERSATIONAL",
         "DOCUMENT_QUERY",
         "EMAIL_SEND",
+        "CHART_REQUEST",
         "OUTSIDE_SCOPE",
     }
 
@@ -65,6 +66,15 @@ This includes natural confirmations or follow-up instructions such as
 asking to send, submit, deliver, or proceed with an email.
 Determine this from the semantic meaning and conversation context,
 not from specific keywords.
+
+CHART_REQUEST
+The user is asking the assistant to create, show, visualize, plot,
+graph, or otherwise represent information from the available document
+as a chart or data visualization.
+Determine this from the semantic meaning and conversation context,
+not from specific keywords. The request should be treated as a chart
+request when the intended output is a visual representation of data
+from the document.
 
 DOCUMENT_QUERY
 The user is asking for information that should be answered from the
@@ -116,7 +126,7 @@ Latest user message:
 
 Return exactly:
 {{
-  "intent": "CONVERSATIONAL" | "DOCUMENT_QUERY" | "EMAIL_SEND" | "OUTSIDE_SCOPE",
+  "intent": "CONVERSATIONAL" | "DOCUMENT_QUERY" | "EMAIL_SEND" | "CHART_REQUEST" | "OUTSIDE_SCOPE",
   "reason": "brief explanation"
 }}
 """

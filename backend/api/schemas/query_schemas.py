@@ -40,3 +40,4 @@ class QueryResponse(BaseModel):
     confidence: Optional[float] = None
     retrieved_chunks: int
     model: Optional[str] = None
+    chart: Optional[Dict[str, Any]] = None

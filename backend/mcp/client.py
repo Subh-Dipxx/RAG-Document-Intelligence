@@ -10,8 +10,8 @@ from mcp.client.streamable_http import streamable_http_client
 class MCPClient:
     """Client for the internal MCP server."""
 
-    def __init__(self) -> None:
-        self.server_url = os.getenv(
+    def __init__(self, server_url: str | None = None) -> None:
+        self.server_url = server_url or os.getenv(
             "MCP_SERVER_URL",
             "http://mcp-email:8000/mcp",
         )
