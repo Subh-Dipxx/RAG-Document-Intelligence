@@ -25,6 +25,99 @@ class IntentRouter:
         self.client = genai.Client(api_key=settings.gemini_api_key)
         self.model_name = settings.gemini_model
 
+    def rewrite_query(
+        self,
+        message: str,
+        history: list[dict[str, str]] | None = None,
+    ) -> str:
+        """
+        Rewrite a follow-up user message into a standalone document query.
+
+        The rewrite preserves the active conversational subject and explicit
+        constraints while avoiding unrelated context from older turns.
+        """
+        history = history or []
+
+        recent_history = history[-6:]
+
+        history_text = "\n".join(
+            f"{item.get('role', 'user')}: {item.get('content', '')}"
+            for item in recent_history
+            if item.get("content")
+        )
+
+        if not history_text:
+            return message.strip()
+
+        prompt = f"""
+You are the contextual query-rewriting component of DocGPT.
+
+Rewrite the user's latest message into ONE standalone query that can be
+sent to a document retriever.
+
+Your job is NOT to answer the question.
+
+Rules:
+- Use the previous conversation only to resolve references, omissions,
+  abbreviations, pronouns, or follow-up instructions.
+- Preserve the exact subject established by the conversation.
+- Preserve named entities, dates, months, metrics, categories, comparisons,
+  filters, and output constraints that are still relevant.
+- If the latest message is a refinement of the previous request, combine
+  the refinement with the established subject.
+- Do NOT introduce a new topic, entity, date, metric, or assumption.
+- Do NOT broaden a focused request into a request about the whole document.
+- If the latest message is already self-contained, return it essentially
+  unchanged.
+- For chart follow-ups, preserve the requested chart scope and data
+  dimensions.
+- Preserve any explicit chart type or output format requested in the
+  latest user message, such as bar chart, line chart, pie chart, or
+  another supported visualization type.
+- The latest user instruction takes precedence over the previous
+  chart context.
+- If the previous chart was a bar chart and the user says "convert it
+  to a line chart" or "change it to a line chart", the rewritten query
+  MUST explicitly retain "line chart".
+- Never silently preserve the previous chart type when the latest user
+  message explicitly requests a different chart type.
+- When the latest message changes only the chart type, preserve the
+  existing comparison entities, dates, metrics, filters, and data scope.
+- If [CHART_CONTEXT] is present, use it to preserve the previous chart
+  subject and data scope, but do not let it override an explicit
+  instruction in the latest user message.
+- Return only the rewritten retrieval query, with no explanation,
+  quotation marks, or labels.
+
+Conversation:
+{history_text}
+
+Latest user message:
+{message}
+""".strip()
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0,
+                ),
+            )
+
+            rewritten = (response.text or "").strip()
+
+            if rewritten:
+                return rewritten
+
+        except Exception as err:
+            print(
+                f"Contextual query rewrite failed: {err}",
+                flush=True,
+            )
+
+        return message.strip()
+
     def classify(
         self,
         message: str,
@@ -70,11 +163,25 @@ not from specific keywords.
 CHART_REQUEST
 The user is asking the assistant to create, show, visualize, plot,
 graph, or otherwise represent information from the available document
-as a chart or data visualization.
+as a chart or data visualization, or to modify/regenerate an existing
+chart.
+
+The intended OUTPUT TYPE is critical:
+- If the user wants a visual chart, graph, plot, or visualization,
+  classify as CHART_REQUEST.
+- A request for a table, tabular format, rows and columns, a data table,
+  or structured tabular information is NOT CHART_REQUEST. Classify it
+  as DOCUMENT_QUERY.
+- A request to explain, clarify, interpret, define, summarize, or
+  elaborate on information previously shown in a chart is
+  DOCUMENT_QUERY.
+- A previous chart or [CHART_CONTEXT] does not by itself make a
+  follow-up a CHART_REQUEST.
+- Only requests whose intended output is a chart or visualization
+  should be classified as CHART_REQUEST.
+
 Determine this from the semantic meaning and conversation context,
-not from specific keywords. The request should be treated as a chart
-request when the intended output is a visual representation of data
-from the document.
+not from specific keywords.
 
 DOCUMENT_QUERY
 The user is asking for information that should be answered from the
@@ -96,6 +203,12 @@ Important:
 - If the latest message asks for additional information, explanation,
   elaboration, clarification, or details about something previously
   established as document-related, classify it as DOCUMENT_QUERY.
+- A follow-up asking to explain, clarify, interpret, define, summarize,
+  or elaborate on a previous chart is DOCUMENT_QUERY, not CHART_REQUEST.
+- A previous chart or [CHART_CONTEXT] does not by itself make a
+  follow-up a CHART_REQUEST.
+- Only requests to create, render, show, change, convert, plot,
+  visualize, or regenerate a chart should be CHART_REQUEST.
 - If the latest message is ambiguous in isolation, use the preceding
   user and assistant messages and the current document availability to
   determine its intended meaning.

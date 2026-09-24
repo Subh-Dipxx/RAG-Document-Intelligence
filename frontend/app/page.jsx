@@ -1226,30 +1226,58 @@ if (
     setAnswer(null)
 
     const history = conversationMessages
-  .filter((message) => {
-    // Without an active document, do not leak previous
-    // document-grounded assistant responses into normal chat.
-    if (targetDoc) {
-      return true
-    }
+      .filter((message) => {
+        // Without an active document, do not leak previous
+        // document-grounded assistant responses into normal chat.
+        if (targetDoc) {
+          return true
+        }
 
-    if (message.role !== 'assistant') {
-      return true
-    }
+        if (message.role !== 'assistant') {
+          return true
+        }
 
-    const hasCitations =
-      Array.isArray(message.citations) && message.citations.length > 0
+        const hasCitations =
+          Array.isArray(message.citations) && message.citations.length > 0
 
-    const hasRetrievedChunks =
-      Number(message.metadata?.retrieved_chunks || 0) > 0
+        const hasRetrievedChunks =
+          Number(message.metadata?.retrieved_chunks || 0) > 0
 
-    return !hasCitations && !hasRetrievedChunks
-  })
-  .filter((message) => message?.role && message?.content)
-  .map((message) => ({
-    role: message.role,
-    content: String(message.content),
-  }))
+        return !hasCitations && !hasRetrievedChunks
+      })
+      .filter((message) => message?.role && message?.content)
+      .slice(-6)
+      .map((message) => {
+        let content = String(message.content)
+
+        // Preserve the exact previous chart specification so follow-ups
+        // such as "change it to a line chart" remain tied to the
+        // previous chart instead of expanding to the whole document.
+        if (
+          message.role === 'assistant' &&
+          message.metadata?.chart
+        ) {
+          const chart = message.metadata.chart
+
+          const chartContext = {
+            chart_type: chart.chart_type ?? null,
+            title: chart.title ?? null,
+            x_key: chart.x_key ?? null,
+            name_key: chart.name_key ?? null,
+            value_key: chart.value_key ?? null,
+            series: chart.series ?? [],
+            data: chart.data ?? [],
+          }
+
+          content +=
+            `\n[CHART_CONTEXT]\n${JSON.stringify(chartContext)}`
+        }
+
+        return {
+          role: message.role,
+          content,
+        }
+      })
 
     const filters = {}
 

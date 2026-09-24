@@ -68,6 +68,36 @@ def query_documents(
             )
 
     # ---------------------------------------------------------
+    # Persist the conversation and user message before intent-specific
+    # branches. Every intent must appear in Chat History.
+    # ---------------------------------------------------------
+    if payload.conversation_id:
+        conversation = get_chat_conversation(
+            db,
+            payload.conversation_id,
+            current_user_id,
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Conversation not found",
+            )
+    else:
+        conversation = create_chat_conversation(
+            db,
+            user_id=current_user_id,
+            title=payload.question[:80],
+            document_id=payload.filters.get("document_id"),
+        )
+
+    create_chat_message(
+        db,
+        conversation_id=conversation.id,
+        role="user",
+        content=payload.question,
+    )
+
+    # ---------------------------------------------------------
     # Semantic intent routing happens BEFORE RAG retrieval.
     # ---------------------------------------------------------
     intent_router = IntentRouter()
@@ -87,6 +117,23 @@ def query_documents(
     intent = intent_result["intent"]
 
     generator = GeminiGenerator()
+
+    # ---------------------------------------------------------
+    # Contextual query rewriting:
+    # Convert elliptical/follow-up document requests into a
+    # precise standalone retrieval query without broadening the
+    # requested topic.
+    # ---------------------------------------------------------
+    contextual_query = payload.question
+
+    if (
+        has_document
+        and intent in {"DOCUMENT_QUERY", "CHART_REQUEST"}
+    ):
+        contextual_query = intent_router.rewrite_query(
+            message=payload.question,
+            history=payload.history,
+        )
 
     # ---------------------------------------------------------
     # Email send action:
@@ -164,7 +211,8 @@ Latest user request:
         )
 
         if not recipients or not subject or not body:
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer=(
                     "I can send the email, but I need the recipient, "
                     "subject, and email body to be established in the "
@@ -176,12 +224,22 @@ Latest user request:
                 retrieved_chunks=0,
                 model=settings.gemini_model,
             )
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+            )
+            return response
 
         attachments = []
 
         if attach_current_document:
             if not requested_document_id:
-                return QueryResponse(
+                response = QueryResponse(
+                    conversation_id=conversation.id,
                     answer=(
                         "I can send the email, but there is no selected "
                         "document to attach."
@@ -192,6 +250,15 @@ Latest user request:
                     retrieved_chunks=0,
                     model=settings.gemini_model,
                 )
+                create_chat_message(
+                    db,
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=response.answer,
+                    citations=[],
+                    metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+                )
+                return response
 
             versions = get_versions(
                 db,
@@ -199,7 +266,8 @@ Latest user request:
             )
 
             if not versions:
-                return QueryResponse(
+                response = QueryResponse(
+                    conversation_id=conversation.id,
                     answer=(
                         "I can send the email, but the selected document "
                         "does not have an available version to attach."
@@ -210,6 +278,15 @@ Latest user request:
                     retrieved_chunks=0,
                     model=settings.gemini_model,
                 )
+                create_chat_message(
+                    db,
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=response.answer,
+                    citations=[],
+                    metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+                )
+                return response
 
             current_version = next(
                 (
@@ -231,7 +308,8 @@ Latest user request:
                 )
 
             if not current_version.storage_key:
-                return QueryResponse(
+                response = QueryResponse(
+                    conversation_id=conversation.id,
                     answer=(
                         "I can send the email, but the selected "
                         "document file is not available in storage."
@@ -242,6 +320,15 @@ Latest user request:
                     retrieved_chunks=0,
                     model=settings.gemini_model,
                 )
+                create_chat_message(
+                    db,
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=response.answer,
+                    citations=[],
+                    metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+                )
+                return response
 
             try:
                 file_bytes = minio_storage.download_bytes(
@@ -249,7 +336,8 @@ Latest user request:
                     object_name=current_version.storage_key,
                 )
             except Exception:
-                return QueryResponse(
+                response = QueryResponse(
+                    conversation_id=conversation.id,
                     answer=(
                         "I can send the email, but the selected "
                         "document could not be retrieved from storage."
@@ -260,9 +348,19 @@ Latest user request:
                     retrieved_chunks=0,
                     model=settings.gemini_model,
                 )
+                create_chat_message(
+                    db,
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=response.answer,
+                    citations=[],
+                    metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+                )
+                return response
 
             if not file_bytes:
-                return QueryResponse(
+                response = QueryResponse(
+                    conversation_id=conversation.id,
                     answer=(
                         "I can send the email, but the selected "
                         "document file is empty."
@@ -273,6 +371,15 @@ Latest user request:
                     retrieved_chunks=0,
                     model=settings.gemini_model,
                 )
+                create_chat_message(
+                    db,
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=response.answer,
+                    citations=[],
+                    metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+                )
+                return response
 
             attachments.append(
                 {
@@ -296,7 +403,8 @@ Latest user request:
                 attachments=attachments,
             )
 
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer="Email sent successfully.",
                 citations=[],
                 abstained=False,
@@ -305,8 +413,25 @@ Latest user request:
                 model=settings.gemini_model,
             )
 
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={
+                    "abstained": response.abstained,
+                    "confidence": response.confidence,
+                    "retrieved_chunks": response.retrieved_chunks,
+                    "model": response.model,
+                },
+            )
+
+            return response
+
         except Exception:
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer=(
                     "I couldn't send the email because the email service "
                     "encountered an error. Please try again."
@@ -317,6 +442,15 @@ Latest user request:
                 retrieved_chunks=0,
                 model=settings.gemini_model,
             )
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model},
+            )
+            return response
 
     # ---------------------------------------------------------
     # A document query cannot be answered without a document.
@@ -344,7 +478,8 @@ Latest user request:
             history=payload.history,
         )
 
-        return QueryResponse(
+        response = QueryResponse(
+            conversation_id=conversation.id,
             answer=conversational_answer,
             citations=[],
             abstained=False,
@@ -353,11 +488,28 @@ Latest user request:
             model=settings.gemini_model,
         )
 
+        create_chat_message(
+            db,
+            conversation_id=conversation.id,
+            role="assistant",
+            content=response.answer,
+            citations=[],
+            metadata_json={
+                "abstained": response.abstained,
+                "confidence": response.confidence,
+                "retrieved_chunks": response.retrieved_chunks,
+                "model": response.model,
+            },
+        )
+
+        return response
+
     # Outside-world factual request:
     # Do not send it into RAG and do not claim it was missing
     # from a document.
     if intent == "OUTSIDE_SCOPE":
-        return QueryResponse(
+        response = QueryResponse(
+            conversation_id=conversation.id,
             answer=(
                 "I can help with conversation and information "
                 "available in this workspace, but I don't provide "
@@ -370,6 +522,22 @@ Latest user request:
             model=settings.gemini_model,
         )
 
+        create_chat_message(
+            db,
+            conversation_id=conversation.id,
+            role="assistant",
+            content=response.answer,
+            citations=[],
+            metadata_json={
+                "abstained": response.abstained,
+                "confidence": response.confidence,
+                "retrieved_chunks": response.retrieved_chunks,
+                "model": response.model,
+            },
+        )
+
+        return response
+
     # ---------------------------------------------------------
     # Chart request:
     # Retrieve only from the explicitly selected document, then
@@ -377,7 +545,8 @@ Latest user request:
     # ---------------------------------------------------------
     if intent == "CHART_REQUEST":
         if not has_document:
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer=(
                     "Please upload or select a document first so I can "
                     "create a chart from its contents."
@@ -389,9 +558,18 @@ Latest user request:
                 model=settings.gemini_model,
                 chart=None,
             )
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model, "chart": None},
+            )
+            return response
 
         chart_query = Query(
-            text=payload.question,
+            text=contextual_query,
             user_id=current_user_id,
             tenant_id=payload.tenant_id,
             corpus_id=payload.corpus_id,
@@ -424,7 +602,8 @@ Latest user request:
         document_context = "\n\n---\n\n".join(context_parts)
 
         if not document_context.strip():
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer=(
                     "I couldn't find enough structured information in the "
                     "selected document to create that chart."
@@ -436,15 +615,25 @@ Latest user request:
                 model=settings.gemini_model,
                 chart=None,
             )
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": 0, "model": response.model, "chart": None},
+            )
+            return response
 
         try:
             chart = create_chart(
-                question=payload.question,
+                question=contextual_query,
                 document_context=document_context,
             )
 
             if chart.get("error") == "INSUFFICIENT_DATA":
-                return QueryResponse(
+                response = QueryResponse(
+                    conversation_id=conversation.id,
                     answer=(
                         "I couldn't find enough information in the selected "
                         "document to create that chart."
@@ -456,8 +645,18 @@ Latest user request:
                     model=settings.gemini_model,
                     chart=None,
                 )
+                create_chat_message(
+                    db,
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=response.answer,
+                    citations=[],
+                    metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": response.retrieved_chunks, "model": response.model, "chart": None},
+                )
+                return response
 
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer="Here is the chart based on the selected document.",
                 citations=[],
                 abstained=False,
@@ -467,8 +666,26 @@ Latest user request:
                 chart=chart,
             )
 
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={
+                    "abstained": response.abstained,
+                    "confidence": response.confidence,
+                    "retrieved_chunks": response.retrieved_chunks,
+                    "model": response.model,
+                    "chart": response.chart,
+                },
+            )
+
+            return response
+
         except Exception:
-            return QueryResponse(
+            response = QueryResponse(
+                conversation_id=conversation.id,
                 answer=(
                     "I couldn't create the chart from the selected "
                     "document."
@@ -480,34 +697,17 @@ Latest user request:
                 model=settings.gemini_model,
                 chart=None,
             )
+            create_chat_message(
+                db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response.answer,
+                citations=[],
+                metadata_json={"abstained": True, "confidence": 0.0, "retrieved_chunks": response.retrieved_chunks, "model": response.model, "chart": None},
+            )
+            return response
 
     # DOCUMENT_QUERY continues into the existing RAG pipeline.
-
-    if payload.conversation_id:
-        conversation = get_chat_conversation(
-            db,
-            payload.conversation_id,
-            current_user_id,
-        )
-        if conversation is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Conversation not found",
-            )
-    else:
-        conversation = create_chat_conversation(
-            db,
-            user_id=current_user_id,
-            title=payload.question[:80],
-            document_id=payload.filters.get("document_id"),
-        )
-
-    create_chat_message(
-        db,
-        conversation_id=conversation.id,
-        role="user",
-        content=payload.question,
-    )
 
     top_k = (
         payload.top_k
@@ -515,8 +715,21 @@ Latest user request:
         else settings.retrieval_top_k
     )
 
+    # ---------------------------------------------------------
+    # Use the semantically rewritten query for retrieval.
+    #
+    # Example:
+    #   previous: "compare Jan and Feb revenue"
+    #   latest:   "explain that properly"
+    #
+    # becomes:
+    #   "Provide a structured explanation of the January and
+    #    February revenue comparison."
+    # ---------------------------------------------------------
+    retrieval_text = contextual_query
+
     query = Query(
-        text=payload.question,
+        text=retrieval_text,
         user_id=current_user_id,
         tenant_id=payload.tenant_id,
         corpus_id=payload.corpus_id,

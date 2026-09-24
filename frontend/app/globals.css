@@ -3675,3 +3675,915 @@ html[data-theme="dark"], html.dark {
 /* Chart expand icon theme colors */
 html { --chart-expand-icon: #5b21b6; }
 html[data-theme="dark"], html.dark { --chart-expand-icon: #ffffff; }
+
+/* =========================================================
+   Document Delete Confirmation
+   Restored styling for existing HTML/React modal
+   ========================================================= */
+
+.delete-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.delete-confirm-panel {
+  width: min(430px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.delete-confirm-title {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.delete-confirm-document {
+  margin-top: 12px;
+  font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.delete-confirm-message {
+  margin-top: 8px;
+  font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.delete-confirm-error {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  font-family: var(--font-body), sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.delete-confirm-cancel,
+.delete-confirm-delete {
+  min-width: 88px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.delete-confirm-cancel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.delete-confirm-delete {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.delete-confirm-cancel:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(124, 58, 237, 0.06));
+}
+
+.delete-confirm-delete:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.delete-confirm-cancel:active:not(:disabled),
+.delete-confirm-delete:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.delete-confirm-cancel:disabled,
+.delete-confirm-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+html[data-theme="dark"] .delete-confirm-overlay,
+html.dark .delete-confirm-overlay {
+  background: rgba(0, 0, 0, 0.62);
+}
+
+html[data-theme="dark"] .delete-confirm-panel,
+html.dark .delete-confirm-panel {
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+}
+
+@media (max-width: 520px) {
+  .delete-confirm-overlay {
+    padding: 16px;
+  }
+
+  .delete-confirm-panel {
+    width: 100%;
+    padding: 22px;
+    border-radius: 16px;
+  }
+
+  .delete-confirm-actions {
+    width: 100%;
+  }
+
+  .delete-confirm-cancel,
+  .delete-confirm-delete {
+    flex: 1;
+  }
+}
+
+
+/* Delete modal: keep the panel opaque while the page behind it blurs */
+.delete-confirm-panel {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-theme="dark"] .delete-confirm-panel,
+html.dark .delete-confirm-panel {
+  background: #111827;
+}
+
+
+/* =========================================================
+   DocGPT Settings
+   Restored settings modal styling
+   ========================================================= */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  animation: settings-overlay-in 160ms ease-out;
+}
+
+.settings-panel {
+  width: min(620px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: var(--surface, #ffffff);
+  color: var(--text, #171717);
+
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.18));
+  border-radius: 14px;
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.18),
+    0 4px 16px rgba(0, 0, 0, 0.08);
+
+  animation: settings-panel-in 180ms ease-out;
+}
+
+/* Header */
+
+.settings-header {
+  min-height: 68px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 18px 22px;
+
+  border-bottom: 1px solid var(--border, rgba(128, 128, 128, 0.16));
+}
+
+.settings-header > div {
+  min-width: 0;
+}
+
+.settings-header h2 {
+  margin: 0;
+
+  color: var(--text, #171717);
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.settings-header p {
+  margin: 3px 0 0;
+
+  color: var(--muted, rgba(128, 128, 128, 0.78));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-close {
+  flex: 0 0 auto;
+
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-left: 16px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+  color: var(--text, #171717);
+
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background-color 120ms ease,
+    opacity 120ms ease;
+}
+
+.settings-close:hover {
+  background: var(--hover-bg, rgba(128, 128, 128, 0.10));
+}
+
+.settings-close:active {
+  opacity: 0.7;
+}
+
+/* Main settings body */
+
+.settings-content {
+  overflow-y: auto;
+  padding: 4px 22px 22px;
+  scrollbar-width: thin;
+}
+
+/* Sections */
+
+.settings-section {
+  padding: 20px 0;
+}
+
+.settings-section + .settings-section {
+  border-top: 1px solid var(--border, rgba(128, 128, 128, 0.14));
+}
+
+.settings-section h3 {
+  margin: 0 0 12px;
+
+  color: var(--muted, rgba(128, 128, 128, 0.72));
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+/* Individual setting */
+
+.settings-row {
+  min-height: 54px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.settings-row-title {
+  color: var(--text, #171717);
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.settings-row-description {
+  margin-top: 3px;
+
+  color: var(--muted, rgba(128, 128, 128, 0.72));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-value {
+  max-width: 240px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--text, #171717);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Settings action buttons */
+
+.settings-theme-button,
+.settings-secondary-button,
+.settings-cancel-button,
+.settings-save-button {
+  flex: 0 0 auto;
+
+  min-height: 36px;
+  padding: 0 14px;
+
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.settings-theme-button,
+.settings-save-button {
+  border: 1px solid #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.settings-theme-button:hover,
+.settings-save-button:hover:not(:disabled) {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
+.settings-secondary-button,
+.settings-cancel-button {
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.22));
+  background: var(--surface, #ffffff);
+  color: var(--text, #171717);
+}
+
+.settings-secondary-button:hover:not(:disabled),
+.settings-cancel-button:hover:not(:disabled) {
+  background: var(--hover-bg, rgba(128, 128, 128, 0.08));
+}
+
+/* Password / username forms */
+
+.change-password-form {
+  padding-top: 4px;
+}
+
+.change-password-title {
+  margin-bottom: 16px;
+
+  color: var(--text, #171717);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.change-password-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  margin-bottom: 14px;
+}
+
+.change-password-field label {
+  color: var(--text, #171717);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.change-password-field input {
+  width: 100%;
+  box-sizing: border-box;
+
+  min-height: 40px;
+  padding: 0 11px;
+
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.22));
+  border-radius: 8px;
+
+  outline: none;
+
+  background: var(--surface, #ffffff);
+  color: var(--text, #171717);
+
+  font-family: inherit;
+  font-size: 13px;
+
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.change-password-field input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.change-password-field input::placeholder {
+  color: var(--muted, rgba(128, 128, 128, 0.55));
+}
+
+.change-password-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  margin-top: 18px;
+}
+
+.change-password-error {
+  margin-top: 10px;
+  padding: 9px 11px;
+
+  border-radius: 8px;
+
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.change-password-success {
+  margin-top: 10px;
+  padding: 9px 11px;
+
+  border-radius: 8px;
+
+  background: rgba(22, 163, 74, 0.10);
+  color: #16a34a;
+
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Disabled states */
+
+.settings-cancel-button:disabled,
+.settings-secondary-button:disabled,
+.settings-save-button:disabled,
+.settings-theme-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Animations */
+
+@keyframes settings-overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes settings-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark mode */
+
+html[data-theme="dark"] .settings-panel,
+html.dark .settings-panel {
+  background: var(--surface, #111827);
+  color: var(--text, #f8fafc);
+}
+
+html[data-theme="dark"] .settings-header h2,
+html[data-theme="dark"] .settings-row-title,
+html[data-theme="dark"] .settings-value,
+html[data-theme="dark"] .settings-close,
+html[data-theme="dark"] .change-password-title,
+html[data-theme="dark"] .change-password-field label,
+html.dark .settings-header h2,
+html.dark .settings-row-title,
+html.dark .settings-value,
+html.dark .settings-close,
+html.dark .change-password-title,
+html.dark .change-password-field label {
+  color: var(--text, #f8fafc);
+}
+
+html[data-theme="dark"] .settings-theme-button,
+html.dark .settings-theme-button {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+html[data-theme="dark"] .settings-theme-button:hover,
+html.dark .settings-theme-button:hover {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+html[data-theme="dark"] .settings-secondary-button,
+html[data-theme="dark"] .settings-cancel-button,
+html.dark .settings-secondary-button,
+html.dark .settings-cancel-button {
+  background: var(--surface, #111827);
+  color: var(--text, #f8fafc);
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .settings-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .settings-panel {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .settings-header {
+    padding: 17px 18px;
+  }
+
+  .settings-content {
+    padding: 2px 18px 18px;
+  }
+
+  .settings-row {
+    align-items: flex-start;
+  }
+
+  .settings-value {
+    max-width: 130px;
+  }
+}
+
+
+/* Delete confirmation: shape only */
+.delete-confirm-panel {
+  border-radius: 20px;
+}
+
+.delete-confirm-delete,
+.delete-confirm-cancel {
+  border-radius: 999px;
+}
+
+
+/* Settings buttons: match Logout pill shape without changing size */
+.settings-theme-button,
+.settings-secondary-button,
+.settings-cancel-button,
+.settings-save-button {
+  border-radius: 999px;
+}
+
+
+/* Delete modal buttons: compact side-by-side pills */
+.delete-confirm-actions {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.delete-confirm-delete,
+.delete-confirm-cancel {
+  width: 180px;
+  min-width: 0;
+  min-height: 42px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+}
+
+
+/* Settings — shape only, preserve all existing dimensions */
+.settings-theme-button,
+.settings-secondary-button,
+.settings-cancel-button,
+.settings-save-button {
+  border-radius: 999px;
+}
+
+
+/* =========================================================
+   Settings buttons
+   Match the Change Username button's visual styling.
+   Shape, size and dimensions are intentionally untouched.
+   ========================================================= */
+
+.settings-theme-button,
+.settings-secondary-button,
+.settings-cancel-button,
+.settings-save-button {
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  background: rgba(124, 58, 237, 0.03);
+  color: #5b21b6;
+
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.settings-theme-button:hover:not(:disabled),
+.settings-secondary-button:hover:not(:disabled),
+.settings-cancel-button:hover:not(:disabled),
+.settings-save-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.07);
+  border-color: rgba(124, 58, 237, 0.45);
+  color: #5b21b6;
+}
+
+.settings-theme-button:active:not(:disabled),
+.settings-secondary-button:active:not(:disabled),
+.settings-cancel-button:active:not(:disabled),
+.settings-save-button:active:not(:disabled) {
+  background: rgba(124, 58, 237, 0.10);
+}
+
+/* Keep existing button shapes exactly as they are. */
+
+html[data-theme="dark"] .settings-theme-button,
+html[data-theme="dark"] .settings-secondary-button,
+html[data-theme="dark"] .settings-cancel-button,
+html[data-theme="dark"] .settings-save-button,
+html.dark .settings-theme-button,
+html.dark .settings-secondary-button,
+html.dark .settings-cancel-button,
+html.dark .settings-save-button {
+  border-color: rgba(167, 139, 250, 0.40);
+  background: rgba(139, 92, 246, 0.06);
+  color: #c4b5fd;
+}
+
+html[data-theme="dark"] .settings-theme-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-secondary-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-cancel-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-save-button:hover:not(:disabled),
+html.dark .settings-theme-button:hover:not(:disabled),
+html.dark .settings-secondary-button:hover:not(:disabled),
+html.dark .settings-cancel-button:hover:not(:disabled),
+html.dark .settings-save-button:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(167, 139, 250, 0.60);
+  color: #ddd6fe;
+}
+
+
+/* Settings buttons — match Change Username reference */
+.settings-theme-button,
+.settings-secondary-button,
+.settings-cancel-button,
+.settings-save-button {
+  background: #ffffff;
+  border-color: #d8c4ff;
+  color: #6d28d9;
+}
+
+.settings-theme-button:hover:not(:disabled),
+.settings-secondary-button:hover:not(:disabled),
+.settings-cancel-button:hover:not(:disabled),
+.settings-save-button:hover:not(:disabled) {
+  background: #f3eaff;
+  border-color: #c9adff;
+  color: #6d28d9;
+}
+
+/* Keep the existing button dimensions and shapes unchanged. */
+
+html[data-theme="dark"] .settings-theme-button,
+html[data-theme="dark"] .settings-secondary-button,
+html[data-theme="dark"] .settings-cancel-button,
+html[data-theme="dark"] .settings-save-button,
+html.dark .settings-theme-button,
+html.dark .settings-secondary-button,
+html.dark .settings-cancel-button,
+html.dark .settings-save-button {
+  background: #111827;
+  border-color: #8b6fc7;
+  color: #c4b5fd;
+}
+
+html[data-theme="dark"] .settings-theme-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-secondary-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-cancel-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-save-button:hover:not(:disabled),
+html.dark .settings-theme-button:hover:not(:disabled),
+html.dark .settings-secondary-button:hover:not(:disabled),
+html.dark .settings-cancel-button:hover:not(:disabled),
+html.dark .settings-save-button:hover:not(:disabled) {
+  background: #2a2040;
+  border-color: #a78bfa;
+  color: #ddd6fe;
+}
+
+
+/* Settings inputs — dark mode */
+html[data-theme="dark"] .change-password-field input,
+html.dark .change-password-field input {
+  background: #1a2233;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .change-password-field input::placeholder,
+html.dark .change-password-field input::placeholder {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .change-password-field input:focus,
+html.dark .change-password-field input:focus {
+  background: #1a2233;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+}
+
+html[data-theme="dark"] .change-password-field input:disabled,
+html.dark .change-password-field input:disabled {
+  background: #151c2b;
+  color: #64748b;
+}
+
+
+/* Settings buttons — dark mode */
+html[data-theme="dark"] .settings-theme-button,
+html[data-theme="dark"] .settings-secondary-button,
+html[data-theme="dark"] .settings-cancel-button,
+html[data-theme="dark"] .settings-save-button,
+html.dark .settings-theme-button,
+html.dark .settings-secondary-button,
+html.dark .settings-cancel-button,
+html.dark .settings-save-button {
+  background: #4c1d95;
+  border-color: #4c1d95;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .settings-theme-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-secondary-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-cancel-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-save-button:hover:not(:disabled),
+html.dark .settings-theme-button:hover:not(:disabled),
+html.dark .settings-secondary-button:hover:not(:disabled),
+html.dark .settings-cancel-button:hover:not(:disabled),
+html.dark .settings-save-button:hover:not(:disabled) {
+  background: #5b21b6;
+  border-color: #5b21b6;
+  color: #ffffff;
+}
+
+
+/* Profile menu Settings item — match Logout menu-item behavior */
+.sidebar-profile-settings {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 9px 12px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+  color: inherit;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.sidebar-profile-settings:hover {
+  background: rgba(124, 58, 237, 0.08);
+  color: var(--accent);
+}
+
+.sidebar-profile-settings:active {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.sidebar-profile-settings-icon {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 15px;
+  opacity: 0.78;
+  flex-shrink: 0;
+}
+
+
+/* Profile menu Logout — red color, existing shape preserved */
+.sidebar-profile-logout {
+  color: #dc2626;
+}
+
+.sidebar-profile-logout:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.sidebar-profile-logout:active {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+
+/* Confirmation modal only — Log out button */
+.logout-confirm-primary {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.logout-confirm-primary:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+
+.logout-confirm-primary:active:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+  color: #ffffff;
+}
+
