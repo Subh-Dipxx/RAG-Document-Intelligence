@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 import json
 
 from backend.database.database import get_db
-from backend.auth.dependencies import get_current_user
+from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.database import crud
 from backend.domain.models import Document, Version
 from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
@@ -23,7 +23,7 @@ async def upload_document(
     permissions: Optional[str] = Form("[]"),  # JSON string of permissions list
     metadata_json: Optional[str] = Form("{}"),
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    auth: AuthContext = Depends(get_auth_context),
 ):
     """Upload a document file, store in MinIO, create DB records, and trigger async processing job."""
     content = await file.read()
@@ -66,7 +66,8 @@ async def upload_document(
         file_name=file_name,
         mime_type=file.content_type,
         file_size=len(content),
-        owner_id=current_user,
+        owner_id=auth.user_id,
+        tenant_id=auth.tenant_id,
         permissions=perms_list,
         metadata=meta_dict,
     )
@@ -97,19 +98,25 @@ def list_documents(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    auth: AuthContext = Depends(get_auth_context),
 ):
     """List documents metadata stored in database."""
-    docs = crud.list_documents(db, skip=skip, limit=limit, owner_id=current_user)
+    if auth.tenant_id:
+        docs = crud.list_documents(db, skip=skip, limit=limit, tenant_id=auth.tenant_id)
+    else:
+        docs = crud.list_documents(db, skip=skip, limit=limit, owner_id=auth.user_id)
     return docs
 
 
 @router.get("/{document_id}/content")
-def get_document_content(document_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+def get_document_content(document_id: str, db: Session = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
     """Return the stored file bytes for a document."""
     from fastapi.responses import Response
 
-    doc = crud.get_document(db, document_id, owner_id=current_user)
+    if auth.tenant_id:
+        doc = crud.get_document(db, document_id, tenant_id=auth.tenant_id)
+    else:
+        doc = crud.get_document(db, document_id, owner_id=auth.user_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -140,18 +147,37 @@ def get_document_content(document_id: str, db: Session = Depends(get_db), curren
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document(document_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+def get_document(document_id: str, db: Session = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
     """Get document details including version history."""
-    doc = crud.get_document(db, document_id, owner_id=current_user)
+    if auth.tenant_id:
+        doc = crud.get_document(db, document_id, tenant_id=auth.tenant_id)
+    else:
+        doc = crud.get_document(db, document_id, owner_id=auth.user_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(document_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
     """Delete a document and its database records."""
-    success = crud.delete_document(db, document_id, owner_id=current_user)
+    if auth.tenant_id:
+        if auth.role != "admin":
+            raise HTTPException(status_code=403, detail="Organization admin access required")
+        success = crud.delete_document(
+            db,
+            document_id,
+            actor_id=auth.user_id,
+            tenant_id=auth.tenant_id,
+        )
+    else:
+        success = crud.delete_document(
+            db,
+            document_id,
+            actor_id=auth.user_id,
+            owner_id=auth.user_id,
+        )
+
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
     return None

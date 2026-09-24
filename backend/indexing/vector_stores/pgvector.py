@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 
 from backend.database.database import get_engine
-from backend.database.models import ChunkModel
+from backend.database.models import ChunkModel, DocumentModel
 
 
 class PgVectorStore:
@@ -56,16 +56,23 @@ class PgVectorStore:
         if top_k <= 0:
             return []
 
-        query = select(
-            ChunkModel.id,
-            ChunkModel.document_id,
-            ChunkModel.version_id,
-            ChunkModel.page_number,
-            ChunkModel.text,
-            ChunkModel.embedding_model,
-            ChunkModel.embedding.cosine_distance(vector).label("distance"),
-        ).where(
-            ChunkModel.embedding.is_not(None)
+        query = (
+            select(
+                ChunkModel.id,
+                ChunkModel.document_id,
+                ChunkModel.version_id,
+                ChunkModel.page_number,
+                ChunkModel.text,
+                ChunkModel.embedding_model,
+                ChunkModel.embedding.cosine_distance(vector).label("distance"),
+            )
+            .join(
+                DocumentModel,
+                DocumentModel.id == ChunkModel.document_id,
+            )
+            .where(
+                ChunkModel.embedding.is_not(None)
+            )
         )
 
         if filter:
@@ -77,6 +84,16 @@ class PgVectorStore:
             if filter.get("version_id") is not None:
                 query = query.where(
                     ChunkModel.version_id == filter["version_id"]
+                )
+
+            if filter.get("tenant_id") is not None:
+                query = query.where(
+                    DocumentModel.tenant_id == filter["tenant_id"]
+                )
+            elif filter.get("individual_scope") and filter.get("owner_id") is not None:
+                query = query.where(
+                    DocumentModel.owner_id == filter["owner_id"],
+                    DocumentModel.tenant_id.is_(None),
                 )
 
         query = query.order_by("distance").limit(top_k)

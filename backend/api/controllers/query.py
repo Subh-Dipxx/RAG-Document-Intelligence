@@ -9,7 +9,7 @@ from backend.api.schemas.query_schemas import (
     QueryRequest,
     QueryResponse,
 )
-from backend.auth.dependencies import get_current_user
+from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.database.crud import (
     create_chat_conversation,
     create_chat_message,
@@ -39,10 +39,11 @@ router = APIRouter(
 @router.post("", response_model=QueryResponse)
 def query_documents(
     payload: QueryRequest,
-    current_user_id: str = Depends(get_current_user),
+    auth: AuthContext = Depends(get_auth_context),
     db: Session = Depends(get_db),
 ) -> QueryResponse:
     settings = get_settings()
+    current_user_id = auth.user_id
 
     # ---------------------------------------------------------
     # Validate document ownership before intent routing/retrieval.
@@ -56,11 +57,18 @@ def query_documents(
     )
 
     if requested_document_id:
-        owned_document = get_document(
-            db,
-            requested_document_id,
-            owner_id=current_user_id,
-        )
+        if auth.tenant_id:
+            owned_document = get_document(
+                db,
+                requested_document_id,
+                tenant_id=auth.tenant_id,
+            )
+        else:
+            owned_document = get_document(
+                db,
+                requested_document_id,
+                owner_id=current_user_id,
+            )
         if owned_document is None:
             raise HTTPException(
                 status_code=404,
@@ -166,7 +174,7 @@ Latest user request:
             email_query = Query(
                 text=retrieval_text,
                 user_id=current_user_id,
-                tenant_id=payload.tenant_id,
+                tenant_id=auth.tenant_id,
                 corpus_id=payload.corpus_id,
                 top_k=(
                     payload.top_k
@@ -571,7 +579,7 @@ Latest user request:
         chart_query = Query(
             text=contextual_query,
             user_id=current_user_id,
-            tenant_id=payload.tenant_id,
+            tenant_id=auth.tenant_id,
             corpus_id=payload.corpus_id,
             top_k=(
                 payload.top_k
@@ -731,7 +739,7 @@ Latest user request:
     query = Query(
         text=retrieval_text,
         user_id=current_user_id,
-        tenant_id=payload.tenant_id,
+        tenant_id=auth.tenant_id,
         corpus_id=payload.corpus_id,
         top_k=top_k,
         filters=payload.filters,

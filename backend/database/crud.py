@@ -128,10 +128,18 @@ def get_document(
     db: Session,
     doc_id: str,
     owner_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> Optional[DocumentModel]:
     query = db.query(DocumentModel).filter(DocumentModel.id == doc_id)
-    if owner_id is not None:
-        query = query.filter(DocumentModel.owner_id == owner_id)
+
+    if tenant_id is not None:
+        query = query.filter(DocumentModel.tenant_id == tenant_id)
+    elif owner_id is not None:
+        query = query.filter(
+            DocumentModel.owner_id == owner_id,
+            DocumentModel.tenant_id.is_(None),
+        )
+
     return query.first()
 
 
@@ -140,10 +148,18 @@ def list_documents(
     skip: int = 0,
     limit: int = 100,
     owner_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> List[DocumentModel]:
     query = db.query(DocumentModel)
-    if owner_id is not None:
-        query = query.filter(DocumentModel.owner_id == owner_id)
+
+    if tenant_id is not None:
+        query = query.filter(DocumentModel.tenant_id == tenant_id)
+    elif owner_id is not None:
+        query = query.filter(
+            DocumentModel.owner_id == owner_id,
+            DocumentModel.tenant_id.is_(None),
+        )
+
     return (
         query
         .order_by(DocumentModel.created_at.desc())
@@ -159,9 +175,10 @@ def delete_document(
     actor_id: Optional[str] = None,
     reason: Optional[str] = None,
     owner_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> bool:
     """Delete a document and any duplicate records for the same file hash."""
-    doc = get_document(db, doc_id, owner_id=owner_id)
+    doc = get_document(db, doc_id, owner_id=owner_id, tenant_id=tenant_id)
     if not doc:
         return False
 
@@ -178,11 +195,26 @@ def delete_document(
     # The UI treats identical file hashes as duplicate uploads,
     # so deleting one should remove all records for that same file.
     if latest_version and latest_version.file_hash:
-        duplicate_rows = (
+        duplicate_query = (
             db.query(VersionModel.document_id)
+            .join(
+                DocumentModel,
+                DocumentModel.id == VersionModel.document_id,
+            )
             .filter(VersionModel.file_hash == latest_version.file_hash)
-            .all()
         )
+
+        if tenant_id is not None:
+            duplicate_query = duplicate_query.filter(
+                DocumentModel.tenant_id == tenant_id
+            )
+        elif owner_id is not None:
+            duplicate_query = duplicate_query.filter(
+                DocumentModel.owner_id == owner_id,
+                DocumentModel.tenant_id.is_(None),
+            )
+
+        duplicate_rows = duplicate_query.all()
 
         document_ids.update(row[0] for row in duplicate_rows)
 

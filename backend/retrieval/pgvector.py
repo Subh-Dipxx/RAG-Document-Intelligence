@@ -28,6 +28,18 @@ class PgVectorRetriever:
         if query.filters:
             effective_filters.update(query.filters)
 
+        # These fields are authorization-controlled and must never come
+        # from client-provided filters.
+        effective_filters.pop("tenant_id", None)
+        effective_filters.pop("owner_id", None)
+        effective_filters.pop("individual_scope", None)
+
+        if query.tenant_id:
+            effective_filters["tenant_id"] = query.tenant_id
+        elif query.user_id:
+            effective_filters["owner_id"] = query.user_id
+            effective_filters["individual_scope"] = True
+
         query_vectors = self.embedder.embed([query.text])
 
         if not query_vectors:
@@ -61,6 +73,8 @@ class PgVectorRetriever:
             chunks = self._get_document_chunks_fallback(
                 str(effective_filters["document_id"]),
                 limit=query.top_k,
+                tenant_id=query.tenant_id,
+                user_id=query.user_id,
             )
 
         return chunks
@@ -69,10 +83,12 @@ class PgVectorRetriever:
         self,
         document_id: str,
         limit: int = 5,
+        tenant_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> List[Chunk]:
         from sqlalchemy import select
         from backend.database.database import get_engine
-        from backend.database.models import ChunkModel
+        from backend.database.models import ChunkModel, DocumentModel
 
         engine = get_engine()
         query_stmt = (
@@ -84,7 +100,25 @@ class PgVectorRetriever:
                 ChunkModel.text,
                 ChunkModel.embedding_model,
             )
+            .join(
+                DocumentModel,
+                DocumentModel.id == ChunkModel.document_id,
+            )
             .where(ChunkModel.document_id == document_id)
+        )
+
+        if tenant_id:
+            query_stmt = query_stmt.where(
+                DocumentModel.tenant_id == tenant_id
+            )
+        elif user_id:
+            query_stmt = query_stmt.where(
+                DocumentModel.owner_id == user_id,
+                DocumentModel.tenant_id.is_(None),
+            )
+
+        query_stmt = (
+            query_stmt
             .order_by(ChunkModel.page_number, ChunkModel.id)
             .limit(limit)
         )

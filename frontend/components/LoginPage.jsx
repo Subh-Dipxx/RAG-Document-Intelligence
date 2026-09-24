@@ -31,6 +31,10 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const isLight = theme === 'light'
+  const [accountType, setAccountType] = useState('individual')
+  const [organizationLogin, setOrganizationLogin] = useState('')
+  const isOrganization = accountType === 'organization'
+
   const isSignup = mode === 'signup'
   const isForgot = mode === 'forgot'
   const isReset = mode === 'reset'
@@ -56,6 +60,46 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
     setPassword('')
     setConfirmPassword('')
   }
+
+  const handleOrganizationLogin = async (event) => {
+  event.preventDefault()
+  setError("")
+  setSuccess("")
+
+  if (!organizationLogin.trim() || !username.trim() || !password) {
+    setError("Please enter organization name, username, and password.")
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const res = await fetch("/api/v1/auth/organization-login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        organization_name: organizationLogin.trim(),
+        username: username.trim(),
+        password,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data?.detail || "Organization login failed")
+    }
+
+    onLogin(data.access_token, username.trim())
+  } catch (err) {
+    console.error(err)
+    setError(err.message || "Organization login failed.")
+  } finally {
+    setLoading(false)
+  }
+}
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -197,6 +241,11 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
       return
     }
 
+    if (isOrganization && !organizationLogin.trim()) {
+      setError("Please enter the organization name.")
+      return
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.")
       return
@@ -207,7 +256,11 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
     setSuccess("")
 
     try {
-      const res = await fetch("/api/v1/auth/signup", {
+      const res = await fetch(
+        isOrganization
+          ? "/api/v1/auth/organization-signup"
+          : "/api/v1/auth/signup",
+        {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -215,6 +268,9 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
           email: email.trim(),
           password,
           confirm_password: confirmPassword,
+          ...(isOrganization
+            ? { organization_name: organizationLogin.trim() }
+            : {}),
         }),
       })
 
@@ -224,7 +280,11 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         throw new Error(data?.detail || "Signup failed")
       }
 
-      setSuccess("Account created successfully. You can now sign in.")
+      setSuccess(
+        isOrganization
+          ? "Organization created successfully. You can now sign in."
+          : "Account created successfully. You can now sign in."
+      )
       setMode("login")
       setPassword("")
       setConfirmPassword("")
@@ -279,10 +339,55 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
                 ? handleForgotPassword
                 : isSignup
                   ? handleSignup
-                  : handleLogin
+                  : isOrganization ? handleOrganizationLogin : handleLogin
           }
           className="login-form"
         >
+          {!isSignup && !isForgot && !isReset && (
+            <div className="account-type-control">
+              <div className="account-type-label">Account Type</div>
+              <div className="account-type-switch">
+                <button
+                  type="button"
+                  className={`account-type-option${accountType === "individual" ? " active" : ""}`}
+                  onClick={() => {
+                    setAccountType("individual")
+                    setOrganizationLogin("")
+                    setError("")
+                  }}
+                  disabled={loading}
+                >
+                  Individual
+                </button>
+                <button
+                  type="button"
+                  className={`account-type-option${accountType === "organization" ? " active" : ""}`}
+                  onClick={() => {
+                    setAccountType("organization")
+                    setError("")
+                  }}
+                  disabled={loading}
+                >
+                  Organization
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isOrganization && !isForgot && !isReset && (
+            <>
+              <label htmlFor="organization-login">Organization Name</label>
+              <input
+                id="organization-login"
+                type="text"
+                value={organizationLogin}
+                onChange={(e) => setOrganizationLogin(e.target.value)}
+                placeholder="Enter organization name"
+                autoComplete="organization"
+                disabled={loading}
+              />
+            </>
+          )}
           {!isForgot && !isReset && (
             <>
               <label htmlFor="username">Username</label>

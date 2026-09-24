@@ -49,6 +49,21 @@ class PasswordResetTokenModel(Base):
     created_at = Column(DateTime, default=utc_now)
 
 
+class TenantMembershipModel(Base):
+    __tablename__ = "tenant_memberships"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", name="uq_tenant_membership_user"),
+        Index("ix_tenant_memberships_user", "user_id"),
+        Index("ix_tenant_memberships_tenant", "tenant_id"),
+    )
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    tenant_id = Column(String, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String, nullable=False, default="member")
+    created_at = Column(DateTime, default=utc_now)
+
+
 class TenantModel(Base):
     __tablename__ = "tenants"
 

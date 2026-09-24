@@ -8,6 +8,20 @@ class SignupRequest(BaseModel):
     confirm_password: str = Field(min_length=8)
 
 
+class OrganizationSignupRequest(BaseModel):
+    organization_name: str = Field(min_length=2, max_length=200)
+    username: str = Field(min_length=1, max_length=100)
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=8)
+    confirm_password: str = Field(min_length=8)
+
+
+class OrganizationLoginRequest(BaseModel):
+    organization_name: str = Field(min_length=2, max_length=200)
+    username: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=1)
+
+
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1)
     password: str = Field(min_length=1)

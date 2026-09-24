@@ -14,12 +14,14 @@ from backend.api.schemas.auth_schemas import (
     ResetPasswordRequest,
     LoginRequest,
     SignupRequest,
+    OrganizationSignupRequest,
+    OrganizationLoginRequest,
     TokenResponse,
 )
 from backend.auth.security import create_access_token, verify_password, hash_password
 from backend.auth.dependencies import get_current_user
 from backend.database.database import get_db
-from backend.database.models import PasswordResetTokenModel, UserModel, utc_now
+from backend.database.models import PasswordResetTokenModel, TenantMembershipModel, TenantModel, UserModel, utc_now
 from backend.auth.email_service import send_password_reset_email
 
 
@@ -97,6 +99,164 @@ def signup(
     return {
         "message": "Account created successfully",
     }
+
+
+@router.post("/organization-signup", status_code=status.HTTP_201_CREATED)
+def organization_signup(
+    payload: OrganizationSignupRequest,
+    db: Session = Depends(get_db),
+):
+    organization_name = payload.organization_name.strip()
+    username = payload.username.strip()
+    email = payload.email.strip()
+
+    if not organization_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization name cannot be empty",
+        )
+
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username cannot be empty",
+        )
+
+    if payload.password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match",
+        )
+
+    try:
+        email_info = validate_email(
+            email,
+            check_deliverability=True,
+            allow_display_name=False,
+        )
+        normalized_email = email_info.normalized
+    except EmailNotValidError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    existing_username = (
+        db.query(UserModel)
+        .filter(UserModel.username == username)
+        .first()
+    )
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username is already taken",
+        )
+
+    existing_email = (
+        db.query(UserModel)
+        .filter(UserModel.email == normalized_email)
+        .first()
+    )
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email address is already registered",
+        )
+
+    user = UserModel(
+        username=username,
+        email=normalized_email,
+        password_hash=hash_password(payload.password),
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+
+    tenant = TenantModel(
+        name=organization_name,
+    )
+    db.add(tenant)
+    db.flush()
+
+    membership = TenantMembershipModel(
+        tenant_id=tenant.id,
+        user_id=user.id,
+        role="admin",
+    )
+    db.add(membership)
+    db.commit()
+
+    return {
+        "message": "Organization created successfully. You are the organization admin.",
+        "organization_id": tenant.id,
+    }
+
+
+@router.post("/organization-login", response_model=TokenResponse)
+def organization_login(
+    payload: OrganizationLoginRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    organization_name = payload.organization_name.strip()
+    username = payload.username.strip()
+
+    tenant = (
+        db.query(TenantModel)
+        .filter(TenantModel.name.ilike(organization_name))
+        .first()
+    )
+
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid organization credentials",
+        )
+
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.username == username)
+        .first()
+    )
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid organization credentials",
+        )
+
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid organization credentials",
+        )
+
+    membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == tenant.id,
+            TenantMembershipModel.user_id == user.id,
+        )
+        .first()
+    )
+
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid organization credentials",
+        )
+
+    access_token = create_access_token(
+        user_id=user.id,
+        username=user.username,
+        tenant_id=tenant.id,
+        role=membership.role,
+        account_type="organization",
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
