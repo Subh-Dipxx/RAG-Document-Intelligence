@@ -8,6 +8,7 @@ import json
 from backend.database.database import get_db
 from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.database import crud
+from backend.database.models import AccessGrantModel
 from backend.domain.models import Document, Version
 from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 from backend.workers.tasks import process_document_task
@@ -163,7 +164,23 @@ def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthC
     """Delete a document and its database records."""
     if auth.tenant_id:
         if auth.role != "admin":
-            raise HTTPException(status_code=403, detail="Organization admin access required")
+            delete_grant = (
+                db.query(AccessGrantModel)
+                .filter(
+                    AccessGrantModel.tenant_id == auth.tenant_id,
+                    AccessGrantModel.document_id == document_id,
+                    AccessGrantModel.principal == auth.user_id,
+                    AccessGrantModel.role == "delete",
+                )
+                .first()
+            )
+
+            if not delete_grant:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access required to delete this document",
+                )
+
         success = crud.delete_document(
             db,
             document_id,

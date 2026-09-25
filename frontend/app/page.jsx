@@ -564,22 +564,59 @@ function readStoredTheme() {
   }
 }
 
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split(".")[1]
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4)
+    return JSON.parse(atob(padded))
+  } catch {
+    return {}
+  }
+}
+
 function App() {
   const [token, setToken] = useState(null)
   const [username, setUsername] = useState(null)
+  const [role, setRole] = useState(null)
+  const [tenantId, setTenantId] = useState(null)
+  const [accountType, setAccountType] = useState(null)
+
   const [authReady, setAuthReady] = useState(false)
   const [theme, setTheme] = useState('dark')
 
   const handleLogin = (accessToken, loggedInUsername) => {
-    localStorage.setItem('access_token', accessToken)
-    localStorage.setItem('username', loggedInUsername)
+    const claims = decodeJwtPayload(accessToken)
+    const nextRole = claims.role || null
+    const nextTenantId = claims.tenant_id || null
+    const nextAccountType = claims.account_type || null
+
+    localStorage.setItem("access_token", accessToken)
+    localStorage.setItem("username", loggedInUsername)
+    localStorage.setItem("role", nextRole || "")
+    localStorage.setItem("tenant_id", nextTenantId || "")
+    localStorage.setItem("account_type", nextAccountType || "")
+
     setToken(accessToken)
     setUsername(loggedInUsername)
+    setRole(nextRole)
+    setTenantId(nextTenantId)
+    setAccountType(nextAccountType)
   }
 
   const handleLogout = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('username')
+    localStorage.removeItem('role')
+    localStorage.removeItem('tenant_id')
+    localStorage.removeItem('account_type')
+    setRole(null)
+    setTenantId(null)
+    setAccountType(null)
+    setAccessRequestDocument(null)
+    setAccessRequestStatus({})
+    setAccessRequests([])
+    setAccessRequestError('')
     setShowLogoutConfirm(false)
     setShowProfileMenu(false)
     setToken(null)
@@ -592,6 +629,14 @@ function App() {
 
     setToken(storedToken)
     setUsername(storedUsername)
+
+    if (storedToken) {
+      const claims = decodeJwtPayload(storedToken)
+      setRole(claims.role || localStorage.getItem('role') || null)
+      setTenantId(claims.tenant_id || localStorage.getItem('tenant_id') || null)
+      setAccountType(claims.account_type || localStorage.getItem('account_type') || null)
+    }
+
     setAuthReady(true)
   }, [])
   const [file, setFile] = useState(null)
@@ -697,6 +742,14 @@ function App() {
 const [pendingDeleteDocument, setPendingDeleteDocument] = useState(null)
 const [deletingDocument, setDeletingDocument] = useState(false)
 const [deleteError, setDeleteError] = useState('')
+
+  const [accessRequestDocument, setAccessRequestDocument] = useState(null)
+  const [requestingAccess, setRequestingAccess] = useState(false)
+  const [accessRequestStatus, setAccessRequestStatus] = useState({})
+  const [accessRequests, setAccessRequests] = useState([])
+  const [loadingAccessRequests, setLoadingAccessRequests] = useState(false)
+  const [accessRequestError, setAccessRequestError] = useState('')
+
 
 
   const [showChangePassword, setShowChangePassword] = useState(false)
@@ -873,7 +926,9 @@ const [usernameError, setUsernameError] = useState('')
 
       if (!res.ok) {
         throw new Error(
-          data?.detail || rawBody || `Failed to load documents (${res.status})`
+          data?.detail ||
+          rawBody ||
+          `Failed to load documents (${res.status})`
         )
       }
 
@@ -904,6 +959,263 @@ const [usernameError, setUsernameError] = useState('')
       return []
     }
   }
+
+  const fetchAccessRequests = async () => {
+    if (!token || accountType !== 'organization') return []
+
+    try {
+      const res = await fetch('/api/v1/access-requests', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const rawBody = await res.text()
+      let data = null
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : null
+      } catch {
+        data = null
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return []
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to load access requests (${res.status})`
+        )
+      }
+
+      const requests = Array.isArray(data) ? data : []
+      setAccessRequests(requests)
+
+      setAccessRequestStatus((current) => {
+        const next = { ...current }
+
+        for (const request of requests) {
+          const documentId =
+            request?.document_id ||
+            request?.document?.id ||
+            request?.documentId
+
+          if (documentId && request?.status) {
+            next[documentId] = request.status
+          }
+        }
+
+        return next
+      })
+
+      const latestByDocument = {}
+      for (const request of requests) {
+        const documentId =
+          request?.document_id ||
+          request?.document?.id ||
+          request?.documentId
+
+        if (!documentId) continue
+
+        const current = latestByDocument[documentId]
+        const currentTime = current?.created_at
+          ? new Date(current.created_at).getTime()
+          : 0
+        const requestTime = request?.created_at
+          ? new Date(request.created_at).getTime()
+          : 0
+
+        if (!current || requestTime >= currentTime) {
+          latestByDocument[documentId] = request?.status || 'pending'
+        }
+      }
+
+      setAccessRequestStatus((current) => ({
+        ...current,
+        ...latestByDocument,
+      }))
+
+      return requests
+    } catch (err) {
+      console.error('Failed to fetch access requests:', err)
+      setAccessRequestError(
+        err.message || 'Failed to load access requests.'
+      )
+      return []
+    }
+  }
+
+  const requestDocumentAccess = async () => {
+    if (!token || !accessRequestDocument || requestingAccess) return
+
+    const documentId = accessRequestDocument.id
+    setRequestingAccess(true)
+    setAccessRequestError('')
+
+    try {
+      const res = await fetch('/api/v1/access-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          document_id: documentId,
+        }),
+      })
+
+      const rawBody = await res.text()
+      let data = null
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : null
+      } catch {
+        data = null
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          setAccessRequestStatus((current) => ({
+            ...current,
+            [documentId]: 'pending',
+          }))
+
+          const detail =
+            data?.detail ||
+            rawBody ||
+            'An access request is already pending.'
+
+          setAccessRequestError(detail)
+          return
+        }
+
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to request access (${res.status})`
+        )
+      }
+
+      const request = data || {
+        document_id: documentId,
+        status: 'pending',
+      }
+
+      setAccessRequestStatus((current) => ({
+        ...current,
+        [documentId]: request.status || 'pending',
+      }))
+
+      setAccessRequests((current) => [
+        request,
+        ...current.filter(
+          (item) =>
+            (item?.id || item?.request_id) !==
+            (request?.id || request?.request_id)
+        ),
+      ])
+
+      setAccessRequestDocument(null)
+      setAccessRequestError('')
+    } catch (err) {
+      console.error('Failed to request document access:', err)
+      setAccessRequestError(
+        err.message || 'Failed to request document access.'
+      )
+    } finally {
+      setRequestingAccess(false)
+    }
+  }
+
+  const resolveAccessRequest = async (requestId, action) => {
+    if (!token || !requestId || role !== 'admin') return
+
+    setLoadingAccessRequests(true)
+    setAccessRequestError('')
+
+    try {
+      const res = await fetch(
+        `/api/v1/access-requests/${requestId}/${action}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const rawBody = await res.text()
+      let data = null
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : null
+      } catch {
+        data = null
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to ${action} access request (${res.status})`
+        )
+      }
+
+      setAccessRequests((current) =>
+        current.filter(
+          (request) =>
+            (request?.id || request?.request_id) !== requestId
+        )
+      )
+
+      await fetchAccessRequests()
+    } catch (err) {
+      console.error(`Failed to ${action} access request:`, err)
+      setAccessRequestError(
+        err.message || `Failed to ${action} access request.`
+      )
+    } finally {
+      setLoadingAccessRequests(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!token || accountType !== 'organization') {
+      setAccessRequests([])
+      setAccessRequestStatus({})
+      return
+    }
+
+    fetchAccessRequests()
+  }, [token, accountType])
+
+  useEffect(() => {
+    if (token && accountType === 'organization') {
+      const handleWindowFocus = () => {
+        fetchAccessRequests()
+      }
+
+      window.addEventListener('focus', handleWindowFocus)
+
+      return () => {
+        window.removeEventListener('focus', handleWindowFocus)
+      }
+    }
+  }, [token, accountType])
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -1436,6 +1748,87 @@ if (
     }
   }
 
+  const approveAccessRequest = async () => {
+    if (!token || !accessRequestDocument || requestingAccess) return
+
+    setRequestingAccess(true)
+    setAccessRequestError('')
+
+    try {
+      const currentRequests = await fetchAccessRequests()
+
+      const matchingRequest = (Array.isArray(currentRequests) ? currentRequests : []).find(
+        (item) => {
+          const requestDocumentId =
+            item?.document_id ||
+            item?.document?.id ||
+            item?.documentId
+
+          return String(requestDocumentId) === String(accessRequestDocument.id)
+        }
+      )
+
+      const requestId =
+        matchingRequest?.id ||
+        matchingRequest?.request_id
+
+      if (!requestId) {
+        throw new Error(
+          'No pending access request found for this document.'
+        )
+      }
+
+      const res = await fetch(
+        `/api/v1/access-requests/${requestId}/approve`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const rawBody = await res.text()
+      let data = null
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : null
+      } catch {
+        data = null
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to grant access (${res.status})`
+        )
+      }
+
+      setAccessRequestStatus((current) => ({
+        ...current,
+        [accessRequestDocument.id]: 'approved',
+      }))
+
+      setAccessRequestDocument(null)
+      setAccessRequestError('')
+
+      await fetchAccessRequests()
+    } catch (err) {
+      console.error('Failed to grant access:', err)
+      setAccessRequestError(
+        err.message || 'Failed to grant access.'
+      )
+    } finally {
+      setRequestingAccess(false)
+    }
+  }
+
   const filteredConversations = [...conversations]
     .filter((conversation) =>
       (conversation.title || 'Untitled conversation')
@@ -1597,6 +1990,16 @@ if (
         data = JSON.parse(rawBody)
       } catch {
         data = null
+      }
+
+      if (res.status === 403 &&
+          typeof data?.detail === 'string' &&
+          data.detail.toLowerCase().includes('access required')
+      ) {
+        setPendingDeleteDocument(null)
+        setAccessRequestDocument(pendingDeleteDocument)
+        setAccessRequestError('')
+        return
       }
 
       throw new Error(
@@ -2234,6 +2637,129 @@ const handleNewConversation = () => {
   </div>
 )}
 
+{accessRequestDocument && (
+  <div
+    className="delete-confirm-overlay"
+    onClick={() => {
+      if (!requestingAccess) {
+        setAccessRequestDocument(null)
+        setAccessRequestError('')
+      }
+    }}
+  >
+    <div
+      className="delete-confirm-panel"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {(() => {
+        const isAdmin = role === 'admin'
+
+        const matchingAccessRequest = isAdmin
+          ? accessRequests.find((item) => {
+              const requestDocumentId =
+                item?.document_id ||
+                item?.document?.id ||
+                item?.documentId
+
+              return (
+                String(requestDocumentId) ===
+                String(accessRequestDocument.id)
+              )
+            })
+          : null
+
+        const requester =
+          matchingAccessRequest?.requester_username ||
+          matchingAccessRequest?.requester_name ||
+          matchingAccessRequest?.requester_id ||
+          'Organization member'
+
+        const isPending =
+          !isAdmin &&
+          accessRequestStatus[accessRequestDocument.id] === 'pending'
+
+        return (
+          <>
+            <div className="delete-confirm-title">
+              {isAdmin ? 'Access Request' : 'Access Required'}
+            </div>
+
+            <div className="delete-confirm-document">
+              {accessRequestDocument.name}
+            </div>
+
+            <div className="delete-confirm-message">
+              {isAdmin
+                ? `Grant delete access to ${requester} for this document?`
+                : 'You do not currently have permission to delete this document. Request delete access from an organization administrator.'}
+            </div>
+
+            {!isAdmin && isPending && (
+              <div className="delete-confirm-error">
+                Access request already pending.
+              </div>
+            )}
+
+            {isAdmin && !matchingAccessRequest && (
+              <div className="delete-confirm-error">
+                No pending access request was found for this document.
+              </div>
+            )}
+
+            {accessRequestError && (
+              <div className="delete-confirm-error">
+                {accessRequestError}
+              </div>
+            )}
+
+            <div className="delete-confirm-actions">
+              <button
+                type="button"
+                className="delete-confirm-cancel"
+                onClick={() => {
+                  if (!requestingAccess) {
+                    setAccessRequestDocument(null)
+                    setAccessRequestError('')
+                  }
+                }}
+                disabled={requestingAccess}
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                className="delete-confirm-delete"
+                onClick={
+                  isAdmin
+                    ? approveAccessRequest
+                    : requestDocumentAccess
+                }
+                disabled={
+                  requestingAccess ||
+                  (isAdmin
+                    ? !matchingAccessRequest
+                    : isPending)
+                }
+              >
+                {isAdmin
+                  ? requestingAccess
+                    ? 'Granting...'
+                    : 'Grant Access'
+                  : requestingAccess
+                    ? 'Requesting...'
+                    : isPending
+                      ? 'Access Requested'
+                      : 'Request Access'}
+              </button>
+            </div>
+          </>
+        )
+      })()}
+    </div>
+  </div>
+)}
+
 {showSettings && (
         <div
           className="settings-overlay"
@@ -2521,6 +3047,114 @@ const handleNewConversation = () => {
                   </form>
                 )}
               </div>
+              {role === 'admin' && accountType === 'organization' && (
+                <div className="settings-section">
+                  <h3>Access Requests</h3>
+
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-title">
+                        Document delete permissions
+                      </div>
+                      <div className="settings-row-description">
+                        Review member requests and grant or reject delete access.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="settings-theme-button"
+                      onClick={fetchAccessRequests}
+                      disabled={loadingAccessRequests}
+                    >
+                      {loadingAccessRequests ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                  </div>
+
+                  {accessRequestError && (
+                    <div className="change-password-error">
+                      {accessRequestError}
+                    </div>
+                  )}
+
+                  {loadingAccessRequests && accessRequests.length === 0 ? (
+                    <div className="settings-row-description">
+                      Loading access requests...
+                    </div>
+                  ) : accessRequests.length === 0 ? (
+                    <div className="settings-row-description">
+                      No pending access requests.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+                      {accessRequests.map((request) => {
+                        const requestId = request?.id || request?.request_id
+                        const requestDocumentId =
+                          request?.document_id ||
+                          request?.document?.id ||
+                          request?.documentId
+                        const requester =
+                          request?.requester_username ||
+                          request?.requester_name ||
+                          request?.requester_id ||
+                          'Unknown member'
+
+                        return (
+                          <div
+                            key={requestId || `${requestDocumentId}-${request?.created_at || 'request'}`}
+                            style={{
+                              padding: '12px',
+                              border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                              borderRadius: '10px',
+                            }}
+                          >
+                            <div style={{ fontWeight: 600 }}>
+                              {request?.document_name ||
+                                request?.document_title ||
+                                `Document ${requestDocumentId || 'unknown'}`}
+                            </div>
+                            <div
+                              className="settings-row-description"
+                              style={{ marginTop: '4px' }}
+                            >
+                              Requested by {requester}
+                            </div>
+                            <div
+                              className="settings-row-description"
+                              style={{ marginTop: '2px' }}
+                            >
+                              Permission: delete
+                            </div>
+
+                            <div
+                              className="settings-action-group"
+                              style={{ marginTop: '10px' }}
+                            >
+                              <button
+                                type="button"
+                                className="settings-save-button"
+                                onClick={() => resolveAccessRequest(requestId, 'approve')}
+                                disabled={loadingAccessRequests || !requestId}
+                              >
+                                Grant Access
+                              </button>
+
+                              <button
+                                type="button"
+                                className="settings-secondary-button"
+                                onClick={() => resolveAccessRequest(requestId, 'reject')}
+                                disabled={loadingAccessRequests || !requestId}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2671,6 +3305,35 @@ const handleNewConversation = () => {
                     <span className="document-list-filename">
                       {document.file_name || 'Unknown file'}
                     </span>
+                    {['pending', 'approved'].includes(
+                      accessRequestStatus[document.document_id || document.id]
+                    ) && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          width: 'fit-content',
+                          marginTop: '4px',
+                          padding: '2px 7px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          lineHeight: 1.3,
+                          background: 'rgba(245, 158, 11, 0.12)',
+                          color: 'var(--accent, #f59e0b)',
+                        }}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          setAccessRequestDocument(document)
+                          setAccessRequestError("")
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        title="View access request"
+                      >
+                        {accessRequestStatus[document.document_id || document.id] === 'approved' ? 'Request granted' : 'Access requested'}
+                      </span>
+                    )}
                   </span>
                 </button>
 

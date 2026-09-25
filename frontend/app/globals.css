@@ -4647,4 +4647,83 @@ html.dark .settings-save-button:hover:not(:disabled) {
   opacity: 0.7;
 }
 
+/* Dark mode: Documents drawer */
+.app-shell[data-theme="dark"] .documents-drawer {
+  background: #0f1020;
+  color: #f8fafc;
+  border-left: 0 !important;
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.35);
+}
 
+.app-shell[data-theme="dark"] .documents-drawer-header {
+  background: #0f1020;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-shell[data-theme="dark"] .documents-drawer-header .eyebrow {
+  color: #a78bfa;
+}
+
+.app-shell[data-theme="dark"] .documents-drawer-header h2 {
+  color: #f8fafc;
+}
+
+.app-shell[data-theme="dark"] .documents-drawer-close {
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-shell[data-theme="dark"] .documents-drawer-close:hover {
+  background: rgba(167, 139, 250, 0.12);
+  color: #ffffff;
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+.app-shell[data-theme="dark"] .documents-drawer-list {
+  background: #0f1020;
+}
+
+.app-shell[data-theme="dark"] .document-list-item {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.app-shell[data-theme="dark"] .document-list-select {
+  background: transparent;
+  color: #f8fafc;
+}
+
+.app-shell[data-theme="dark"] .document-list-select:hover {
+  background: rgba(167, 139, 250, 0.08);
+}
+
+.app-shell[data-theme="dark"] .document-list-icon {
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.18);
+}
+
+.app-shell[data-theme="dark"] .document-list-title {
+  color: #f8fafc;
+}
+
+.app-shell[data-theme="dark"] .document-list-filename {
+  color: #94a3b8;
+}
+
+.app-shell[data-theme="dark"] .document-list-delete {
+  background: transparent;
+  color: #64748b;
+}
+
+.app-shell[data-theme="dark"] .document-list-delete:hover {
+  background: rgba(239, 68, 68, 0.10);
+  color: #f87171;
+}
+
+
+/* Dark mode: keep sidebar divider subtle */
+.app-shell[data-theme="dark"] .sidebar {
+  border-right-color: rgba(255, 255, 255, 0.06) !important;
+}

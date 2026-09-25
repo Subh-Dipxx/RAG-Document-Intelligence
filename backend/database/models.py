@@ -52,7 +52,7 @@ class PasswordResetTokenModel(Base):
 class TenantMembershipModel(Base):
     __tablename__ = "tenant_memberships"
     __table_args__ = (
-        UniqueConstraint("tenant_id", "user_id", name="uq_tenant_membership_user"),
+        UniqueConstraint("user_id", name="uq_tenant_membership_user"),
         Index("ix_tenant_memberships_user", "user_id"),
         Index("ix_tenant_memberships_tenant", "tenant_id"),
     )
@@ -106,6 +106,26 @@ class AccessGrantModel(Base):
     document_id = Column(String, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
     principal = Column(String, nullable=False)
     role = Column(String, nullable=False, default="viewer")
+
+
+class AccessRequestModel(Base):
+    __tablename__ = "access_requests"
+    __table_args__ = (
+        Index("ix_access_requests_tenant", "tenant_id"),
+        Index("ix_access_requests_document", "document_id"),
+        Index("ix_access_requests_requester", "requester_id"),
+        Index("ix_access_requests_status", "status"),
+    )
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    tenant_id = Column(String, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    document_id = Column(String, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    requester_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    requested_role = Column(String, nullable=False, default="delete")
+    status = Column(String, nullable=False, default="pending")
+    created_at = Column(DateTime, default=utc_now)
+    resolved_at = Column(DateTime, nullable=True)
+    resolved_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
 
 class DocumentModel(Base):

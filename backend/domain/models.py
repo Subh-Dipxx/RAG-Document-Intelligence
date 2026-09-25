@@ -36,6 +36,7 @@ class Role(str, Enum):
     OWNER = "owner"
     EDITOR = "editor"
     VIEWER = "viewer"
+    DELETE = "delete"
 
 
 class JobState(str, Enum):
