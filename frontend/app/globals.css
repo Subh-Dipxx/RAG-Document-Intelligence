@@ -4839,3 +4839,34 @@ html.dark .organization-invitation-actions .settings-secondary-button {
 html.dark .organization-invitation-actions .settings-secondary-button:hover:not(:disabled) {
   background: rgba(139, 92, 246, 0.14);
 }
+
+/* Match organization invitation typography with the rest of Settings */
+.organization-invitation-card {
+  font-family: inherit;
+}
+
+.organization-invitation-card > div:first-child {
+  min-width: 0;
+}
+
+.organization-invitation-card > div:first-child > strong {
+  display: block;
+  margin: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+  color: inherit;
+}
+
+.organization-invitation-card .settings-description {
+  margin: 6px 0 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: normal;
+  color: inherit;
+}
+
