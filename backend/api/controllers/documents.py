@@ -7,6 +7,7 @@ import json
 
 from backend.database.database import get_db
 from backend.auth.dependencies import AuthContext, get_auth_context
+from backend.auth.dependencies import require_active_organization_access
 from backend.database import crud
 from backend.database.models import AccessGrantModel, TenantMembershipModel
 from backend.domain.models import Document, Version
@@ -27,6 +28,9 @@ async def upload_document(
     auth: AuthContext = Depends(get_auth_context),
 ):
     """Upload a document file, store in MinIO, create DB records, and trigger async processing job."""
+    if auth.tenant_id and auth.role != "admin":
+        require_active_organization_access(db=db, auth=auth)
+
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
@@ -103,6 +107,11 @@ def list_documents(
 ):
     """List documents metadata stored in database."""
     if auth.tenant_id:
+        if auth.role != "admin":
+            try:
+                require_active_organization_access(db=db, auth=auth)
+            except HTTPException:
+                return []
         docs = crud.list_documents(db, skip=skip, limit=limit, tenant_id=auth.tenant_id)
     else:
         docs = crud.list_documents(db, skip=skip, limit=limit, owner_id=auth.user_id)
@@ -111,6 +120,8 @@ def list_documents(
 
 @router.get("/{document_id}/content")
 def get_document_content(document_id: str, db: Session = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
+    if auth.tenant_id and auth.role != "admin":
+        require_active_organization_access(db=db, auth=auth)
     """Return the stored file bytes for a document."""
     from fastapi.responses import Response
 
@@ -149,6 +160,8 @@ def get_document_content(document_id: str, db: Session = Depends(get_db), auth: 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 def get_document(document_id: str, db: Session = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
+    if auth.tenant_id and auth.role != "admin":
+        require_active_organization_access(db=db, auth=auth)
     """Get document details including version history."""
     if auth.tenant_id:
         doc = crud.get_document(db, document_id, tenant_id=auth.tenant_id)
@@ -162,6 +175,9 @@ def get_document(document_id: str, db: Session = Depends(get_db), auth: AuthCont
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
     """Delete a document and its database records."""
+    if auth.tenant_id and auth.role != "admin":
+        require_active_organization_access(db=db, auth=auth)
+
     if auth.tenant_id:
         if auth.role != "admin":
             membership = (

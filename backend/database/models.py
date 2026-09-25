@@ -61,7 +61,26 @@ class TenantMembershipModel(Base):
     tenant_id = Column(String, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role = Column(String, nullable=False, default="member")
+    # Organization document access is granted only after an admin invitation is accepted.
+    access_status = Column(String, nullable=False, default="pending")
     created_at = Column(DateTime, default=utc_now)
+
+
+class OrganizationInvitationModel(Base):
+    __tablename__ = "organization_invitations"
+    __table_args__ = (
+        Index("ix_org_invitations_invitee", "invitee_user_id"),
+        Index("ix_org_invitations_tenant", "tenant_id"),
+        Index("ix_org_invitations_status", "status"),
+    )
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    tenant_id = Column(String, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    invitee_user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    invited_by_user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    created_at = Column(DateTime, default=utc_now)
+    responded_at = Column(DateTime, nullable=True)
 
 
 class TenantModel(Base):

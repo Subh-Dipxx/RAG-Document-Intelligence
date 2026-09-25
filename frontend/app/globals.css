@@ -4727,3 +4727,115 @@ html.dark .settings-save-button:hover:not(:disabled) {
 .app-shell[data-theme="dark"] .sidebar {
   border-right-color: rgba(255, 255, 255, 0.06) !important;
 }
+
+
+/* Organization invitation notification badge */
+.sidebar-profile-settings {
+  position: relative;
+}
+
+.sidebar-settings-notification-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  background: #dc2626;
+  color: #fff;
+}
+
+.organization-invitations-list {
+  display: grid;
+  gap: 12px;
+}
+
+.organization-invitation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+}
+
+.organization-invitation-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Organization invitation actions */
+.organization-invitation-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.organization-invitation-actions button {
+  height: 38px;
+  min-width: 92px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease,
+    box-shadow 140ms ease;
+}
+
+.organization-invitation-actions button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.organization-invitation-actions .settings-primary-button {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.organization-invitation-actions .settings-primary-button:hover:not(:disabled) {
+  filter: brightness(0.94);
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.18);
+}
+
+.organization-invitation-actions .settings-secondary-button {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.organization-invitation-actions .settings-secondary-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.organization-invitation-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Dark theme */
+html.dark .organization-invitation-actions .settings-secondary-button {
+  background: transparent;
+  color: #c4b5fd;
+  border-color: #8b5cf6;
+}
+
+html.dark .organization-invitation-actions .settings-secondary-button:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.14);
+}

@@ -10,6 +10,7 @@ from backend.api.schemas.query_schemas import (
     QueryResponse,
 )
 from backend.auth.dependencies import AuthContext, get_auth_context
+from backend.auth.dependencies import require_active_organization_access
 from backend.database.crud import (
     create_chat_conversation,
     create_chat_message,
@@ -40,6 +41,7 @@ router = APIRouter(
 def query_documents(
     payload: QueryRequest,
     auth: AuthContext = Depends(get_auth_context),
+    _active_org_access: AuthContext = Depends(require_active_organization_access),
     db: Session = Depends(get_db),
 ) -> QueryResponse:
     settings = get_settings()

@@ -755,6 +755,10 @@ const [deleteError, setDeleteError] = useState('')
   const [invitingMember, setInvitingMember] = useState(false)
   const [memberInviteError, setMemberInviteError] = useState('')
   const [memberInviteMessage, setMemberInviteMessage] = useState('')
+  const [pendingOrganizationInvitations, setPendingOrganizationInvitations] = useState([])
+  const [loadingOrganizationInvitations, setLoadingOrganizationInvitations] = useState(false)
+  const [invitationActionId, setInvitationActionId] = useState(null)
+  const [invitationActionError, setInvitationActionError] = useState('')
 
 
 
@@ -777,6 +781,17 @@ const [usernameError, setUsernameError] = useState('')
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [documentPreview, setDocumentPreview] = useState(null)
+
+  useEffect(() => {
+    if (!token || accountType !== 'organization' || role !== 'member') {
+      setPendingOrganizationInvitations([])
+      return undefined
+    }
+
+    fetchOrganizationInvitations()
+    const intervalId = setInterval(fetchOrganizationInvitations, 30000)
+    return () => clearInterval(intervalId)
+  }, [token, accountType, role])
 
   useEffect(() => {
     const stored = readStoredTheme()
@@ -965,6 +980,62 @@ const [usernameError, setUsernameError] = useState('')
     } catch (err) {
       console.error('Failed to fetch documents:', err)
       return []
+    }
+  }
+
+  const fetchOrganizationInvitations = async () => {
+    if (!token || accountType !== 'organization' || role !== 'member') {
+      setPendingOrganizationInvitations([])
+      return []
+    }
+
+    setLoadingOrganizationInvitations(true)
+    try {
+      const res = await fetch('/api/v1/organization-members/invitations', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => [])
+      if (!res.ok) {
+        throw new Error(data?.detail || 'Failed to load organization invitations')
+      }
+      const invitations = Array.isArray(data) ? data : []
+      setPendingOrganizationInvitations(invitations)
+      return invitations
+    } catch (error) {
+      console.error('Failed to fetch organization invitations:', error)
+      setPendingOrganizationInvitations([])
+      return []
+    } finally {
+      setLoadingOrganizationInvitations(false)
+    }
+  }
+
+  const respondToOrganizationInvitation = async (invitationId, action) => {
+    if (!token || role !== 'member' || accountType !== 'organization') return
+    setInvitationActionId(invitationId)
+    setInvitationActionError('')
+    try {
+      const res = await fetch(`/api/v1/organization-members/invitations/${invitationId}/${action}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data?.detail || `Failed to ${action} organization invitation`)
+      }
+
+      await fetchOrganizationInvitations()
+      if (action === 'accept') {
+        setSelectedDocument(null)
+        await fetchDocuments()
+      } else {
+        setDocuments([])
+        setSelectedDocument(null)
+      }
+    } catch (error) {
+      setInvitationActionError(error?.message || 'Unable to process invitation')
+    } finally {
+      setInvitationActionId(null)
     }
   }
 
@@ -2659,13 +2730,29 @@ const handleNewConversation = () => {
               <button
                 type="button"
                 className="sidebar-profile-settings"
-                onClick={() => {
+                onClick={async () => {
                   setShowProfileMenu(false)
                   setShowSettings(true)
+                  if (accountType === 'organization' && role === 'member') {
+                    await fetchOrganizationInvitations()
+                  }
+                  if (accountType === 'organization' && role === 'admin') {
+                    await fetchOrganizationMembers()
+                  }
                 }}
               >
                 <span className="sidebar-profile-settings-icon">⚙</span>
                 <span>Settings</span>
+                {accountType === 'organization' &&
+                  role === 'member' &&
+                  pendingOrganizationInvitations.length > 0 && (
+                    <span
+                      className="sidebar-settings-notification-badge"
+                      aria-label={`${pendingOrganizationInvitations.length} pending organization invitation${pendingOrganizationInvitations.length === 1 ? '' : 's'}`}
+                    >
+                      {pendingOrganizationInvitations.length}
+                    </span>
+                  )}
               </button>
 
               <button
@@ -2918,6 +3005,54 @@ const handleNewConversation = () => {
             </div>
 
             <div className="settings-content">
+        {accountType === 'organization' && role === 'member' && (
+          <div className="settings-section">
+            <h3>Organization Invitations</h3>
+            {loadingOrganizationInvitations ? (
+              <p className="settings-description">Checking for organization invitations...</p>
+            ) : pendingOrganizationInvitations.length === 0 ? (
+              <p className="settings-description">You have no pending organization invitations.</p>
+            ) : (
+              <div className="organization-invitations-list">
+                {pendingOrganizationInvitations.map((invitation) => (
+                  <div key={invitation.id} className="organization-invitation-card">
+                    <div>
+                      <strong>{invitation.organization_name}</strong>
+                      <p className="settings-description">
+                        You were invited by {invitation.invited_by_username}
+                        {invitation.invited_by_email ? ` (${invitation.invited_by_email})` : ''}.
+                        Accept the invitation to access this organization's shared documents.
+                      </p>
+                    </div>
+                    <div className="organization-invitation-actions">
+                      <button
+                        type="button"
+                        className="settings-primary-button"
+                        disabled={invitationActionId === invitation.id}
+                        onClick={() => respondToOrganizationInvitation(invitation.id, 'accept')}
+                      >
+                        {invitationActionId === invitation.id ? 'Processing...' : 'Accept'}
+                      </button>
+                      <button
+                        type="button"
+                        className="settings-secondary-button"
+                        disabled={invitationActionId === invitation.id}
+                        onClick={() => respondToOrganizationInvitation(invitation.id, 'decline')}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {invitationActionError && (
+              <p className="settings-error-message">{invitationActionError}</p>
+            )}
+          </div>
+        )}
+
+
               <div className="settings-section">
                 <h3>Appearance</h3>
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
+
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from backend.auth.security import decode_access_token
@@ -54,3 +55,35 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> str:
     return get_auth_context(credentials).user_id
+
+from backend.database.database import get_db
+from backend.database.models import TenantMembershipModel
+
+
+
+def require_active_organization_access(
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+) -> AuthContext:
+    """Require an active organization membership before exposing shared documents/RAG."""
+    if not auth.tenant_id or auth.account_type != "organization":
+        return auth
+
+    # Organization admins always have access.
+    if auth.role == "admin":
+        return auth
+
+    membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.user_id == auth.user_id,
+        )
+        .first()
+    )
+    if not membership or membership.access_status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization document access is pending admin invitation acceptance",
+        )
+    return auth
