@@ -11,6 +11,7 @@ from backend.database.models import (
     AccessGrantModel,
     AccessRequestModel,
     DocumentModel,
+    TenantMembershipModel,
     UserModel,
     utc_now,
 )
@@ -104,6 +105,21 @@ def create_access_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Organization admins already have delete access",
+        )
+
+    membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.user_id == auth.user_id,
+        )
+        .first()
+    )
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must belong to this organization before requesting document access",
         )
 
     document = (
@@ -242,6 +258,21 @@ def approve_access_request(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Access request is already {request.status}",
+        )
+
+    requester_membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == request.tenant_id,
+            TenantMembershipModel.user_id == request.requester_id,
+        )
+        .first()
+    )
+
+    if not requester_membership:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This user is no longer a member of the organization",
         )
 
     document = (

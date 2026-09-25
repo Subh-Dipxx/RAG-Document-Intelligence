@@ -163,6 +163,15 @@ def organization_signup(
             detail="Email address is already registered",
         )
 
+    # Exact organization-name matching:
+    # same case + same internal spacing = same organization.
+    # Different case or internal spacing = different organization.
+    existing_organization = (
+        db.query(TenantModel)
+        .filter(TenantModel.name == organization_name)
+        .first()
+    )
+
     user = UserModel(
         username=username,
         email=normalized_email,
@@ -172,23 +181,40 @@ def organization_signup(
     db.add(user)
     db.flush()
 
-    tenant = TenantModel(
-        name=organization_name,
-    )
-    db.add(tenant)
-    db.flush()
+    if existing_organization:
+        # Existing organization: this signup becomes a member.
+        tenant = existing_organization
+        membership_role = "member"
+        message = (
+            "Account created successfully. "
+            "You have joined the organization as a member."
+        )
+    else:
+        # New organization: this signup creates the organization admin.
+        tenant = TenantModel(
+            name=organization_name,
+        )
+        db.add(tenant)
+        db.flush()
+
+        membership_role = "admin"
+        message = (
+            "Organization created successfully. "
+            "You are the organization admin."
+        )
 
     membership = TenantMembershipModel(
         tenant_id=tenant.id,
         user_id=user.id,
-        role="admin",
+        role=membership_role,
     )
     db.add(membership)
     db.commit()
 
     return {
-        "message": "Organization created successfully. You are the organization admin.",
+        "message": message,
         "organization_id": tenant.id,
+        "role": membership_role,
     }
 
 
@@ -202,7 +228,7 @@ def organization_login(
 
     tenant = (
         db.query(TenantModel)
-        .filter(TenantModel.name.ilike(organization_name))
+        .filter(TenantModel.name == organization_name)
         .first()
     )
 

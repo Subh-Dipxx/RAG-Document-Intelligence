@@ -749,6 +749,14 @@ const [deleteError, setDeleteError] = useState('')
   const [accessRequests, setAccessRequests] = useState([])
   const [loadingAccessRequests, setLoadingAccessRequests] = useState(false)
   const [accessRequestError, setAccessRequestError] = useState('')
+  const [organizationMembers, setOrganizationMembers] = useState([])
+  const [loadingOrganizationMembers, setLoadingOrganizationMembers] = useState(false)
+  const [memberEmail, setMemberEmail] = useState('')
+  const [invitingMember, setInvitingMember] = useState(false)
+  const [memberInviteError, setMemberInviteError] = useState('')
+  const [memberInviteMessage, setMemberInviteMessage] = useState('')
+
+
 
 
 
@@ -957,6 +965,123 @@ const [usernameError, setUsernameError] = useState('')
     } catch (err) {
       console.error('Failed to fetch documents:', err)
       return []
+    }
+  }
+
+  const fetchOrganizationMembers = async () => {
+    if (!token || accountType !== 'organization' || role !== 'admin') {
+      return []
+    }
+
+    setLoadingOrganizationMembers(true)
+    setMemberInviteError('')
+
+    try {
+      const res = await fetch('/api/v1/organization-members', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const rawBody = await res.text()
+      let data = []
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : []
+      } catch {
+        data = []
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return []
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to load organization members (${res.status})`
+        )
+      }
+
+      const members = Array.isArray(data) ? data : []
+      setOrganizationMembers(members)
+      return members
+    } catch (err) {
+      console.error('Failed to load organization members:', err)
+      setMemberInviteError(
+        err.message || 'Failed to load organization members.'
+      )
+      return []
+    } finally {
+      setLoadingOrganizationMembers(false)
+    }
+  }
+
+  const inviteOrganizationMember = async (event) => {
+    event.preventDefault()
+
+    if (!token || role !== 'admin' || accountType !== 'organization') {
+      return
+    }
+
+    const email = memberEmail.trim()
+
+    if (!email) {
+      setMemberInviteError('Enter the member email address.')
+      return
+    }
+
+    setInvitingMember(true)
+    setMemberInviteError('')
+    setMemberInviteMessage('')
+
+    try {
+      const res = await fetch('/api/v1/organization-members/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const rawBody = await res.text()
+      let data = null
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : null
+      } catch {
+        data = null
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to invite member (${res.status})`
+        )
+      }
+
+      setMemberEmail('')
+      setMemberInviteMessage(
+        `${data?.username || email} has been added to the organization.`
+      )
+
+      await fetchOrganizationMembers()
+    } catch (err) {
+      console.error('Failed to invite organization member:', err)
+      setMemberInviteError(
+        err.message || 'Failed to invite organization member.'
+      )
+    } finally {
+      setInvitingMember(false)
     }
   }
 
@@ -1197,11 +1322,18 @@ const [usernameError, setUsernameError] = useState('')
     if (!token || accountType !== 'organization') {
       setAccessRequests([])
       setAccessRequestStatus({})
+      setOrganizationMembers([])
       return
     }
 
     fetchAccessRequests()
-  }, [token, accountType])
+
+    if (role === 'admin') {
+      fetchOrganizationMembers()
+    } else {
+      setOrganizationMembers([])
+    }
+  }, [token, accountType, role])
 
   useEffect(() => {
     if (token && accountType === 'organization') {
@@ -3047,6 +3179,118 @@ const handleNewConversation = () => {
                   </form>
                 )}
               </div>
+              {role === 'admin' && accountType === 'organization' && (
+                <div className="settings-section">
+                  <h3>Organization Members</h3>
+
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-title">
+                        Invite a member
+                      </div>
+                      <div className="settings-row-description">
+                        Add an existing registered user to this organization by email.
+                      </div>
+                    </div>
+                  </div>
+
+                  <form
+                    className="change-password-form"
+                    onSubmit={inviteOrganizationMember}
+                  >
+                    <div className="change-password-field">
+                      <label htmlFor="organization-member-email">
+                        Member email
+                      </label>
+                      <input
+                        id="organization-member-email"
+                        type="email"
+                        value={memberEmail}
+                        onChange={(event) => {
+                          setMemberEmail(event.target.value)
+                          setMemberInviteError('')
+                          setMemberInviteMessage('')
+                        }}
+                        autoComplete="email"
+                        placeholder="member@example.com"
+                        disabled={invitingMember}
+                      />
+                    </div>
+
+                    {memberInviteError && (
+                      <div className="change-password-error">
+                        {memberInviteError}
+                      </div>
+                    )}
+
+                    {memberInviteMessage && (
+                      <div className="change-password-success">
+                        {memberInviteMessage}
+                      </div>
+                    )}
+
+                    <div className="change-password-actions">
+                      <button
+                        type="submit"
+                        className="settings-save-button"
+                        disabled={invitingMember || !memberEmail.trim()}
+                      >
+                        {invitingMember ? 'Inviting...' : 'Invite Member'}
+                      </button>
+                    </div>
+                  </form>
+
+                  <div style={{ marginTop: '16px' }}>
+                    <div className="settings-row-description">
+                      Current organization members
+                    </div>
+
+                    {loadingOrganizationMembers ? (
+                      <div
+                        className="settings-row-description"
+                        style={{ marginTop: '10px' }}
+                      >
+                        Loading members...
+                      </div>
+                    ) : organizationMembers.length === 0 ? (
+                      <div
+                        className="settings-row-description"
+                        style={{ marginTop: '10px' }}
+                      >
+                        No organization members found.
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: '8px',
+                          marginTop: '10px',
+                        }}
+                      >
+                        {organizationMembers.map((member) => (
+                          <div
+                            key={member.user_id}
+                            style={{
+                              padding: '10px 12px',
+                              border:
+                                '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                              borderRadius: '10px',
+                            }}
+                          >
+                            <div style={{ fontWeight: 600 }}>
+                              {member.username}
+                            </div>
+                            <div className="settings-row-description">
+                              {member.email || 'No email'} · {member.role}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {role === 'admin' && accountType === 'organization' && (
                 <div className="settings-section">
                   <h3>Access Requests</h3>

@@ -8,7 +8,7 @@ import json
 from backend.database.database import get_db
 from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.database import crud
-from backend.database.models import AccessGrantModel
+from backend.database.models import AccessGrantModel, TenantMembershipModel
 from backend.domain.models import Document, Version
 from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 from backend.workers.tasks import process_document_task
@@ -164,6 +164,21 @@ def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthC
     """Delete a document and its database records."""
     if auth.tenant_id:
         if auth.role != "admin":
+            membership = (
+                db.query(TenantMembershipModel)
+                .filter(
+                    TenantMembershipModel.tenant_id == auth.tenant_id,
+                    TenantMembershipModel.user_id == auth.user_id,
+                )
+                .first()
+            )
+
+            if not membership:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are no longer a member of this organization",
+                )
+
             delete_grant = (
                 db.query(AccessGrantModel)
                 .filter(
@@ -177,7 +192,7 @@ def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthC
 
             if not delete_grant:
                 raise HTTPException(
-                    status_code=403,
+                    status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access required to delete this document",
                 )
 
@@ -191,10 +206,11 @@ def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthC
         success = crud.delete_document(
             db,
             document_id,
-            actor_id=auth.user_id,
             owner_id=auth.user_id,
         )
 
     if not success:
-        raise HTTPException(status_code=404, detail="Document not found")
-    return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )

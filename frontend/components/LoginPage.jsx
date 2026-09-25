@@ -281,9 +281,12 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
       }
 
       setSuccess(
-        isOrganization
-          ? "Organization created successfully. You can now sign in."
-          : "Account created successfully. You can now sign in."
+        data?.message ||
+        (
+          isOrganization
+            ? "Organization account created successfully. You can now sign in."
+            : "Account created successfully. You can now sign in."
+        )
       )
       setMode("login")
       setPassword("")
@@ -343,7 +346,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
           }
           className="login-form"
         >
-          {!isSignup && !isForgot && !isReset && (
+          {!isForgot && !isReset && (
             <div className="account-type-control">
               <div className="account-type-label">Account Type</div>
               <div className="account-type-switch">

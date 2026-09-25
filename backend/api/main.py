@@ -1,3 +1,4 @@
+from backend.api.controllers import organization_members
 from backend.config import get_settings
 import json
 import urllib.request
@@ -49,6 +50,7 @@ app.include_router(query_route.router, prefix="/api/v1")
 app.include_router(chat_route.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(access_requests.router, prefix="/api/v1")
+app.include_router(organization_members.router, prefix="/api/v1")
 
 
 settings = get_settings()
