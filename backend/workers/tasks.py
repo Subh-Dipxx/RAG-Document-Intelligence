@@ -10,6 +10,7 @@ from backend.domain.models import Document, Page
 from backend.ingestion.parsers.factory import get_parser
 from backend.ingestion.parsers.pdf import PyMuPDFParser
 from backend.ingestion.cleaners.pdf import PyMuPDFTextCleaner
+from backend.ingestion.classifier import classify_document_content
 from backend.chunking.factory import ChunkerFactory
 from backend.config import get_settings
 from backend.indexing.embedders.bge import get_bge_embedder
@@ -163,6 +164,20 @@ def process_document_task(
                     version_id=version_id,
                     page=page,
                 )
+
+        # ---------------------------------------------------------
+        # Content Classification based on internal text content
+        # ---------------------------------------------------------
+        full_doc_text = " ".join([getattr(p, "text", "") or "" for p in pages])
+        classification = classify_document_content(
+            text=full_doc_text,
+            file_name=db_document.file_name or "",
+            title=db_document.title or "",
+        )
+        existing_metadata = dict(db_document.metadata_json or {})
+        existing_metadata.update(classification)
+        db_document.metadata_json = existing_metadata
+        db.commit()
 
         # ---------------------------------------------------------
         # 6. Build domain document for chunking

@@ -11,9 +11,9 @@ from backend.auth.dependencies import require_active_organization_access
 from backend.database import crud
 from backend.database.models import AccessGrantModel, TenantMembershipModel
 from backend.domain.models import Document, Version
-from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 from backend.workers.tasks import process_document_task
 from backend.api.schemas.document_schemas import DocumentResponse, VersionResponse
+from backend.ingestion.classifier import classify_document_content
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -64,6 +64,22 @@ async def upload_document(
         meta_dict = json.loads(metadata_json) if metadata_json else {}
     except Exception:
         meta_dict = {}
+
+    # Extract initial plain text snippet if text file
+    sample_text = ""
+    try:
+        sample_text = content.decode("utf-8", errors="ignore")[:3000]
+    except Exception:
+        pass
+
+    initial_classification = classify_document_content(
+        text=sample_text,
+        file_name=file_name,
+        title=title or file_name,
+    )
+    for k, v in initial_classification.items():
+        if k not in meta_dict:
+            meta_dict[k] = v
 
     doc_domain = Document(
         id=doc_id,

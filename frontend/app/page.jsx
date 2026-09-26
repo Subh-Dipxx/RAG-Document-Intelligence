@@ -550,6 +550,170 @@ function formatParsedJson(obj, indent = 0) {
   return String(obj)
 }
 
+function formatCategoryName(str) {
+  if (!str || typeof str !== 'string') return 'Others'
+  const trimmed = str
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+  return trimmed || 'Others'
+}
+
+function getDocumentFormatLabel(doc) {
+  const name = doc?.file_name || doc?.title || ''
+  const parts = name.split('.')
+  if (parts.length > 1) {
+    const ext = parts.pop()?.toUpperCase() || ''
+    if (ext.length >= 1 && ext.length <= 5 && ext !== name.toUpperCase()) {
+      return ext
+    }
+  }
+  const mime = (doc?.mime_type || doc?.detected_mime_type || '').toLowerCase()
+  if (mime.includes('pdf')) return 'PDF'
+  if (mime.includes('word') || mime.includes('docx')) return 'DOCX'
+  if (mime.includes('excel') || mime.includes('xlsx') || mime.includes('spreadsheet')) return 'XLSX'
+  if (mime.includes('powerpoint') || mime.includes('pptx') || mime.includes('presentation')) return 'PPTX'
+  if (mime.includes('csv')) return 'CSV'
+  if (mime.includes('html')) return 'HTML'
+  if (mime.includes('image')) return 'IMG'
+  if (mime.includes('text/plain')) return 'TXT'
+  return 'FILE'
+}
+
+function getDocumentContentField(doc) {
+  const meta = doc?.metadata || {}
+
+  if (meta.category && typeof meta.category === 'string' && meta.category.trim()) {
+    return formatCategoryName(meta.category)
+  }
+  if (meta.domain && typeof meta.domain === 'string' && meta.domain.trim()) {
+    return formatCategoryName(meta.domain)
+  }
+  if (meta.field && typeof meta.field === 'string' && meta.field.trim()) {
+    return formatCategoryName(meta.field)
+  }
+  if (meta.topic && typeof meta.topic === 'string' && meta.topic.trim()) {
+    return formatCategoryName(meta.topic)
+  }
+  if (Array.isArray(meta.tags) && meta.tags.length > 0 && typeof meta.tags[0] === 'string' && meta.tags[0].trim()) {
+    return formatCategoryName(meta.tags[0])
+  }
+
+  const text = `${doc?.title || ''} ${doc?.file_name || ''} ${JSON.stringify(meta)}`.toLowerCase()
+
+  if (/\b(edu|education|school|course|learn|teach|teacher|study|class|syllabus|lecture|academi|academic|university|student|tutorial|textbook|exam|assignment|sem|semester|pe|resume|cv|degree|diploma|thesis|math|physics|chemistry|biology|engineering|homework|grade)\b/i.test(text)) {
+    return 'Education'
+  }
+  if (/\b(sport|sports|cricket|football|soccer|basketball|tennis|badminton|baseball|hockey|nba|match|league|tournament|athlete|olympic|game|score|player|team|stadium|championship|fitness|workout|athletics)\b/i.test(text)) {
+    return 'Sports'
+  }
+  if (/\b(news|headline|press|journal|bulletin|newspaper|broadcast|reporting|gazette|reporter|breaking|daily|editorial|article|report|notice)\b/i.test(text)) {
+    return 'News'
+  }
+  if (/\b(movie|film|cinema|theater|tv|show|actor|actress|concert|song|music|album|drama|video|gaming|celebrity|pop|fun|comedy|series|anime|entertain|entertainment|media|play|novel|story)\b/i.test(text)) {
+    return 'Entertainment'
+  }
+  if (/\b(finance|bank|tax|invoice|price|budget|audit|revenue|sale|market|stock|invest|payment|billing|fiscal|profit|expense|business)\b/i.test(text)) {
+    return 'Finance & Business'
+  }
+  if (/\b(tech|technology|code|api|dev|system|software|program|data|algorithm|cyber|network|server|config|database|ai|ml|python|java|web)\b/i.test(text)) {
+    return 'Technology & Data'
+  }
+  if (/\b(legal|law|contract|policy|agreement|compliance|term|statute|court|patent|license|regulation|clause|juridical)\b/i.test(text)) {
+    return 'Legal & Policy'
+  }
+  if (/\b(health|medical|doctor|patient|pharma|clinical|hospital|care|diet|disease|medicine|anatomy)\b/i.test(text)) {
+    return 'Healthcare & Science'
+  }
+
+  return 'Others'
+}
+
+function getContentFieldBadgeInfo(fieldCategory) {
+  const cat = String(fieldCategory || '').toLowerCase()
+
+  if (cat.includes('edu')) {
+    return { icon: '📚', color: '#818cf8', bg: 'rgba(99, 102, 241, 0.15)' }
+  }
+  if (cat.includes('sport')) {
+    return { icon: '⚽', color: '#34d399', bg: 'rgba(16, 185, 129, 0.15)' }
+  }
+  if (cat.includes('news')) {
+    return { icon: '📰', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)' }
+  }
+  if (cat.includes('entertain')) {
+    return { icon: '🎭', color: '#f472b6', bg: 'rgba(236, 72, 153, 0.15)' }
+  }
+  if (cat.includes('finan') || cat.includes('busin')) {
+    return { icon: '💼', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.15)' }
+  }
+  if (cat.includes('tech') || cat.includes('data')) {
+    return { icon: '⚡', color: '#22d3ee', bg: 'rgba(6, 182, 212, 0.15)' }
+  }
+  if (cat.includes('legal') || cat.includes('policy')) {
+    return { icon: '⚖️', color: '#facc15', bg: 'rgba(234, 179, 8, 0.15)' }
+  }
+  if (cat.includes('health') || cat.includes('scien')) {
+    return { icon: '🩺', color: '#a78bfa', bg: 'rgba(139, 92, 246, 0.15)' }
+  }
+  return { icon: '📁', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
+}
+
+function sortCategoriesWithOthersLast(entries) {
+  if (!Array.isArray(entries)) return []
+  return [...entries].sort(([aKey = ''], [bKey = '']) => {
+    const aStr = String(aKey || '')
+    const bStr = String(bKey || '')
+    const aIsOthers = aStr.toLowerCase().includes('other')
+    const bIsOthers = bStr.toLowerCase().includes('other')
+
+    if (aIsOthers && !bIsOthers) return 1
+    if (!aIsOthers && bIsOthers) return -1
+
+    return aStr.localeCompare(bStr)
+  })
+}
+
+function extractDocumentContentTopics(doc) {
+  const meta = doc?.metadata || {}
+  const topics = []
+
+  if (Array.isArray(meta.tags)) {
+    meta.tags.forEach((t) => topics.push(String(t)))
+  }
+  if (Array.isArray(meta.topics)) {
+    meta.topics.forEach((t) => topics.push(String(t)))
+  }
+  if (meta.subject) topics.push(String(meta.subject))
+
+  if (Array.isArray(meta.columns) && meta.columns.length > 0) {
+    meta.columns.slice(0, 4).forEach((c) => topics.push(`Field: ${c}`))
+  } else if (Array.isArray(meta.fields) && meta.fields.length > 0) {
+    meta.fields.slice(0, 4).forEach((f) => topics.push(`Field: ${f}`))
+  }
+
+  if (topics.length === 0) {
+    const rawName = (doc?.title || doc?.file_name || '')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+    const words = rawName
+      .split(/\s+/)
+      .filter(
+        (w) =>
+          w.length >= 2 &&
+          !['document', 'file', 'untitled', 'sheet', 'data', 'test', 'pdf', 'docx', 'xlsx', 'txt'].includes(w.toLowerCase())
+      )
+
+    if (words.length > 0) {
+      words.forEach((w) => topics.push(formatCategoryName(w)))
+    } else {
+      topics.push('Content Summary', 'Key Insights')
+    }
+  }
+
+  return Array.from(new Set(topics))
+}
+
 function applyTheme(next) {
   if (typeof document === 'undefined') return
   document.documentElement.setAttribute('data-theme', next)
@@ -646,17 +810,7 @@ function App() {
   const [health, setHealth] = useState(null)
   const [documents, setDocuments] = useState([])
 
-  useEffect(() => {
-    setDocuments((current) => {
-      const unique = deduplicateDocuments(current)
 
-      if (unique.length === current.length) {
-        return current
-      }
-
-      return unique
-    })
-  }, [documents])
 
 
   const deduplicateDocuments = (items) => {
@@ -722,6 +876,8 @@ function App() {
   const [conversationId, setConversationId] = useState(null)
   const [showChatHistory, setShowChatHistory] = useState(false)
   const [showDocuments, setShowDocuments] = useState(false)
+  const [documentTypeFilter, setDocumentTypeFilter] = useState('all')
+  const [expandedDocFields, setExpandedDocFields] = useState({})
   const [historySearch, setHistorySearch] = useState('')
   const [historySort, setHistorySort] = useState('recent')
 
@@ -3600,7 +3756,7 @@ const handleNewConversation = () => {
       >
         <div className="documents-drawer-header">
           <div>
-            <p className="eyebrow">Documents</p>
+            <p className="eyebrow">Content Knowledge Domains</p>
             <h2>Your documents</h2>
           </div>
 
@@ -3614,150 +3770,252 @@ const handleNewConversation = () => {
           </button>
         </div>
 
+        {/* Dynamic Content Field Filter Pills */}
+        <div className="documents-type-filter-bar">
+          <button
+            type="button"
+            className={`doc-type-pill${documentTypeFilter === 'all' ? ' active' : ''}`}
+            onClick={() => setDocumentTypeFilter('all')}
+          >
+            All Fields ({(Array.isArray(documents) ? documents : []).length})
+          </button>
+          {(() => {
+            const fieldCounts = {}
+            const safeDocs = Array.isArray(documents) ? documents : []
+            safeDocs.forEach((doc) => {
+              const field = getDocumentContentField(doc)
+              fieldCounts[field] = (fieldCounts[field] || 0) + 1
+            })
+
+            return sortCategoriesWithOthersLast(Object.entries(fieldCounts))
+              .map(([fieldName, count]) => {
+                const badge = getContentFieldBadgeInfo(fieldName)
+                return (
+                  <button
+                    key={fieldName}
+                    type="button"
+                    className={`doc-type-pill${
+                      documentTypeFilter === fieldName ? ' active' : ''
+                    }`}
+                    onClick={() => setDocumentTypeFilter(fieldName)}
+                  >
+                    {badge.icon} {fieldName} ({count})
+                  </button>
+                )
+              })
+          })()}
+        </div>
+
         <div className="documents-drawer-list">
-          {documents.length > 0 ? (
-            documents.map((document) => (
-              <div
-                className="document-list-item"
-                key={document.document_id || document.id}
-              >
-                <button
-                  type="button"
-                  className="document-list-select"
-                  onClick={async () => {
-                    const documentId = document.document_id || document.id
+          {(Array.isArray(documents) ? documents : []).length > 0 ? (
+            (() => {
+              const safeDocs = Array.isArray(documents) ? documents : []
+              const filteredDocs =
+                documentTypeFilter === 'all'
+                  ? safeDocs
+                  : safeDocs.filter(
+                      (doc) =>
+                        getDocumentContentField(doc) === documentTypeFilter
+                    )
 
-                    setShowDocuments(false)
-                    setQueryError('')
-                    setSelectedDocument(document)
+              if (filteredDocs.length === 0) {
+                return (
+                  <div className="documents-empty">
+                    <span className="documents-empty-icon">🏷️</span>
+                    <p>No documents found for this content field.</p>
+                  </div>
+                )
+              }
 
-                    setDocuments((prev) => {
-                      const filtered = Array.isArray(prev) ? prev.filter((d) => (d.document_id || d.id) !== documentId) : []
-                      return [document, ...filtered]
-                    })
+              // Group filtered documents by Content Field
+              const groupedDocs = {}
+              filteredDocs.forEach((doc) => {
+                const fieldName = getDocumentContentField(doc)
+                if (!groupedDocs[fieldName]) {
+                  groupedDocs[fieldName] = []
+                }
+                groupedDocs[fieldName].push(doc)
+              })
 
-                    requestAnimationFrame(() => {
-                      document
-                        .getElementById('query')
-                        ?.scrollIntoView({
-                          behavior: 'smooth',
-                          block: 'center',
-                        })
-                    })
+              return sortCategoriesWithOthersLast(Object.entries(groupedDocs))
+                .map(([fieldName, categoryDocs]) => {
+                  const badgeInfo = getContentFieldBadgeInfo(fieldName)
 
-                    try {
-                      const res = await fetch(
-                        `/api/v1/documents/${documentId}/content`,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                          },
-                        }
-                      )
+                  return (
+                    <div key={fieldName} className="doc-field-group-container">
+                      <div className="doc-group-header">
+                        <span className="doc-group-header-title">
+                          <span>{badgeInfo.icon}</span>
+                          <span>{fieldName}</span>
+                        </span>
+                        <span className="doc-group-header-badge">
+                          {categoryDocs.length} {categoryDocs.length === 1 ? 'doc' : 'docs'}
+                        </span>
+                      </div>
 
-                      if (res.ok) {
-                        const blob = await res.blob()
-                        const selectedFile = new File(
-                          [blob],
-                          document.file_name || document.title || 'document',
-                          {
-                            type:
-                              document.mime_type ||
-                              blob.type ||
-                              'application/octet-stream',
-                          }
+                      {categoryDocs.map((document) => {
+                        const docId = document.document_id || document.id
+
+                        return (
+                          <div className="document-list-item-card" key={docId}>
+                            <div className="document-card-top">
+                              <button
+                                type="button"
+                                className="document-list-select"
+                                onClick={async () => {
+                                  setShowDocuments(false)
+                                  setQueryError('')
+                                  setSelectedDocument(document)
+
+                                  setDocuments((prev) => {
+                                    const filtered = Array.isArray(prev)
+                                      ? prev.filter((d) => (d.document_id || d.id) !== docId)
+                                      : []
+                                    return [document, ...filtered]
+                                  })
+
+                                  requestAnimationFrame(() => {
+                                    document
+                                      .getElementById('query')
+                                      ?.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'center',
+                                      })
+                                  })
+
+                                  try {
+                                    const res = await fetch(
+                                      `/api/v1/documents/${docId}/content`,
+                                      {
+                                        headers: {
+                                          Authorization: `Bearer ${token}`,
+                                        },
+                                      }
+                                    )
+
+                                    if (res.ok) {
+                                      const blob = await res.blob()
+                                      const selectedFile = new File(
+                                        [blob],
+                                        document.file_name || document.title || 'document',
+                                        {
+                                          type:
+                                            document.mime_type ||
+                                            blob.type ||
+                                            'application/octet-stream',
+                                        }
+                                      )
+
+                                      setFile(selectedFile)
+                                      setShowDocumentViewer(false)
+                                    }
+                                  } catch (err) {
+                                    console.error('Failed to load document content:', err)
+                                  }
+                                }}
+                              >
+                                <span
+                                  className="document-list-icon"
+                                  style={{
+                                    color: badgeInfo.color,
+                                    backgroundColor: badgeInfo.bg,
+                                  }}
+                                >
+                                  {badgeInfo.icon}
+                                </span>
+
+                                <span className="document-list-content">
+                                  <span className="document-list-title">
+                                    {document.title || document.file_name || 'Untitled document'}
+                                  </span>
+
+                                  <span className="document-list-filename">
+                                    {document.file_name || 'Unknown file'}
+                                  </span>
+                                </span>
+                              </button>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+
+                                <button
+                                  type="button"
+                                  className="document-list-delete"
+                                  aria-label={`Delete ${document.file_name || 'document'}`}
+                                  title="Delete document"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDeleteError('')
+                                    setPendingDeleteDocument({
+                                      id: docId,
+                                      name:
+                                        document.file_name ||
+                                        document.title ||
+                                        'this document',
+                                    })
+                                  }}
+                                >
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    width="15"
+                                    height="15"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                  >
+                                    <path d="M3 6h18" />
+                                    <path d="M8 6V4h8v2" />
+                                    <path d="M19 6l-1 14H6L5 6" />
+                                    <path d="M10 11v5" />
+                                    <path d="M14 11v5" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+
+
+
+                            {['pending', 'approved'].includes(
+                              accessRequestStatus[docId]
+                            ) && (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  width: 'fit-content',
+                                  marginTop: '8px',
+                                  padding: '2px 7px',
+                                  borderRadius: '999px',
+                                  fontSize: '11px',
+                                  lineHeight: 1.3,
+                                  background: 'rgba(245, 158, 11, 0.12)',
+                                  color: 'var(--accent, #f59e0b)',
+                                }}
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  setAccessRequestDocument(document)
+                                  setAccessRequestError('')
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                title="View access request"
+                              >
+                                {accessRequestStatus[docId] === 'approved'
+                                  ? 'Request granted'
+                                  : 'Access requested'}
+                              </span>
+                            )}
+                          </div>
                         )
-
-                        setFile(selectedFile)
-                        setShowDocumentViewer(false)
-                      }
-                    } catch (err) {
-                      console.error('Failed to load document content:', err)
-                    }
-                  }}
-                >
-                  <span className="document-list-icon">▤</span>
-                  <span className="document-list-content">
-                    <span className="document-list-title">
-                      {document.title || document.file_name || 'Untitled document'}
-                    </span>
-                    <span className="document-list-filename">
-                      {document.file_name || 'Unknown file'}
-                    </span>
-                    {['pending', 'approved'].includes(
-                      accessRequestStatus[document.document_id || document.id]
-                    ) && (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          width: 'fit-content',
-                          marginTop: '4px',
-                          padding: '2px 7px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          lineHeight: 1.3,
-                          background: 'rgba(245, 158, 11, 0.12)',
-                          color: 'var(--accent, #f59e0b)',
-                        }}
-                        onClick={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          setAccessRequestDocument(document)
-                          setAccessRequestError("")
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        title="View access request"
-                      >
-                        {accessRequestStatus[document.document_id || document.id] === 'approved' ? 'Request granted' : 'Access requested'}
-                      </span>
-                    )}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className="document-list-delete"
-                  aria-label={`Delete ${document.file_name || 'document'}`}
-                  title="Delete document"
-                  onClick={(e) => {
-                    e.stopPropagation()
-
-                    const documentId =
-                      document.document_id || document.id
-
-                    setDeleteError('')
-
-                    setPendingDeleteDocument({
-                      id: documentId,
-                      name:
-                        document.file_name ||
-                        document.title ||
-                        'this document',
-                    })
-                  }}
-                >
-                  <svg
-                      viewBox="0 0 24 24"
-                      width="15"
-                      height="15"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4h8v2" />
-                      <path d="M19 6l-1 14H6L5 6" />
-                      <path d="M10 11v5" />
-                      <path d="M14 11v5" />
-                    </svg>
-                </button>
-              </div>
-            ))
+                      })}
+                    </div>
+                  )
+                }
+              )
+            })()
           ) : (
             <div className="documents-empty">
               <span className="documents-empty-icon">▤</span>
