@@ -7226,3 +7226,1439 @@ html[data-theme="light"] .login-account-notification-option.selected {
   }
 }
 
+
+
+/* =========================================================
+   DocGPT Settings tabbed layout
+   Frontend-only UI refinement.
+   Uses the application's existing typography and theme
+   variables. No application/pipeline behavior is changed.
+   ========================================================= */
+
+.settings-panel {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 48px));
+  font-family: inherit;
+}
+
+.settings-header,
+.settings-content,
+.settings-tabs,
+.settings-section,
+.settings-row,
+.settings-theme-button,
+.change-password-form,
+.change-password-field,
+.change-password-field input,
+.settings-save-button,
+.settings-cancel-button {
+  font-family: inherit;
+}
+
+/* Tabs */
+
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 14px 22px 0;
+  padding: 4px;
+
+  border: 1px solid var(
+    --border-color,
+    rgba(128, 128, 128, 0.16)
+  );
+
+  border-radius: 10px;
+
+  background: var(
+    --hover-bg,
+    rgba(128, 128, 128, 0.055)
+  );
+}
+
+.settings-tab {
+  position: relative;
+
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 8px 10px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+  color: var(
+    --text-secondary,
+    rgba(128, 128, 128, 0.82)
+  );
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.settings-tab:hover {
+  background: var(
+    --hover-bg,
+    rgba(128, 128, 128, 0.08)
+  );
+
+  color: var(
+    --text-primary,
+    inherit
+  );
+}
+
+.settings-tab.is-active {
+  background: var(
+    --accent-color,
+    #6d3df5
+  );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 3px 12px rgba(109, 61, 245, 0.22);
+}
+
+.settings-tab-icon {
+  width: 15px;
+  height: 15px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 14px;
+  line-height: 1;
+
+  opacity: 0.9;
+}
+
+/* Only the currently selected Settings section exists
+   visually. Therefore Appearance/Account do not become
+   part of the Organization scroll area. */
+
+.settings-content {
+  min-height: 390px;
+  overflow-y: auto;
+
+  padding: 8px 22px 22px;
+
+  scrollbar-width: thin;
+}
+
+.settings-content[data-settings-section="organization"]
+  .settings-section:not(.settings-section-organization) {
+  display: none;
+}
+
+.settings-content[data-settings-section="account"]
+  .settings-section:not(.settings-section-account) {
+  display: none;
+}
+
+/* Active section cards */
+
+.settings-content
+  .settings-section {
+  margin-top: 14px;
+  padding: 18px;
+
+  border: 1px solid var(
+    --border-color,
+    rgba(128, 128, 128, 0.15)
+  );
+
+  border-radius: 12px;
+
+  background: var(
+    --surface,
+    var(--background, transparent)
+  );
+
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.035);
+}
+
+.settings-content
+  .settings-section
+  + .settings-section {
+  border-top: 1px solid var(
+    --border-color,
+    rgba(128, 128, 128, 0.15)
+  );
+}
+
+.settings-content .settings-section h3 {
+  margin: 0 0 14px;
+
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 600;
+
+  text-transform: none;
+  letter-spacing: normal;
+
+  color: var(
+    --text-primary,
+    var(--foreground, inherit)
+  );
+}
+
+/* Make existing rows feel like the generated design without
+   changing their underlying behavior. */
+
+.settings-content .settings-row {
+  min-height: 52px;
+  padding: 10px 0;
+}
+
+.settings-content .settings-row-title {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.settings-content .settings-row-description {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Inputs */
+
+.settings-content .change-password-field input {
+  min-height: 40px;
+
+  border-radius: 8px;
+
+  background: var(
+    --background,
+    transparent
+  );
+
+  font-family: inherit;
+  font-size: 13px;
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.settings-content .change-password-field input:focus {
+  border-color: var(
+    --accent-color,
+    #6d3df5
+  );
+
+  box-shadow:
+    0 0 0 3px rgba(109, 61, 245, 0.10);
+}
+
+/* Buttons remain visually compatible with existing DocGPT
+   buttons rather than introducing a separate design system. */
+
+.settings-content .settings-save-button,
+.settings-content .settings-theme-button {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Light theme */
+
+html[data-theme="light"] .settings-panel {
+  background: var(
+    --background,
+    #ffffff
+  );
+
+  color: var(
+    --foreground,
+    #171717
+  );
+}
+
+html[data-theme="light"] .settings-tabs {
+  background: rgba(109, 61, 245, 0.035);
+}
+
+html[data-theme="light"] .settings-content
+  .settings-section {
+  background: #ffffff;
+
+  box-shadow:
+    0 2px 12px rgba(31, 35, 48, 0.045);
+}
+
+/* Dark theme */
+
+html[data-theme="dark"] .settings-panel {
+  background: var(
+    --background,
+    var(--surface, #15151b)
+  );
+}
+
+html[data-theme="dark"] .settings-content
+  .settings-section {
+  background: var(
+    --surface,
+    rgba(255, 255, 255, 0.018)
+  );
+
+  box-shadow:
+    0 2px 14px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="dark"] .settings-tabs {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+
+  .settings-panel {
+    width: 100%;
+    max-height: 90vh;
+  }
+
+  .settings-tabs {
+    margin: 12px 18px 0;
+
+    grid-template-columns: repeat(2, minmax(100px, 1fr));
+
+    overflow-x: auto;
+  }
+
+  .settings-tab {
+    white-space: nowrap;
+  }
+
+  .settings-content {
+    min-height: 360px;
+    padding: 6px 18px 18px;
+  }
+
+  .settings-content
+    .settings-section {
+    padding: 16px;
+  }
+}
+
+/* =========================================================
+   Settings action buttons — DocGPT purple pill style
+   Final override: keeps Settings controls consistent with
+   the application's existing purple UI.
+   ========================================================= */
+
+.settings-save-button,
+.settings-theme-button,
+.settings-secondary-button,
+.settings-cancel-button {
+  min-height: 38px;
+  padding: 8px 18px;
+
+  border: 1px solid #6d3df5;
+  border-radius: 999px;
+
+  background: #6d3df5;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+
+  cursor: pointer;
+
+  box-shadow: 0 2px 8px rgba(109, 61, 245, 0.18);
+
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 100ms ease;
+}
+
+.settings-save-button:hover:not(:disabled),
+.settings-theme-button:hover:not(:disabled),
+.settings-secondary-button:hover:not(:disabled),
+.settings-cancel-button:hover:not(:disabled) {
+  background: #5b21d6;
+  border-color: #5b21d6;
+  color: #ffffff;
+
+  box-shadow: 0 4px 12px rgba(109, 61, 245, 0.25);
+}
+
+.settings-save-button:active:not(:disabled),
+.settings-theme-button:active:not(:disabled),
+.settings-secondary-button:active:not(:disabled),
+.settings-cancel-button:active:not(:disabled) {
+  background: #4f1bbd;
+  border-color: #4f1bbd;
+  transform: translateY(1px);
+}
+
+.settings-save-button:disabled,
+.settings-theme-button:disabled,
+.settings-secondary-button:disabled,
+.settings-cancel-button:disabled {
+  background: #6d3df5;
+  border-color: #6d3df5;
+  color: #ffffff;
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Dark mode — same purple treatment */
+html[data-theme="dark"] .settings-save-button,
+html[data-theme="dark"] .settings-theme-button,
+html[data-theme="dark"] .settings-secondary-button,
+html[data-theme="dark"] .settings-cancel-button,
+html.dark .settings-save-button,
+html.dark .settings-theme-button,
+html.dark .settings-secondary-button,
+html.dark .settings-cancel-button {
+  background: #6d3df5;
+  border-color: #6d3df5;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .settings-save-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-theme-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-secondary-button:hover:not(:disabled),
+html[data-theme="dark"] .settings-cancel-button:hover:not(:disabled),
+html.dark .settings-save-button:hover:not(:disabled),
+html.dark .settings-theme-button:hover:not(:disabled),
+html.dark .settings-secondary-button:hover:not(:disabled),
+html.dark .settings-cancel-button:hover:not(:disabled) {
+  background: #7c4dff;
+  border-color: #7c4dff;
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   Settings Organization / Account tabs
+   Purple pill-style navigation
+   ========================================================= */
+
+.settings-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  margin: 14px 22px 0;
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  overflow: visible;
+}
+
+.settings-tab {
+  flex: 0 0 auto;
+
+  min-width: 145px;
+  min-height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 8px 20px;
+
+  border: 1px solid rgba(109, 61, 245, 0.38);
+  border-radius: 999px;
+
+  background: rgba(109, 61, 245, 0.06);
+  color: #6d3df5;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+
+  cursor: pointer;
+
+  box-shadow: none;
+
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 100ms ease;
+}
+
+.settings-tab:hover {
+  background: rgba(109, 61, 245, 0.12);
+  border-color: rgba(109, 61, 245, 0.58);
+  color: #6d3df5;
+}
+
+.settings-tab.is-active {
+  background: #6d3df5;
+  border-color: #6d3df5;
+  color: #ffffff;
+
+  box-shadow:
+    0 4px 14px rgba(109, 61, 245, 0.25);
+}
+
+.settings-tab.is-active:hover {
+  background: #5b21d6;
+  border-color: #5b21d6;
+  color: #ffffff;
+}
+
+.settings-tab:active {
+  transform: translateY(1px);
+}
+
+.settings-tab-icon {
+  width: 15px;
+  height: 15px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Dark mode */
+html[data-theme="dark"] .settings-tab,
+html.dark .settings-tab {
+  background: rgba(109, 61, 245, 0.08);
+  border-color: rgba(139, 92, 246, 0.45);
+  color: #a78bfa;
+}
+
+html[data-theme="dark"] .settings-tab:hover,
+html.dark .settings-tab:hover {
+  background: rgba(109, 61, 245, 0.16);
+  border-color: rgba(139, 92, 246, 0.65);
+  color: #c4b5fd;
+}
+
+html[data-theme="dark"] .settings-tab.is-active,
+html.dark .settings-tab.is-active {
+  background: #6d3df5;
+  border-color: #6d3df5;
+  color: #ffffff;
+
+  box-shadow:
+    0 4px 16px rgba(109, 61, 245, 0.30);
+}
+
+html[data-theme="dark"] .settings-tab.is-active:hover,
+html.dark .settings-tab.is-active:hover {
+  background: #7c4dff;
+  border-color: #7c4dff;
+  color: #ffffff;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .settings-tabs {
+    gap: 7px;
+    margin: 12px 18px 0;
+  }
+
+  .settings-tab {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 8px 14px;
+  }
+}
+
+
+/* Settings tabs — match the exact purple used by the chat send button */
+
+.settings-tab {
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #7c3aed;
+  border-radius: 999px;
+}
+
+.settings-tab:hover {
+  background: rgba(167, 139, 250, 0.14);
+  border-color: rgba(124, 58, 237, 0.45);
+  color: #7c3aed;
+}
+
+.settings-tab.is-active {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  border-color: transparent;
+  color: #ffffff;
+
+  box-shadow:
+    0 8px 20px rgba(124, 58, 237, 0.24);
+}
+
+.settings-tab.is-active:hover {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  border-color: transparent;
+  color: #ffffff;
+
+  filter: brightness(1.06);
+}
+
+html[data-theme="dark"] .settings-tab,
+html.dark .settings-tab {
+  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: #a78bfa;
+}
+
+html[data-theme="dark"] .settings-tab:hover,
+html.dark .settings-tab:hover {
+  background: rgba(167, 139, 250, 0.14);
+  border-color: rgba(167, 139, 250, 0.5);
+  color: #a78bfa;
+}
+
+html[data-theme="dark"] .settings-tab.is-active,
+html.dark .settings-tab.is-active {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  border-color: transparent;
+  color: #ffffff;
+
+  box-shadow:
+    0 8px 20px rgba(124, 58, 237, 0.30);
+}
+
+
+/* Settings tabs — restore original segmented shape */
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+
+  padding: 4px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: var(--surface);
+}
+
+.settings-tab {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  padding: 8px 16px;
+
+  background: transparent;
+  color: var(--muted);
+
+  box-shadow: none;
+}
+
+.settings-tab:hover {
+  background: rgba(167, 139, 250, 0.08);
+  border-color: transparent;
+  color: var(--text);
+}
+
+.settings-tab.is-active {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  border-color: transparent;
+  border-radius: 8px;
+
+  color: #ffffff;
+
+  box-shadow:
+    0 8px 20px rgba(124, 58, 237, 0.24);
+}
+
+.settings-tab.is-active:hover {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  border-color: transparent;
+  color: #ffffff;
+
+  filter: brightness(1.06);
+}
+
+html[data-theme="dark"] .settings-tabs,
+html.dark .settings-tabs {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .settings-tab,
+html.dark .settings-tab {
+  background: transparent;
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .settings-tab:hover,
+html.dark .settings-tab:hover {
+  background: rgba(167, 139, 250, 0.08);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .settings-tab.is-active,
+html.dark .settings-tab.is-active {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   Settings — left navigation layout
+   ========================================================= */
+
+.settings-panel {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 48px));
+
+  overflow: hidden;
+}
+
+.settings-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+
+  overflow: hidden;
+}
+
+/* Left navigation */
+
+.settings-sidebar {
+  width: 190px;
+  flex: 0 0 190px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  padding: 18px 12px;
+
+  border-right: 1px solid var(
+    --border-color,
+    rgba(128, 128, 128, 0.16)
+  );
+
+  background: var(
+    --hover-bg,
+    rgba(128, 128, 128, 0.025)
+  );
+}
+
+.settings-sidebar-item {
+  width: 100%;
+
+  min-height: 42px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: var(
+    --text-secondary,
+    rgba(128, 128, 128, 0.82)
+  );
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.settings-sidebar-item:hover {
+  background: rgba(109, 61, 245, 0.07);
+  color: #7c3aed;
+}
+
+.settings-sidebar-item.is-active {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 5px 14px rgba(124, 58, 237, 0.20);
+}
+
+.settings-sidebar-item.is-active:hover {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  color: #ffffff;
+}
+
+.settings-sidebar-icon {
+  width: 18px;
+  height: 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Right content */
+
+.settings-body .settings-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding: 8px 22px 22px;
+}
+
+/* The section name is now displayed in the header,
+   so don't duplicate it inside the content. */
+
+.settings-body .settings-content .settings-section > h3 {
+  display: none;
+}
+
+/* Active section only */
+
+.settings-content[data-settings-section="organization"]
+  .settings-section:not(.settings-section-organization) {
+  display: none;
+}
+
+.settings-content[data-settings-section="account"]
+  .settings-section:not(.settings-section-account) {
+  display: none;
+}
+
+/* Remove the old tab styling from affecting the new layout */
+
+.settings-tabs {
+  display: none;
+}
+
+/* Dark mode */
+
+html[data-theme="dark"] .settings-sidebar,
+html.dark .settings-sidebar {
+  background: rgba(255, 255, 255, 0.018);
+
+  border-right-color:
+    rgba(255, 255, 255, 0.09);
+}
+
+html[data-theme="dark"] .settings-sidebar-item,
+html.dark .settings-sidebar-item {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+html[data-theme="dark"] .settings-sidebar-item:hover,
+html.dark .settings-sidebar-item:hover {
+  background: rgba(167, 139, 250, 0.09);
+  color: #c4b5fd;
+}
+
+html[data-theme="dark"] .settings-sidebar-item.is-active,
+html.dark .settings-sidebar-item.is-active {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+
+  color: #ffffff;
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+
+  .settings-panel {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 24px);
+  }
+
+  .settings-body {
+    flex-direction: column;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+
+    flex-direction: row;
+
+    padding: 10px 14px;
+
+    border-right: 0;
+    border-bottom: 1px solid var(
+      --border-color,
+      rgba(128, 128, 128, 0.16)
+    );
+
+    overflow-x: auto;
+  }
+
+  .settings-sidebar-item {
+    width: auto;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  .settings-body .settings-content {
+    min-height: 0;
+    padding: 8px 16px 18px;
+  }
+}
+
+
+/* Match Settings buttons to the chatbox send-arrow */
+.settings-theme-button,
+.settings-save-button,
+.settings-primary-button {
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.22) !important;
+}
+
+.settings-theme-button:hover,
+.settings-save-button:hover,
+.settings-primary-button:hover {
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%) !important;
+  filter: brightness(1.05);
+}
+
+.settings-theme-button:disabled,
+.settings-save-button:disabled,
+.settings-primary-button:disabled {
+  opacity: 0.55;
+  filter: none;
+}
+
+
+/* =========================================================
+   Documents: Search + Filter
+   ========================================================= */
+
+.documents-search-filter {
+  position: relative;
+  width: 100%;
+  margin: 0 0 14px;
+  flex-shrink: 0;
+}
+
+.documents-search-box {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 7px 0 15px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid rgba(124, 58, 237, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 5px 16px rgba(91, 64, 160, 0.07);
+}
+
+.documents-search-icon {
+  flex: 0 0 auto;
+  color: #7c3aed;
+}
+
+.documents-search-box input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  color: #2a2450;
+  font-size: 13px;
+  box-shadow: none !important;
+}
+
+.documents-search-box input::placeholder {
+  color: #9188ad;
+}
+
+.documents-filter-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #7c3aed;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.documents-filter-button:hover {
+  background: rgba(124, 58, 237, 0.09);
+}
+
+.documents-filter-button.is-active {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.documents-filter-button:active {
+  transform: scale(0.95);
+}
+
+.documents-filter-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, 100%);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 7px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid rgba(124, 58, 237, 0.14);
+  border-radius: 16px;
+  box-shadow:
+    0 18px 42px rgba(39, 25, 77, 0.16),
+    0 4px 12px rgba(91, 64, 160, 0.08);
+}
+
+.documents-filter-option {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #3b3460;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.documents-filter-option:hover {
+  background: rgba(124, 58, 237, 0.07);
+}
+
+.documents-filter-option.is-selected {
+  background: linear-gradient(
+    180deg,
+    rgba(167, 139, 250, 0.16) 0%,
+    rgba(124, 58, 237, 0.09) 100%
+  );
+  color: #6d28d9;
+  font-weight: 600;
+}
+
+.documents-filter-option-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.documents-filter-count {
+  flex: 0 0 auto;
+  min-width: 24px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.08);
+  color: #7c3aed;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .documents-search-box {
+    height: 44px;
+  }
+
+  .documents-filter-menu {
+    width: 100%;
+    left: 0;
+    right: auto;
+  }
+}
+
+
+/* =========================================================
+   Documents / History drawers
+   Cover the entire left sidebar.
+   No backdrop. No blur. No design changes.
+   ========================================================= */
+
+/* Completely remove the page-level backdrop */
+.history-backdrop,
+.documents-backdrop {
+  display: none !important;
+}
+
+/* Documents drawer starts from the absolute left edge,
+   covering the entire existing sidebar. */
+.documents-drawer {
+  left: 0 !important;
+  z-index: 100 !important;
+}
+
+/* History drawer does the same. */
+.chat-history-drawer {
+  left: 0 !important;
+  z-index: 100 !important;
+}
+
+/* Never blur the underlying sidebar or workspace. */
+.app-shell:has(.chat-history-drawer.is-open) .sidebar > *,
+.app-shell:has(.documents-drawer.is-open) .sidebar > * {
+  filter: none !important;
+}
+
+/* The drawer itself and its contents remain sharp. */
+.chat-history-drawer,
+.chat-history-drawer *,
+.documents-drawer,
+.documents-drawer * {
+  filter: none !important;
+}
+
+
+/* =========================================================
+   Documents + Chat History
+   Both drawers cover the complete left sidebar.
+   No backdrop, no blur, no design/color changes.
+   ========================================================= */
+
+/* Remove full-page backdrop for BOTH drawers */
+.documents-backdrop,
+.history-backdrop {
+  display: none !important;
+}
+
+/* Documents drawer */
+.documents-drawer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  z-index: 100 !important;
+}
+
+/* Chat History drawer */
+.chat-history-drawer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  z-index: 100 !important;
+}
+
+/* Never blur the original sidebar */
+.app-shell:has(.documents-drawer.is-open) .sidebar > *,
+.app-shell:has(.chat-history-drawer.is-open) .sidebar > * {
+  filter: none !important;
+}
+
+/* Never blur the workspace */
+.app-shell:has(.documents-drawer.is-open) .main-content,
+.app-shell:has(.chat-history-drawer.is-open) .main-content {
+  filter: none !important;
+}
+
+/* Keep both drawers completely sharp */
+.documents-drawer,
+.documents-drawer *,
+.chat-history-drawer,
+.chat-history-drawer * {
+  filter: none !important;
+}
+
+
+/* =========================================================
+   Drawer outside-click behavior
+   Invisible click area only — no overlay, no blur.
+   ========================================================= */
+
+.history-backdrop,
+.documents-backdrop {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  cursor: default !important;
+}
+
+/* Drawer stays above the invisible click area */
+.documents-drawer,
+.chat-history-drawer {
+  z-index: 100 !important;
+}
+
+/* Drawer itself remains fully opaque and sharp */
+.documents-drawer,
+.chat-history-drawer {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+.documents-drawer *,
+.chat-history-drawer * {
+  filter: none !important;
+}
+
+
+/* ============================================================
+   Documents Drawer — match Chat History drawer surface
+   ============================================================ */
+
+.documents-drawer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 76px !important;
+  bottom: 0 !important;
+  right: auto !important;
+
+  width: min(430px, calc(100vw - 76px)) !important;
+  max-width: none !important;
+  min-width: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  padding: 28px 22px 22px !important;
+
+  background: rgba(252, 250, 255, 0.98) !important;
+  color: #241b43 !important;
+
+  border-right: 1px solid rgba(91, 64, 160, 0.12) !important;
+  box-shadow: 24px 0 70px rgba(47, 31, 86, 0.18) !important;
+
+  transform: translateX(-105%) !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+
+  transition:
+    transform 0.24s ease,
+    opacity 0.2s ease,
+    visibility 0.24s ease !important;
+
+  box-sizing: border-box !important;
+  filter: none !important;
+}
+
+.documents-drawer.is-open {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Keep document drawer contents sharp */
+.documents-drawer,
+.documents-drawer * {
+  filter: none !important;
+}
+
+/* Do not allow old full-white drawer overrides to change the surface */
+.documents-drawer {
+  isolation: isolate;
+}
+
+/* Dark theme: same visual structure, existing dark colors preserved */
+.app-shell[data-theme="dark"] .documents-drawer {
+  background: #0f1020 !important;
+  color: #f8fafc !important;
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 24px 0 70px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Invisible outside-click area — no blur/no visible backdrop */
+.documents-backdrop,
+.history-backdrop {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+
+/* =========================================================
+   FINAL: Documents drawer must start at the app's left edge
+   and cover the existing sidebar.
+   ========================================================= */
+
+.documents-drawer {
+  left: 0 !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+
+  width: min(430px, 100vw) !important;
+  max-width: 430px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* Keep the same open/closed behavior as Chat History */
+.documents-drawer:not(.is-open) {
+  transform: translateX(-105%) !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.documents-drawer.is-open {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+
+/* Remove the header separator above the Documents search bar */
+.documents-drawer-header {
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+
+/* =========================================================
+   Settings — keep pill buttons cleanly above row borders
+   ========================================================= */
+
+.settings-theme-button,
+.settings-save-button,
+.settings-primary-button,
+.settings-secondary-button {
+  position: relative !important;
+  z-index: 5 !important;
+
+  border-radius: 999px !important;
+  overflow: hidden !important;
+
+  /* Prevent underlying settings-row borders from showing
+     through/over the pill */
+  isolation: isolate !important;
+}
+
+/* Remove any pseudo-elements that can create a straight
+   line across the pill */
+.settings-theme-button::before,
+.settings-theme-button::after,
+.settings-save-button::before,
+.settings-save-button::after,
+.settings-primary-button::before,
+.settings-primary-button::after,
+.settings-secondary-button::before,
+.settings-secondary-button::after {
+  content: none !important;
+  display: none !important;
+}
+

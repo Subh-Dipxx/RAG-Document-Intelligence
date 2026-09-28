@@ -859,6 +859,9 @@ function App() {
   const [showChatHistory, setShowChatHistory] = useState(false)
   const [showDocuments, setShowDocuments] = useState(false)
   const [documentTypeFilter, setDocumentTypeFilter] = useState('all')
+  const [documentSearch, setDocumentSearch] = useState('')
+  const [showDocumentFilters, setShowDocumentFilters] = useState(false)
+
   const [expandedDocFields, setExpandedDocFields] = useState({})
   const [historySearch, setHistorySearch] = useState('')
   const [historySort, setHistorySort] = useState('recent')
@@ -877,6 +880,8 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showChangeOrganization, setShowChangeOrganization] = useState(false)
+  const [settingsSection, setSettingsSection] = useState('account')
   const [organizationName, setOrganizationName] = useState('')
   const [newOrganizationName, setNewOrganizationName] = useState('')
   const [organizationCurrentPassword, setOrganizationCurrentPassword] = useState('')
@@ -1413,6 +1418,7 @@ const [usernameError, setUsernameError] = useState('')
       setNewOrganizationName(updatedName)
       setOrganizationCurrentPassword('')
       setOrganizationNameMessage('Organization name updated successfully.')
+      setShowChangeOrganization(false)
     } catch (error) {
       console.error('Failed to update organization name:', error)
       setOrganizationNameError(
@@ -3266,6 +3272,11 @@ const handleNewConversation = () => {
                 className="sidebar-profile-settings"
                 onClick={async () => {
                   setShowProfileMenu(false)
+                  setSettingsSection(
+                    accountType === 'organization'
+                      ? 'organization'
+                      : 'account'
+                  )
                   setShowSettings(true)
                   if (accountType === 'organization' && role === 'member') {
                     await fetchOrganizationInvitations()
@@ -3531,8 +3542,11 @@ const handleNewConversation = () => {
           >
             <div className="settings-header">
               <div>
-                <h2>Settings</h2>
-                <p>Manage your application preferences</p>
+                <h2>
+                  {settingsSection === 'organization'
+                    ? 'Organization'
+                    : 'Account'}
+                </h2>
               </div>
 
               <button
@@ -3545,7 +3559,56 @@ const handleNewConversation = () => {
               </button>
             </div>
 
-            <div className="settings-content">
+            <div className="settings-body">
+              <nav
+                className="settings-sidebar"
+                aria-label="Settings sections"
+              >
+                {accountType === 'organization' && (
+                  <button
+                    type="button"
+                    className={`settings-sidebar-item${settingsSection === 'organization' ? ' is-active' : ''}`}
+                    onClick={() => setSettingsSection('organization')}
+                    aria-current={
+                      settingsSection === 'organization'
+                        ? 'page'
+                        : undefined
+                    }
+                  >
+                    <span
+                      className="settings-sidebar-icon"
+                      aria-hidden="true"
+                    >
+                      ⌘
+                    </span>
+                    <span>Organization</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className={`settings-sidebar-item${settingsSection === 'account' ? ' is-active' : ''}`}
+                  onClick={() => setSettingsSection('account')}
+                  aria-current={
+                    settingsSection === 'account'
+                      ? 'page'
+                      : undefined
+                  }
+                >
+                  <span
+                    className="settings-sidebar-icon"
+                    aria-hidden="true"
+                  >
+                    ○
+                  </span>
+                  <span>Account</span>
+                </button>
+              </nav>
+
+              <div
+                className="settings-content"
+                data-settings-section={settingsSection}
+              >
         {accountType === 'organization' && myOrganizations.length > 1 && (
           <div className="settings-section">
             <h3>Organizations</h3>
@@ -3652,114 +3715,131 @@ const handleNewConversation = () => {
 
 
               {accountType === 'organization' && role === 'admin' && (
-                <div className="settings-section">
+                <div className="settings-section settings-section-organization">
                   <h3>Organization</h3>
 
-                  <form
-                    className="change-password-form"
-                    onSubmit={updateOrganizationName}
-                  >
+                  {!showChangeOrganization ? (
                     <div className="settings-row">
                       <div>
                         <div className="settings-row-title">
                           Organization Name
                         </div>
+
                         <div className="settings-row-description">
                           Change the name of your organization.
                         </div>
                       </div>
-                    </div>
 
-                    <div className="change-password-field">
-                      <label htmlFor="organization-name">
-                        Organization name
-                      </label>
-                      <input
-                        id="organization-name"
-                        type="text"
-                        value={newOrganizationName}
-                        onChange={(event) => {
-                          setNewOrganizationName(event.target.value)
-                          setOrganizationNameError('')
-                          setOrganizationNameMessage('')
-                        }}
-                        placeholder="Enter organization name"
-                        maxLength={200}
-                        disabled={organizationNameSaving}
-                      />
-                    </div>
-
-                    <div className="change-password-field">
-                      <label htmlFor="organization-current-password">
-                        Current password
-                      </label>
-                      <input
-                        id="organization-current-password"
-                        type="password"
-                        value={organizationCurrentPassword}
-                        onChange={(event) => {
-                          setOrganizationCurrentPassword(event.target.value)
-                          setOrganizationNameError('')
-                          setOrganizationNameMessage('')
-                        }}
-                        autoComplete="current-password"
-                        placeholder="Enter current password"
-                        disabled={organizationNameSaving}
-                      />
-                    </div>
-
-                    {organizationNameError && (
-                      <p className="settings-error-message">
-                        {organizationNameError}
-                      </p>
-                    )}
-
-                    {organizationNameMessage && (
-                      <p className="settings-success-message">
-                        {organizationNameMessage}
-                      </p>
-                    )}
-
-                    <div className="settings-action-group">
                       <button
-                        type="submit"
-                        className="settings-save-button"
-                        disabled={
-                          organizationNameSaving ||
-                          !newOrganizationName.trim()
-                        }
+                        type="button"
+                        className="settings-theme-button"
+                        onClick={() => {
+                          setShowChangeOrganization(true)
+                          setNewOrganizationName(organizationName)
+                          setOrganizationCurrentPassword('')
+                          setOrganizationNameError('')
+                          setOrganizationNameMessage('')
+                        }}
                       >
-                        {organizationNameSaving
-                          ? 'Saving...'
-                          : 'Save Changes'}
+                        Change Organization
                       </button>
                     </div>
-                  </form>
+                  ) : (
+                    <form
+                      className="change-password-form"
+                      onSubmit={updateOrganizationName}
+                    >
+                      <div className="change-password-title">
+                        Change Organization Name
+                      </div>
+
+                      <div className="change-password-field">
+                        <label htmlFor="organization-name">
+                          New organization name
+                        </label>
+
+                        <input
+                          id="organization-name"
+                          type="text"
+                          value={newOrganizationName}
+                          onChange={(event) => {
+                            setNewOrganizationName(event.target.value)
+                            setOrganizationNameError('')
+                            setOrganizationNameMessage('')
+                          }}
+                          placeholder="Enter organization name"
+                          maxLength={200}
+                          disabled={organizationNameSaving}
+                        />
+                      </div>
+
+                      <div className="change-password-field">
+                        <label htmlFor="organization-current-password">
+                          Current password
+                        </label>
+
+                        <input
+                          id="organization-current-password"
+                          type="password"
+                          value={organizationCurrentPassword}
+                          onChange={(event) => {
+                            setOrganizationCurrentPassword(event.target.value)
+                            setOrganizationNameError('')
+                            setOrganizationNameMessage('')
+                          }}
+                          autoComplete="current-password"
+                          placeholder="Enter current password"
+                          disabled={organizationNameSaving}
+                        />
+                      </div>
+
+                      {organizationNameError && (
+                        <p className="settings-error-message">
+                          {organizationNameError}
+                        </p>
+                      )}
+
+                      {organizationNameMessage && (
+                        <p className="settings-success-message">
+                          {organizationNameMessage}
+                        </p>
+                      )}
+
+                      <div className="settings-action-group">
+                        <button
+                          type="button"
+                          className="settings-secondary-button"
+                          onClick={() => {
+                            setShowChangeOrganization(false)
+                            setOrganizationNameError('')
+                            setOrganizationNameMessage('')
+                            setOrganizationCurrentPassword('')
+                            setNewOrganizationName(organizationName)
+                          }}
+                          disabled={organizationNameSaving}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="submit"
+                          className="settings-save-button"
+                          disabled={
+                            organizationNameSaving ||
+                            !newOrganizationName.trim()
+                          }
+                        >
+                          {organizationNameSaving
+                            ? 'Changing...'
+                            : 'Change Organization'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               )}
 
-              <div className="settings-section">
-                <h3>Appearance</h3>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-row-title">Theme</div>
-                    <div className="settings-row-description">
-                      Switch between light and dark mode.
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="settings-theme-button"
-                    onClick={toggleTheme}
-                  >
-                    {isLight ? 'Dark mode' : 'Light mode'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="settings-section">
+              <div className="settings-section settings-section-account">
                 <h3>Account</h3>
 
                 {!showChangeUsername ? (
@@ -4000,7 +4080,7 @@ const handleNewConversation = () => {
                 )}
               </div>
               {role === 'admin' && accountType === 'organization' && (
-                <div className="settings-section">
+                <div className="settings-section settings-section-organization">
                   <h3>Organization Members</h3>
 
                   <div className="settings-row">
@@ -4190,7 +4270,7 @@ const handleNewConversation = () => {
               )}
 
               {role === 'admin' && accountType === 'organization' && (
-                <div className="settings-section">
+                <div className="settings-section settings-section-organization">
                   <h3>Access Requests</h3>
 
                   <div className="settings-row">
@@ -4298,6 +4378,7 @@ const handleNewConversation = () => {
                 </div>
               )}
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -4377,53 +4458,174 @@ const handleNewConversation = () => {
           </button>
         </div>
 
-        {/* Dynamic Content Field Filter Pills */}
-        <div className="documents-type-filter-bar">
-          <button
-            type="button"
-            className={`doc-type-pill${documentTypeFilter === 'all' ? ' active' : ''}`}
-            onClick={() => setDocumentTypeFilter('all')}
-          >
-            All Fields ({(Array.isArray(documents) ? documents : []).length})
-          </button>
-          {(() => {
-            const fieldCounts = {}
-            const safeDocs = Array.isArray(documents) ? documents : []
-            safeDocs.forEach((doc) => {
-              const field = getDocumentContentField(doc)
-              fieldCounts[field] = (fieldCounts[field] || 0) + 1
-            })
+        {/* Document Search + Filters */}
+        <div className="documents-search-filter">
+          <div className="documents-search-box">
+            <svg
+              className="documents-search-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-4-4" />
+            </svg>
 
-            return sortCategories(Object.entries(fieldCounts))
-              .map(([fieldName, count]) => {
-                const badge = getContentFieldBadgeInfo(fieldName)
+            <input
+              type="search"
+              value={documentSearch}
+              onChange={(event) => setDocumentSearch(event.target.value)}
+              placeholder="Search documents..."
+              aria-label="Search documents"
+            />
+
+            <button
+              type="button"
+              className={`documents-filter-button${
+                documentTypeFilter !== 'all' ? ' is-active' : ''
+              }`}
+              onClick={() =>
+                setShowDocumentFilters((current) => !current)
+              }
+              aria-label="Filter documents"
+              aria-expanded={showDocumentFilters}
+              title="Filter documents"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 6h16" />
+                <path d="M7 12h10" />
+                <path d="M10 18h4" />
+              </svg>
+            </button>
+          </div>
+
+          {showDocumentFilters && (
+            <div className="documents-filter-menu">
+              {(() => {
+                /*
+                 * Complete set of document categories supported
+                 * by the application's classifier.
+                 *
+                 * These filters are intentionally independent of
+                 * the currently uploaded documents.
+                 */
+                const availableContentFields = [
+                  'Education',
+                  'Sports',
+                  'News',
+                  'Entertainment',
+                  'Finance & Business',
+                  'Technology & Data',
+                  'Legal & Policy',
+                  'Healthcare & Science',
+                  'Others',
+                ]
+
+                const safeDocs = Array.isArray(documents)
+                  ? documents
+                  : []
+
                 return (
-                  <button
-                    key={fieldName}
-                    type="button"
-                    className={`doc-type-pill${
-                      documentTypeFilter === fieldName ? ' active' : ''
-                    }`}
-                    onClick={() => setDocumentTypeFilter(fieldName)}
-                  >
-                    {badge.icon} {fieldName} ({count})
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className={`documents-filter-option${
+                        documentTypeFilter === 'all'
+                          ? ' is-selected'
+                          : ''
+                      }`}
+                      onClick={() => {
+                        setDocumentTypeFilter('all')
+                        setShowDocumentFilters(false)
+                      }}
+                    >
+                      <span className="documents-filter-option-name">
+                        <span>📚</span>
+                        <span>All Documents</span>
+                      </span>
+
+                    </button>
+
+                    {availableContentFields.map((fieldName) => {
+                      const badge = getContentFieldBadgeInfo(fieldName)
+
+                      return (
+                        <button
+                          key={fieldName}
+                          type="button"
+                          className={`documents-filter-option${
+                            documentTypeFilter === fieldName
+                              ? ' is-selected'
+                              : ''
+                          }`}
+                          onClick={() => {
+                            setDocumentTypeFilter(fieldName)
+                            setShowDocumentFilters(false)
+                          }}
+                        >
+                          <span className="documents-filter-option-name">
+                            <span>{badge.icon}</span>
+                            <span>{fieldName}</span>
+                          </span>
+
+                        </button>
+                      )
+                    })}
+                  </>
                 )
-              })
-          })()}
+              })()}
+            </div>
+          )}
         </div>
 
         <div className="documents-drawer-list">
           {(Array.isArray(documents) ? documents : []).length > 0 ? (
             (() => {
               const safeDocs = Array.isArray(documents) ? documents : []
-              const filteredDocs =
-                documentTypeFilter === 'all'
-                  ? safeDocs
-                  : safeDocs.filter(
-                      (doc) =>
-                        getDocumentContentField(doc) === documentTypeFilter
-                    )
+              const normalizedSearch = documentSearch.trim().toLowerCase()
+
+              const filteredDocs = safeDocs.filter((doc) => {
+                const matchesFilter =
+                  documentTypeFilter === 'all' ||
+                  getDocumentContentField(doc) === documentTypeFilter
+
+                if (!matchesFilter) {
+                  return false
+                }
+
+                if (!normalizedSearch) {
+                  return true
+                }
+
+                const searchableText = [
+                  doc?.title,
+                  doc?.file_name,
+                  doc?.filename,
+                  doc?.name,
+                  getDocumentContentField(doc),
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+                  .toLowerCase()
+
+                return searchableText.includes(normalizedSearch)
+              })
 
               if (filteredDocs.length === 0) {
                 return (
