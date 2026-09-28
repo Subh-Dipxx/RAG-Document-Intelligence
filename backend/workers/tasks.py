@@ -171,8 +171,6 @@ def process_document_task(
         full_doc_text = " ".join([getattr(p, "text", "") or "" for p in pages])
         classification = classify_document_content(
             text=full_doc_text,
-            file_name=db_document.file_name or "",
-            title=db_document.title or "",
         )
         existing_metadata = dict(db_document.metadata_json or {})
         existing_metadata.update(classification)

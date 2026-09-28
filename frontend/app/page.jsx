@@ -551,12 +551,54 @@ function formatParsedJson(obj, indent = 0) {
 }
 
 function formatCategoryName(str) {
-  if (!str || typeof str !== 'string') return 'Others'
+  if (!str || typeof str !== 'string') return 'Processing'
+
   const trimmed = str
     .trim()
     .replace(/[_-]+/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase())
-  return trimmed || 'Others'
+
+  return trimmed || 'Processing'
+}
+
+
+function getContentFieldBadgeInfo(field) {
+  const name = String(field || '').trim()
+
+  if (!name) {
+    return {
+      label: 'Processing',
+      icon: '📁',
+    }
+  }
+
+  const icons = [
+    '📚',
+    '📰',
+    '💻',
+    '📊',
+    '🔬',
+    '🎨',
+    '⚖️',
+    '🌐',
+    '🧪',
+    '📖',
+    '🗂️',
+    '🧭',
+  ]
+
+  let hash = 0
+
+  for (let i = 0; i < name.length; i += 1) {
+    hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
+  }
+
+  const icon = icons[Math.abs(hash) % icons.length]
+
+  return {
+    label: name,
+    icon,
+  }
 }
 
 function getDocumentFormatLabel(doc) {
@@ -583,95 +625,33 @@ function getDocumentFormatLabel(doc) {
 function getDocumentContentField(doc) {
   const meta = doc?.metadata || {}
 
-  if (meta.category && typeof meta.category === 'string' && meta.category.trim()) {
-    return formatCategoryName(meta.category)
-  }
-  if (meta.domain && typeof meta.domain === 'string' && meta.domain.trim()) {
-    return formatCategoryName(meta.domain)
-  }
-  if (meta.field && typeof meta.field === 'string' && meta.field.trim()) {
-    return formatCategoryName(meta.field)
-  }
-  if (meta.topic && typeof meta.topic === 'string' && meta.topic.trim()) {
-    return formatCategoryName(meta.topic)
-  }
-  if (Array.isArray(meta.tags) && meta.tags.length > 0 && typeof meta.tags[0] === 'string' && meta.tags[0].trim()) {
-    return formatCategoryName(meta.tags[0])
+  const candidates = [
+    meta.category,
+    meta.domain,
+    meta.field,
+    meta.topic,
+    ...(Array.isArray(meta.tags) ? meta.tags : []),
+  ]
+
+  const value = candidates.find(
+    (item) =>
+      typeof item === 'string' &&
+      item.trim()
+  )
+
+  if (value) {
+    return formatCategoryName(value)
   }
 
-  const text = `${doc?.title || ''} ${doc?.file_name || ''} ${JSON.stringify(meta)}`.toLowerCase()
-
-  if (/\b(edu|education|school|course|learn|teach|teacher|study|class|syllabus|lecture|academi|academic|university|student|tutorial|textbook|exam|assignment|sem|semester|pe|resume|cv|degree|diploma|thesis|math|physics|chemistry|biology|engineering|homework|grade)\b/i.test(text)) {
-    return 'Education'
-  }
-  if (/\b(sport|sports|cricket|football|soccer|basketball|tennis|badminton|baseball|hockey|nba|match|league|tournament|athlete|olympic|game|score|player|team|stadium|championship|fitness|workout|athletics)\b/i.test(text)) {
-    return 'Sports'
-  }
-  if (/\b(news|headline|press|journal|bulletin|newspaper|broadcast|reporting|gazette|reporter|breaking|daily|editorial|article|report|notice)\b/i.test(text)) {
-    return 'News'
-  }
-  if (/\b(movie|film|cinema|theater|tv|show|actor|actress|concert|song|music|album|drama|video|gaming|celebrity|pop|fun|comedy|series|anime|entertain|entertainment|media|play|novel|story)\b/i.test(text)) {
-    return 'Entertainment'
-  }
-  if (/\b(finance|bank|tax|invoice|price|budget|audit|revenue|sale|market|stock|invest|payment|billing|fiscal|profit|expense|business)\b/i.test(text)) {
-    return 'Finance & Business'
-  }
-  if (/\b(tech|technology|code|api|dev|system|software|program|data|algorithm|cyber|network|server|config|database|ai|ml|python|java|web)\b/i.test(text)) {
-    return 'Technology & Data'
-  }
-  if (/\b(legal|law|contract|policy|agreement|compliance|term|statute|court|patent|license|regulation|clause|juridical)\b/i.test(text)) {
-    return 'Legal & Policy'
-  }
-  if (/\b(health|medical|doctor|patient|pharma|clinical|hospital|care|diet|disease|medicine|anatomy)\b/i.test(text)) {
-    return 'Healthcare & Science'
-  }
-
-  return 'Others'
+  return 'Processing'
 }
 
-function getContentFieldBadgeInfo(fieldCategory) {
-  const cat = String(fieldCategory || '').toLowerCase()
-
-  if (cat.includes('edu')) {
-    return { icon: '📚', color: '#818cf8', bg: 'rgba(99, 102, 241, 0.15)' }
-  }
-  if (cat.includes('sport')) {
-    return { icon: '⚽', color: '#34d399', bg: 'rgba(16, 185, 129, 0.15)' }
-  }
-  if (cat.includes('news')) {
-    return { icon: '📰', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)' }
-  }
-  if (cat.includes('entertain')) {
-    return { icon: '🎭', color: '#f472b6', bg: 'rgba(236, 72, 153, 0.15)' }
-  }
-  if (cat.includes('finan') || cat.includes('busin')) {
-    return { icon: '💼', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.15)' }
-  }
-  if (cat.includes('tech') || cat.includes('data')) {
-    return { icon: '⚡', color: '#22d3ee', bg: 'rgba(6, 182, 212, 0.15)' }
-  }
-  if (cat.includes('legal') || cat.includes('policy')) {
-    return { icon: '⚖️', color: '#facc15', bg: 'rgba(234, 179, 8, 0.15)' }
-  }
-  if (cat.includes('health') || cat.includes('scien')) {
-    return { icon: '🩺', color: '#a78bfa', bg: 'rgba(139, 92, 246, 0.15)' }
-  }
-  return { icon: '📁', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
-}
-
-function sortCategoriesWithOthersLast(entries) {
+function sortCategories(entries) {
   if (!Array.isArray(entries)) return []
-  return [...entries].sort(([aKey = ''], [bKey = '']) => {
-    const aStr = String(aKey || '')
-    const bStr = String(bKey || '')
-    const aIsOthers = aStr.toLowerCase().includes('other')
-    const bIsOthers = bStr.toLowerCase().includes('other')
 
-    if (aIsOthers && !bIsOthers) return 1
-    if (!aIsOthers && bIsOthers) return -1
-
-    return aStr.localeCompare(bStr)
-  })
+  return [...entries].sort(([aKey = ''], [bKey = '']) =>
+    String(aKey || '').localeCompare(String(bKey || ''))
+  )
 }
 
 function extractDocumentContentTopics(doc) {
@@ -826,8 +806,7 @@ function App() {
       return bTime - aTime
     })
 
-    const seenHashes = new Set()
-    const seenNames = new Set()
+    const seenKeys = new Set()
     const unique = []
 
     for (const document of sorted) {
@@ -835,9 +814,16 @@ function App() {
         ? document.versions
         : []
 
-      const hashes = versions
-        .map((version) => version?.file_hash)
-        .filter(Boolean)
+      const currentVersion =
+        versions.find((version) => version?.is_current) ||
+        versions[0] ||
+        null
+
+      const fileHash =
+        document?.content_hash ||
+        document?.file_hash ||
+        currentVersion?.file_hash ||
+        null
 
       const fileName = String(
         document?.file_name ||
@@ -848,23 +834,18 @@ function App() {
         .trim()
         .toLowerCase()
 
-      const hasDuplicateHash = hashes.some((hash) =>
-        seenHashes.has(hash)
-      )
+      const fileSize = Number(document?.file_size || 0)
+      const mimeType = String(document?.mime_type || '').toLowerCase()
 
-      const hasDuplicateName =
-        fileName && seenNames.has(fileName)
+      const duplicateKey = fileHash
+        ? `hash:${fileHash}`
+        : `file:${fileName}:${fileSize}:${mimeType}`
 
-      if (hasDuplicateHash || hasDuplicateName) {
+      if (seenKeys.has(duplicateKey)) {
         continue
       }
 
-      hashes.forEach((hash) => seenHashes.add(hash))
-
-      if (fileName) {
-        seenNames.add(fileName)
-      }
-
+      seenKeys.add(duplicateKey)
       unique.push(document)
     }
 
@@ -1114,25 +1095,9 @@ const [usernameError, setUsernameError] = useState('')
         )
       }
 
-      const uniqueDocuments = []
-      const seenIds = new Set()
-
-      for (const document of Array.isArray(data) ? data : []) {
-        const docId = document?.document_id || document?.id
-        if (docId) {
-          if (seenIds.has(docId)) {
-            continue
-          }
-          seenIds.add(docId)
-        }
-        uniqueDocuments.push(document)
-      }
-
-      uniqueDocuments.sort((a, b) => {
-        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
-        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
-        return bTime - aTime
-      })
+      const uniqueDocuments = deduplicateDocuments(
+        Array.isArray(data) ? data : []
+      )
 
       setDocuments(uniqueDocuments)
       return uniqueDocuments
@@ -1897,17 +1862,91 @@ if (
         throw new Error('The server returned an invalid response.')
       }
 
-      setSelectedDocument(data)
+      const documentId = data.document_id || data.id
+      let processedDocument = data
+      let classificationReady = false
+
+      setStatus('Processing document content...')
+
+      // Wait for the asynchronous worker to finish parsing and semantic
+      // classification. We only look for the presence of backend metadata;
+      // we do not inspect filenames or predefined categories.
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        if (attempt > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+
+        try {
+          const detailRes = await fetch(
+            `/api/v1/documents/${documentId}`,
+            {
+              headers: token
+                ? { Authorization: `Bearer ${token}` }
+                : {},
+            }
+          )
+
+          if (detailRes.status === 401) {
+            handleLogout()
+            setStatus('Session expired. Please sign in again.')
+            return null
+          }
+
+          if (!detailRes.ok) {
+            continue
+          }
+
+          const refreshedDocument = await detailRes.json()
+
+          if (refreshedDocument) {
+            processedDocument = refreshedDocument
+          }
+
+          const metadata = processedDocument?.metadata || {}
+
+          if (
+            typeof metadata.category === 'string' &&
+            metadata.category.trim()
+          ) {
+            classificationReady = true
+            break
+          }
+        } catch (pollError) {
+          console.debug(
+            'Waiting for document classification:',
+            pollError
+          )
+        }
+      }
+
+      setSelectedDocument(processedDocument)
+
       setDocuments((prev) => {
-        const docId = data.document_id || data.id
-        const filtered = Array.isArray(prev) ? prev.filter((d) => (d.document_id || d.id) !== docId) : []
-        return [data, ...filtered]
+        const filtered = Array.isArray(prev)
+          ? prev.filter(
+              (d) =>
+                (d.document_id || d.id) !== documentId
+            )
+          : []
+
+        return deduplicateDocuments([
+          processedDocument,
+          ...filtered,
+        ])
       })
-      setStatus('Document uploaded successfully.')
+
+      setStatus(
+        classificationReady
+          ? 'Document uploaded and classified successfully.'
+          : 'Document uploaded. Classification is still processing.'
+      )
+
       setTitle('')
       setQueryError('')
+
       await fetchDocuments()
-      return data
+
+      return processedDocument
     } catch (err) {
       console.error(err)
       setStatus(err.message || 'Upload failed.')
@@ -1937,14 +1976,31 @@ if (
 
     let targetDoc = selectedDocument
 
-    // If a file is attached to this message, it is the document
-    // context for this query. Always upload/use the current attachment.
+    // Reuse the already uploaded/selected document.
+    // Only upload when the attachment is actually a new document.
     if (file) {
-      try {
-        targetDoc = await performUpload(file)
-      } catch (err) {
-        setQueryError(err.message || 'Failed to upload attached document.')
-        return
+      const selectedFileName =
+        selectedDocument?.file_name ||
+        selectedDocument?.filename ||
+        selectedDocument?.title ||
+        ''
+
+      const selectedFileSize = Number(selectedDocument?.file_size || 0)
+
+      const sameAsSelectedDocument =
+        selectedDocument &&
+        file.name === selectedFileName &&
+        Number(file.size || 0) === selectedFileSize
+
+      if (!sameAsSelectedDocument) {
+        try {
+          targetDoc = await performUpload(file)
+        } catch (err) {
+          setQueryError(
+            err.message || 'Failed to upload attached document.'
+          )
+          return
+        }
       }
     }
 
@@ -3934,7 +3990,7 @@ const handleNewConversation = () => {
               fieldCounts[field] = (fieldCounts[field] || 0) + 1
             })
 
-            return sortCategoriesWithOthersLast(Object.entries(fieldCounts))
+            return sortCategories(Object.entries(fieldCounts))
               .map(([fieldName, count]) => {
                 const badge = getContentFieldBadgeInfo(fieldName)
                 return (
@@ -3984,7 +4040,7 @@ const handleNewConversation = () => {
                 groupedDocs[fieldName].push(doc)
               })
 
-              return sortCategoriesWithOthersLast(Object.entries(groupedDocs))
+              return sortCategories(Object.entries(groupedDocs))
                 .map(([fieldName, categoryDocs]) => {
                   const badgeInfo = getContentFieldBadgeInfo(fieldName)
 
