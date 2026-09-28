@@ -5259,35 +5259,40 @@ html.dark .settings-save-button:hover:not(:disabled) {
 .account-type-option {
   min-height: 38px;
   padding: 0 12px;
-  border: 0;
+  border: 1px solid rgba(124, 58, 237, 0.28);
   border-radius: 10px;
-  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
-  color: #ffffff;
+  background: rgba(124, 58, 237, 0.04);
+  color: #8b5cf6;
   font: inherit;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.16);
+  box-shadow: none;
   transition:
     background 0.16s ease,
     color 0.16s ease,
+    border-color 0.16s ease,
     box-shadow 0.16s ease;
 }
 
-.account-type-option:not(.active) {
-  background: #ffffff;
-  color: var(--accent);
-  border: 1px solid rgba(124, 58, 237, 0.28);
-  box-shadow: none;
-}
-
-.account-type-option:hover:not(:disabled) {
+.account-type-option.active {
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
+  color: #ffffff;
+  border-color: #7c3aed;
   box-shadow: 0 8px 18px rgba(124, 58, 237, 0.16);
 }
 
-.account-type-option:not(.active):hover:not(:disabled) {
-  background: rgba(124, 58, 237, 0.06);
-  color: var(--accent);
+.account-type-option:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.10);
+  color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+.account-type-option.active:hover:not(:disabled) {
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
+  color: #ffffff;
+  border-color: #7c3aed;
+  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.2);
 }
 
 .account-type-option:disabled {
@@ -5428,47 +5433,62 @@ html.dark .settings-save-button:hover:not(:disabled) {
 }
 
 .organization-invitation-actions button {
-  height: 38px;
-  min-width: 92px;
-  padding: 0 18px;
-  border-radius: 9px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
   transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    transform 100ms ease,
-    box-shadow 140ms ease;
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
 }
 
-.organization-invitation-actions button:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.organization-invitation-actions .settings-primary-button {
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
-.organization-invitation-actions .settings-primary-button:hover:not(:disabled) {
-  filter: brightness(0.94);
-  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.18);
-}
-
+/* Light mode */
+.organization-invitation-actions .settings-primary-button,
 .organization-invitation-actions .settings-secondary-button {
-  background: transparent;
-  border: 1px solid var(--accent);
-  color: var(--accent);
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  background: #7c3aed;
+  border: 1px solid #7c3aed;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
+.organization-invitation-actions .settings-primary-button:hover:not(:disabled),
 .organization-invitation-actions .settings-secondary-button:hover:not(:disabled) {
-  background: rgba(124, 58, 237, 0.08);
+  background: #6d28d9;
+  border-color: #6d28d9;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(109, 40, 217, 0.22);
+}
+
+.organization-invitation-actions .settings-primary-button:active:not(:disabled),
+.organization-invitation-actions .settings-secondary-button:active:not(:disabled) {
+  background: rgba(124, 58, 237, 0.10);
+  border-color: #7c3aed;
+  color: #ffffff;
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .organization-invitation-actions button:disabled {
@@ -5476,16 +5496,35 @@ html.dark .settings-save-button:hover:not(:disabled) {
   cursor: not-allowed;
   box-shadow: none;
 }
+/* Dark mode */
+html.dark .organization-invitation-actions .settings-primary-button,
+html[data-theme="dark"] .organization-invitation-actions .settings-primary-button {
+  background: #6d28d9;
+  border-color: #6d28d9;
+  color: #ffffff;
+}
 
-/* Dark theme */
-html.dark .organization-invitation-actions .settings-secondary-button {
+html.dark .organization-invitation-actions .settings-primary-button:hover:not(:disabled),
+html[data-theme="dark"] .organization-invitation-actions .settings-primary-button:hover:not(:disabled) {
+  background: #6d28d9;
+  border-color: #6d28d9;
+  color: #ffffff;
+  filter: none;
+  box-shadow: 0 3px 8px rgba(109, 40, 217, 0.22);
+}
+
+html.dark .organization-invitation-actions .settings-secondary-button,
+html[data-theme="dark"] .organization-invitation-actions .settings-secondary-button {
   background: transparent;
   color: #c4b5fd;
   border-color: #8b5cf6;
 }
 
-html.dark .organization-invitation-actions .settings-secondary-button:hover:not(:disabled) {
-  background: rgba(139, 92, 246, 0.14);
+html.dark .organization-invitation-actions .settings-secondary-button:hover:not(:disabled),
+html[data-theme="dark"] .organization-invitation-actions .settings-secondary-button:hover:not(:disabled) {
+  background: transparent;
+  color: #c4b5fd;
+  border-color: #8b5cf6;
 }
 
 /* Match organization invitation typography with the rest of Settings */
@@ -5724,3 +5763,316 @@ html.dark .organization-invitation-actions .settings-secondary-button:hover:not(
   font-weight: 500;
   border: 1px solid rgba(124, 58, 237, 0.15);
 }
+/* Organization members */
+.organization-members-list {
+  display: grid;
+  gap: 8px;
+}
+
+.organization-member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 44px;
+  align-items: center;
+  column-gap: 16px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.2));
+  border-radius: 10px;
+}
+
+.organization-member-info {
+  min-width: 0;
+}
+
+.organization-member-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.organization-member-access {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.organization-member-access-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+.organization-member-access.is-granted {
+  color: #16a34a;
+}
+
+.organization-member-access.is-granted .organization-member-access-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.organization-member-access.is-pending {
+  color: #dc2626;
+}
+
+.organization-member-access.is-pending .organization-member-access-dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.organization-member-delete {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 44px;
+}
+
+.organization-member-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #dc2626;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+}
+
+.organization-member-delete-button:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.09);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.organization-member-delete-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.organization-member-delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+html.dark .organization-member-access.is-granted {
+  color: #4ade80;
+}
+
+html.dark .organization-member-access.is-pending {
+  color: #f87171;
+}
+
+html.dark .organization-member-delete-button {
+  color: #f87171;
+}
+
+html.dark .organization-member-delete-button:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.22);
+}
+
+@media (max-width: 640px) {
+  .organization-member-row {
+    grid-template-columns: minmax(0, 1fr) 120px 40px;
+    column-gap: 10px;
+    padding: 10px;
+  }
+
+  .organization-member-access {
+    font-size: 10px;
+  }
+}
+
+
+/* Organization members dropdown */
+.organization-members-section {
+  width: 100%;
+}
+
+.organization-members-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.organization-members-toggle:hover .settings-row-description {
+  color: var(--text-color, #f8fafc);
+}
+
+.organization-members-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  margin-left: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.06);
+  color: #a78bfa;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.organization-members-chevron-icon {
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border-right: 1.7px solid currentColor;
+  border-bottom: 1.7px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 180ms ease;
+}
+
+.organization-members-chevron.is-open .organization-members-chevron-icon {
+  margin-top: 3px;
+  transform: rotate(225deg);
+}
+
+.organization-members-toggle:hover .organization-members-chevron {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #c4b5fd;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.12);
+}
+
+html:not(.dark) .organization-members-chevron {
+  background: rgba(124, 58, 237, 0.04);
+  border-color: rgba(124, 58, 237, 0.18);
+  color: #7c3aed;
+}
+
+html:not(.dark) .organization-members-toggle:hover .organization-members-chevron {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #6d28d9;
+}
+
+.organization-member-access-spacer {
+  width: 150px;
+}
+
+@media (max-width: 640px) {
+  .organization-member-access-spacer {
+    width: 120px;
+  }
+}
+
+
+
+/* Invite Member button - light mode */
+html:not(.dark) .change-password-actions .settings-save-button {
+  background: #7c3aed !important;
+  border: 1px solid #7c3aed !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.16);
+}
+
+html:not(.dark) .change-password-actions .settings-save-button:hover:not(:disabled) {
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .change-password-actions .settings-save-button:disabled {
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #ffffff !important;
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+/* Invite Member — match the other light-mode settings buttons */
+html:not(.dark) .organization-members-section
+  ~ .settings-section
+  .change-password-actions .settings-save-button,
+html:not(.dark) .change-password-form .settings-save-button {
+  background: #ffffff !important;
+  border: 1px solid rgba(124, 58, 237, 0.28) !important;
+  color: #7c3aed !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .change-password-form .settings-save-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.06) !important;
+  border-color: rgba(124, 58, 237, 0.42) !important;
+  color: #6d28d9 !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .change-password-form .settings-save-button:disabled {
+  background: #ffffff !important;
+  border-color: rgba(124, 58, 237, 0.18) !important;
+  color: #9b8ac7 !important;
+  opacity: 0.9 !important;
+  box-shadow: none !important;
+}
+
+
+/* Organization members - dark mode */
+html.dark .organization-members-chevron,
+html[data-theme="dark"] .organization-members-chevron {
+  color: #ffffff !important;
+}
+
+html.dark .organization-members-toggle:hover .organization-members-chevron,
+html[data-theme="dark"] .organization-members-toggle:hover .organization-members-chevron {
+  color: #ffffff !important;
+}
+
+/* Invite Member - match other dark-mode action buttons */
+html.dark .change-password-form .settings-save-button,
+html[data-theme="dark"] .change-password-form .settings-save-button {
+  background: #7c3aed !important;
+  border: 1px solid #7c3aed !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.18) !important;
+}
+
+html.dark .change-password-form .settings-save-button:hover:not(:disabled),
+html[data-theme="dark"] .change-password-form .settings-save-button:hover:not(:disabled) {
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(109, 40, 217, 0.22) !important;
+}
+
+html.dark .change-password-form .settings-save-button:disabled,
+html[data-theme="dark"] .change-password-form .settings-save-button:disabled {
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #ffffff !important;
+  opacity: 0.55 !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+

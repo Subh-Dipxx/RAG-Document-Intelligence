@@ -14,6 +14,7 @@ from backend.domain.models import Document, Version
 from backend.workers.tasks import process_document_task
 from backend.api.schemas.document_schemas import DocumentResponse, VersionResponse
 from backend.ingestion.classifier import classify_document_content
+from backend.storage.minio_client import minio_storage, RAW_DOCUMENTS_BUCKET
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -51,8 +52,12 @@ async def upload_document(
             content_type=file.content_type or "application/octet-stream",
         )
     except Exception as e:
-        # If MinIO upload fails in dev without running MinIO container, fallback log
-        print(f"MinIO storage notice: {e}")
+        # Never create a DB record or Celery task when the source object
+        # was not successfully written to object storage.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Document storage upload failed: {e}",
+        )
 
     # Parse JSON permissions & metadata
     try:

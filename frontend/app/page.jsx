@@ -907,10 +907,13 @@ const [deleteError, setDeleteError] = useState('')
   const [accessRequestError, setAccessRequestError] = useState('')
   const [organizationMembers, setOrganizationMembers] = useState([])
   const [loadingOrganizationMembers, setLoadingOrganizationMembers] = useState(false)
+  const [showOrganizationMembers, setShowOrganizationMembers] = useState(false)
   const [memberEmail, setMemberEmail] = useState('')
   const [invitingMember, setInvitingMember] = useState(false)
   const [memberInviteError, setMemberInviteError] = useState('')
   const [memberInviteMessage, setMemberInviteMessage] = useState('')
+  const [deletingOrganizationMemberId, setDeletingOrganizationMemberId] = useState(null)
+  const [organizationMemberDeleteError, setOrganizationMemberDeleteError] = useState('')
   const [pendingOrganizationInvitations, setPendingOrganizationInvitations] = useState([])
   const [loadingOrganizationInvitations, setLoadingOrganizationInvitations] = useState(false)
   const [invitationActionId, setInvitationActionId] = useState(null)
@@ -1243,6 +1246,65 @@ const [usernameError, setUsernameError] = useState('')
       return []
     } finally {
       setLoadingOrganizationMembers(false)
+    }
+  }
+
+  const deleteOrganizationMember = async (member) => {
+    if (!token || role !== 'admin' || accountType !== 'organization') {
+      return
+    }
+
+    if (!member?.user_id) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Remove ${member.username || member.email || 'this member'} from the organization?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingOrganizationMemberId(member.user_id)
+    setOrganizationMemberDeleteError('')
+
+    try {
+      const res = await fetch(
+        `/api/v1/organization-members/${encodeURIComponent(member.user_id)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!res.ok) {
+        const rawBody = await res.text()
+        let data = null
+
+        try {
+          data = rawBody ? JSON.parse(rawBody) : null
+        } catch {
+          // Ignore non-JSON error responses.
+        }
+
+        throw new Error(
+          data?.detail ||
+            rawBody ||
+            `Failed to remove member (${res.status})`
+        )
+      }
+
+      await fetchOrganizationMembers()
+    } catch (err) {
+      console.error('Failed to delete organization member:', err)
+      setOrganizationMemberDeleteError(
+        err.message || 'Failed to remove organization member.'
+      )
+    } finally {
+      setDeletingOrganizationMemberId(null)
     }
   }
 
@@ -3049,9 +3111,14 @@ const handleNewConversation = () => {
           matchingAccessRequest?.requester_id ||
           'Organization member'
 
+        const accessStatus =
+          accessRequestStatus[accessRequestDocument.id]
+
         const isPending =
-          !isAdmin &&
-          accessRequestStatus[accessRequestDocument.id] === 'pending'
+          !isAdmin && accessStatus === 'pending'
+
+        const isApproved =
+          !isAdmin && accessStatus === 'approved'
 
         return (
           <>
@@ -3114,7 +3181,7 @@ const handleNewConversation = () => {
                   requestingAccess ||
                   (isAdmin
                     ? !matchingAccessRequest
-                    : isPending)
+                    : isPending || isApproved)
                 }
               >
                 {isAdmin
@@ -3123,9 +3190,11 @@ const handleNewConversation = () => {
                     : 'Grant Access'
                   : requestingAccess
                     ? 'Requesting...'
-                    : isPending
-                      ? 'Access Requested'
-                      : 'Request Access'}
+                    : isApproved
+                      ? 'Request Granted'
+                      : isPending
+                        ? 'Access Requested'
+                        : 'Request Access'}
               </button>
             </div>
           </>
@@ -3531,55 +3600,133 @@ const handleNewConversation = () => {
                     </div>
                   </form>
 
-                  <div style={{ marginTop: '16px' }}>
-                    <div className="settings-row-description">
-                      Current organization members
-                    </div>
+                  <div className="organization-members-section">
+                    <button
+                      type="button"
+                      className="organization-members-toggle"
+                      onClick={() =>
+                        setShowOrganizationMembers((current) => !current)
+                      }
+                      aria-expanded={showOrganizationMembers}
+                    >
+                      <span className="settings-row-description">
+                        Current organization members
+                      </span>
 
-                    {loadingOrganizationMembers ? (
-                      <div
-                        className="settings-row-description"
-                        style={{ marginTop: '10px' }}
+                      <span
+                        className={`organization-members-chevron ${
+                          showOrganizationMembers ? 'is-open' : ''
+                        }`}
+                        aria-hidden="true"
                       >
-                        Loading members...
-                      </div>
-                    ) : organizationMembers.length === 0 ? (
-                      <div
-                        className="settings-row-description"
-                        style={{ marginTop: '10px' }}
-                      >
-                        No organization members found.
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          display: 'grid',
-                          gap: '8px',
-                          marginTop: '10px',
-                        }}
-                      >
-                        {organizationMembers.map((member) => (
+                        <span className="organization-members-chevron-icon" />
+                      </span>
+                    </button>
+
+                    {showOrganizationMembers && (
+                      <div>
+                        {organizationMemberDeleteError && (
                           <div
-                            key={member.user_id}
-                            style={{
-                              padding: '10px 12px',
-                              border:
-                                '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                              borderRadius: '10px',
-                            }}
+                            className="change-password-error"
+                            style={{ marginTop: '10px' }}
                           >
-                            <div style={{ fontWeight: 600 }}>
-                              {member.username}
-                            </div>
-                            <div className="settings-row-description">
-                              {member.email || 'No email'} · {member.role}
-                            </div>
+                            {organizationMemberDeleteError}
                           </div>
-                        ))}
+                        )}
+
+                        {loadingOrganizationMembers ? (
+                          <div
+                            className="settings-row-description"
+                            style={{ marginTop: '10px' }}
+                          >
+                            Loading members...
+                          </div>
+                        ) : organizationMembers.length === 0 ? (
+                          <div
+                            className="settings-row-description"
+                            style={{ marginTop: '10px' }}
+                          >
+                            No organization members found.
+                          </div>
+                        ) : (
+                          <div
+                            className="organization-members-list"
+                            style={{ marginTop: '10px' }}
+                          >
+                            {organizationMembers.map((member) => {
+                              const isAdmin = member.role === 'admin'
+                              const hasAccess =
+                                member.access_status === 'active'
+                              const isDeleting =
+                                deletingOrganizationMemberId === member.user_id
+
+                              return (
+                                <div
+                                  key={member.user_id}
+                                  className="organization-member-row"
+                                >
+                                  <div className="organization-member-info">
+                                    <div className="organization-member-name">
+                                      {member.username}
+                                    </div>
+
+                                    <div className="settings-row-description">
+                                      {member.email || 'No email'} · {member.role}
+                                    </div>
+                                  </div>
+
+                                  {!isAdmin ? (
+                                    <div
+                                      className={`organization-member-access ${
+                                        hasAccess
+                                          ? 'is-granted'
+                                          : 'is-pending'
+                                      }`}
+                                    >
+                                      <span
+                                        className="organization-member-access-dot"
+                                        aria-hidden="true"
+                                      />
+
+                                      {hasAccess
+                                        ? 'ACCESS GRANTED'
+                                        : 'NO ACCESS'}
+                                    </div>
+                                  ) : (
+                                    <div className="organization-member-access-spacer" />
+                                  )}
+
+                                  <div className="organization-member-delete">
+                                    {!isAdmin && (
+                                      <button
+                                        type="button"
+                                        className="organization-member-delete-button"
+                                        onClick={() =>
+                                          deleteOrganizationMember(member)
+                                        }
+                                        disabled={isDeleting}
+                                        aria-label={`Remove ${
+                                          member.username || 'member'
+                                        }`}
+                                        title={
+                                          isDeleting
+                                            ? 'Removing member...'
+                                            : 'Remove member'
+                                        }
+                                      >
+                                        {isDeleting ? '…' : '🗑'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
+                  </div>
               )}
 
               {role === 'admin' && accountType === 'organization' && (

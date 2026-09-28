@@ -78,6 +78,47 @@ def list_organization_members(
     ]
 
 
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_organization_member(
+    user_id: str,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    require_organization_admin(auth)
+
+    if user_id == auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot remove yourself from the organization",
+        )
+
+    membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.user_id == user_id,
+        )
+        .first()
+    )
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization member not found",
+        )
+
+    if membership.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization admins cannot be removed",
+        )
+
+    db.delete(membership)
+    db.commit()
+
+    return None
+
+
 @router.post(
     "/invite",
     response_model=OrganizationMemberResponse,
