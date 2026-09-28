@@ -1,8 +1,30 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import React, { Component, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+
+class CanvasErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error) {
+    console.warn('KnowledgeSphere Canvas rendering failed, using CSS fallback:', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null
+    }
+    return this.props.children
+  }
+}
 
 function RevolvingOrb({ reduced, light }) {
   const group = useRef(null)
@@ -71,27 +93,56 @@ function RevolvingOrb({ reduced, light }) {
 }
 
 export default function KnowledgeSphere({ theme = 'dark' }) {
-  const reduced =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [mounted, setMounted] = useState(false)
+  const [webglSupported, setWebglSupported] = useState(false)
+  const [reduced, setReduced] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    try {
+      const isReduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      setReduced(!!isReduced)
+    } catch {
+      setReduced(false)
+    }
+
+    try {
+      const canvas = document.createElement('canvas')
+      const supported = !!(
+        window.WebGLRenderingContext &&
+        (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+      )
+      setWebglSupported(supported)
+    } catch {
+      setWebglSupported(false)
+    }
+  }, [])
+
   const light = theme === 'light'
 
   return (
     <div className="knowledge-sphere" aria-hidden="true">
       <div className="knowledge-sphere-glow" />
       <div className="knowledge-sphere-css" />
-      <Canvas
-        className="knowledge-sphere-canvas"
-        camera={{ position: [0, 0.12, 4.05], fov: 38 }}
-        dpr={[1, 1.6]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      >
-        <ambientLight intensity={light ? 0.55 : 0.28} color={light ? '#a78bfa' : '#c4b5fd'} />
-        <pointLight position={[2.4, 1.6, 3.2]} intensity={light ? 10 : 14} color="#c4b5fd" distance={14} />
-        <pointLight position={[-2.8, -1.4, 1.8]} intensity={light ? 5 : 7} color="#6366f1" distance={12} />
-        <directionalLight position={[0, 3, 2]} intensity={light ? 0.85 : 0.55} color="#f5f3ff" />
-        <RevolvingOrb reduced={reduced} light={light} />
-      </Canvas>
+      {mounted && webglSupported && (
+        <CanvasErrorBoundary>
+          <Canvas
+            className="knowledge-sphere-canvas"
+            camera={{ position: [0, 0.12, 4.05], fov: 38 }}
+            dpr={[1, 1.6]}
+            gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+          >
+            <ambientLight intensity={light ? 0.55 : 0.28} color={light ? '#a78bfa' : '#c4b5fd'} />
+            <pointLight position={[2.4, 1.6, 3.2]} intensity={light ? 10 : 14} color="#c4b5fd" distance={14} />
+            <pointLight position={[-2.8, -1.4, 1.8]} intensity={light ? 5 : 7} color="#6366f1" distance={12} />
+            <directionalLight position={[0, 3, 2]} intensity={light ? 0.85 : 0.55} color="#f5f3ff" />
+            <RevolvingOrb reduced={reduced} light={light} />
+          </Canvas>
+        </CanvasErrorBoundary>
+      )}
     </div>
   )
-}
+}

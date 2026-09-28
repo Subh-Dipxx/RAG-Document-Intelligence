@@ -26,7 +26,9 @@ export default function ChartRenderer({ chart }) {
     return null
   }
 
-  const series = Array.isArray(chart.series) ? chart.series : []
+  const series = Array.isArray(chart.series)
+    ? chart.series.filter((item) => item && typeof item === 'object')
+    : []
 
   const xValues =
     chart.chart_type === 'pie'

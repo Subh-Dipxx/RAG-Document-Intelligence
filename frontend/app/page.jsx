@@ -769,17 +769,21 @@ function App() {
   }
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('access_token')
-    const storedUsername = localStorage.getItem('username')
+    try {
+      const storedToken = localStorage.getItem('access_token')
+      const storedUsername = localStorage.getItem('username')
 
-    setToken(storedToken)
-    setUsername(storedUsername)
+      setToken(storedToken)
+      setUsername(storedUsername)
 
-    if (storedToken) {
-      const claims = decodeJwtPayload(storedToken)
-      setRole(claims.role || localStorage.getItem('role') || null)
-      setTenantId(claims.tenant_id || localStorage.getItem('tenant_id') || null)
-      setAccountType(claims.account_type || localStorage.getItem('account_type') || null)
+      if (storedToken) {
+        const claims = decodeJwtPayload(storedToken)
+        setRole(claims.role || localStorage.getItem('role') || null)
+        setTenantId(claims.tenant_id || localStorage.getItem('tenant_id') || null)
+        setAccountType(claims.account_type || localStorage.getItem('account_type') || null)
+      }
+    } catch (err) {
+      console.error('Error loading stored auth:', err)
     }
 
     setAuthReady(true)
@@ -1125,15 +1129,15 @@ const [usernameError, setUsernameError] = useState('')
   }, [token, accountType, tenantId])
 
   useEffect(() => {
-    if (!token || accountType !== 'organization' || role !== 'member') {
+    if (!token) {
       setPendingOrganizationInvitations([])
       return undefined
     }
 
     fetchOrganizationInvitations()
-    const intervalId = setInterval(fetchOrganizationInvitations, 30000)
+    const intervalId = setInterval(fetchOrganizationInvitations, 10000)
     return () => clearInterval(intervalId)
-  }, [token, accountType, role])
+  }, [token])
 
   useEffect(() => {
     const stored = readStoredTheme()
@@ -1310,7 +1314,7 @@ const [usernameError, setUsernameError] = useState('')
   }
 
   const fetchOrganizationInvitations = async () => {
-    if (!token || accountType !== 'organization' || role !== 'member') {
+    if (!token) {
       setPendingOrganizationInvitations([])
       return []
     }
@@ -1337,7 +1341,7 @@ const [usernameError, setUsernameError] = useState('')
   }
 
   const respondToOrganizationInvitation = async (invitationId, action) => {
-    if (!token || role !== 'member' || accountType !== 'organization') return
+    if (!token) return
     setInvitationActionId(invitationId)
     setInvitationActionError('')
     try {
@@ -1353,10 +1357,10 @@ const [usernameError, setUsernameError] = useState('')
       await fetchOrganizationInvitations()
       if (action === 'accept') {
         setSelectedDocument(null)
+        setAccountType('organization')
+        localStorage.setItem('account_type', 'organization')
+        await fetchMyOrganizations()
         await fetchDocuments()
-      } else {
-        setDocuments([])
-        setSelectedDocument(null)
       }
     } catch (error) {
       setInvitationActionError(error?.message || 'Unable to process invitation')
@@ -3270,17 +3274,16 @@ const handleNewConversation = () => {
               <button
                 type="button"
                 className="sidebar-profile-settings"
+                style={{ position: 'relative' }}
                 onClick={async () => {
                   setShowProfileMenu(false)
                   setSettingsSection(
-                    accountType === 'organization'
+                    accountType === 'organization' && role === 'admin'
                       ? 'organization'
                       : 'account'
                   )
                   setShowSettings(true)
-                  if (accountType === 'organization' && role === 'member') {
-                    await fetchOrganizationInvitations()
-                  }
+                  await fetchOrganizationInvitations()
                   if (accountType === 'organization' && role === 'admin') {
                     await fetchOrganizationMembers()
                   }
@@ -3288,16 +3291,29 @@ const handleNewConversation = () => {
               >
                 <span className="sidebar-profile-settings-icon">⚙</span>
                 <span>Settings</span>
-                {accountType === 'organization' &&
-                  role === 'member' &&
-                  pendingOrganizationInvitations.length > 0 && (
-                    <span
-                      className="sidebar-settings-notification-badge"
-                      aria-label={`${pendingOrganizationInvitations.length} pending organization invitation${pendingOrganizationInvitations.length === 1 ? '' : 's'}`}
-                    >
-                      {pendingOrganizationInvitations.length}
-                    </span>
-                  )}
+                {pendingOrganizationInvitations.length > 0 && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginLeft: 'auto',
+                      minWidth: '18px',
+                      height: '18px',
+                      padding: '0 5px',
+                      borderRadius: '999px',
+                      backgroundColor: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      lineHeight: 1,
+                      boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
+                    }}
+                    aria-label={`${pendingOrganizationInvitations.length} pending invitation(s)`}
+                  >
+                    {pendingOrganizationInvitations.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -3317,11 +3333,28 @@ const handleNewConversation = () => {
           <button
             type="button"
             className="sidebar-profile-avatar"
+            style={{ position: 'relative' }}
             onClick={() => setShowProfileMenu((open) => !open)}
             aria-label="Open profile menu"
             aria-expanded={showProfileMenu}
           >
             <span>{username ? username.charAt(0).toUpperCase() : 'U'}</span>
+            {pendingOrganizationInvitations.length > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ef4444',
+                  border: '2px solid var(--sidebar-bg, #09090b)',
+                  boxShadow: '0 0 6px rgba(239, 68, 68, 0.9)',
+                }}
+                title={`${pendingOrganizationInvitations.length} pending organization invitation(s)`}
+              />
+            )}
           </button>
 
           <span className="sidebar-profile-name">
@@ -3545,7 +3578,9 @@ const handleNewConversation = () => {
                 <h2>
                   {settingsSection === 'organization'
                     ? 'Organization'
-                    : 'Account'}
+                    : settingsSection === 'invitations'
+                      ? 'Organization Invitations'
+                      : 'Account'}
                 </h2>
               </div>
 
@@ -3564,7 +3599,7 @@ const handleNewConversation = () => {
                 className="settings-sidebar"
                 aria-label="Settings sections"
               >
-                {accountType === 'organization' && (
+                {accountType === 'organization' && role === 'admin' && (
                   <button
                     type="button"
                     className={`settings-sidebar-item${settingsSection === 'organization' ? ' is-active' : ''}`}
@@ -3603,6 +3638,45 @@ const handleNewConversation = () => {
                   </span>
                   <span>Account</span>
                 </button>
+
+                {pendingOrganizationInvitations.length > 0 && (
+                  <button
+                    type="button"
+                    className={`settings-sidebar-item${settingsSection === 'invitations' ? ' is-active' : ''}`}
+                    onClick={() => setSettingsSection('invitations')}
+                    aria-current={
+                      settingsSection === 'invitations'
+                        ? 'page'
+                        : undefined
+                    }
+                  >
+                    <span
+                      className="settings-sidebar-icon"
+                      aria-hidden="true"
+                    >
+                      ✉
+                    </span>
+                    <span>Invitations</span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: 'auto',
+                        minWidth: '16px',
+                        height: '16px',
+                        padding: '0 4px',
+                        borderRadius: '999px',
+                        backgroundColor: '#ef4444',
+                        color: '#ffffff',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                      }}
+                    >
+                      {pendingOrganizationInvitations.length}
+                    </span>
+                  </button>
+                )}
               </nav>
 
               <div
@@ -3666,52 +3740,7 @@ const handleNewConversation = () => {
           </div>
         )}
 
-        {accountType === 'organization' && role === 'member' && (
-          <div className="settings-section">
-            <h3>Organization Invitations</h3>
-            {loadingOrganizationInvitations ? (
-              <p className="settings-description">Checking for organization invitations...</p>
-            ) : pendingOrganizationInvitations.length === 0 ? (
-              <p className="settings-description">You have no pending organization invitations.</p>
-            ) : (
-              <div className="organization-invitations-list">
-                {pendingOrganizationInvitations.map((invitation) => (
-                  <div key={invitation.id} className="organization-invitation-card">
-                    <div>
-                      <strong>{invitation.organization_name}</strong>
-                      <p className="settings-description">
-                        You were invited by {invitation.invited_by_username}
-                        {invitation.invited_by_email ? ` (${invitation.invited_by_email})` : ''}.
-                        Accept the invitation to access this organization's shared documents.
-                      </p>
-                    </div>
-                    <div className="organization-invitation-actions">
-                      <button
-                        type="button"
-                        className="settings-primary-button"
-                        disabled={invitationActionId === invitation.id}
-                        onClick={() => respondToOrganizationInvitation(invitation.id, 'accept')}
-                      >
-                        {invitationActionId === invitation.id ? 'Processing...' : 'Accept'}
-                      </button>
-                      <button
-                        type="button"
-                        className="settings-secondary-button"
-                        disabled={invitationActionId === invitation.id}
-                        onClick={() => respondToOrganizationInvitation(invitation.id, 'decline')}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {invitationActionError && (
-              <p className="settings-error-message">{invitationActionError}</p>
-            )}
-          </div>
-        )}
+
 
 
               {accountType === 'organization' && role === 'admin' && (
@@ -3841,6 +3870,55 @@ const handleNewConversation = () => {
 
               <div className="settings-section settings-section-account">
                 <h3>Account</h3>
+
+                {pendingOrganizationInvitations.length > 0 && (
+                  <div className="organization-invitations-list" style={{ marginBottom: '20px', display: 'grid', gap: '12px' }}>
+                    {pendingOrganizationInvitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="organization-invitation-card"
+                        style={{
+                          padding: '16px',
+                          borderRadius: '12px',
+                          background: 'rgba(124, 58, 237, 0.09)',
+                          border: '1px solid rgba(124, 58, 237, 0.28)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                          <div>
+                            <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>{invitation.organization_name}</strong>
+                            <p className="settings-description" style={{ marginTop: '4px', fontSize: '0.875rem' }}>
+                              You were invited by <strong>{invitation.invited_by_username}</strong>
+                              {invitation.invited_by_email ? ` (${invitation.invited_by_email})` : ''}.
+                              Accept the invitation to access this organization's shared documents.
+                            </p>
+                          </div>
+                          <div className="organization-invitation-actions" style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              className="settings-save-button"
+                              disabled={invitationActionId === invitation.id}
+                              onClick={() => respondToOrganizationInvitation(invitation.id, 'accept')}
+                            >
+                              {invitationActionId === invitation.id ? 'Accepting...' : 'Accept Invitation'}
+                            </button>
+                            <button
+                              type="button"
+                              className="settings-secondary-button"
+                              disabled={invitationActionId === invitation.id}
+                              onClick={() => respondToOrganizationInvitation(invitation.id, 'decline')}
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {invitationActionError && (
+                      <p className="settings-error-message">{invitationActionError}</p>
+                    )}
+                  </div>
+                )}
 
                 {!showChangeUsername ? (
   <div className="settings-row settings-account-action">
