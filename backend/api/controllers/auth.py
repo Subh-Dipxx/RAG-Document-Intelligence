@@ -13,10 +13,13 @@ from backend.api.schemas.auth_schemas import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
     LoginRequest,
+    SelectLoginAccountRequest,
     SignupRequest,
     OrganizationSignupRequest,
     OrganizationLoginRequest,
     TokenResponse,
+    LoginAccount,
+    LoginAccountSelectionResponse,
 )
 from backend.auth.security import create_access_token, verify_password, hash_password
 from backend.auth.dependencies import get_current_user
@@ -152,17 +155,9 @@ def organization_signup(
             detail="Username is already taken",
         )
 
-    existing_email = (
-        db.query(UserModel)
-        .filter(UserModel.email == normalized_email)
-        .first()
-    )
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email address is already registered",
-        )
-
+    # Email addresses may be shared by multiple organization accounts.
+    # Username remains globally unique and identifies the account.
+    
     # Exact organization-name matching:
     # same case + same internal spacing = same organization.
     # Different case or internal spacing = different organization.
@@ -286,33 +281,165 @@ def organization_login(
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse | LoginAccountSelectionResponse)
 def login(
     payload: LoginRequest,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
+    email = payload.email.strip().lower()
+
+    users = (
+        db.query(UserModel)
+        .filter(UserModel.email.ilike(email))
+        .all()
+    )
+
+    matching_users = [
+        candidate
+        for candidate in users
+        if candidate.is_active
+        and verify_password(payload.password, candidate.password_hash)
+    ]
+
+    if not matching_users:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if len(matching_users) > 1:
+        accounts = []
+
+        for candidate in matching_users:
+            memberships = (
+                db.query(TenantMembershipModel, TenantModel)
+                .join(
+                    TenantModel,
+                    TenantMembershipModel.tenant_id == TenantModel.id,
+                )
+                .filter(
+                    TenantMembershipModel.user_id == candidate.id,
+                    TenantMembershipModel.access_status == "active",
+                )
+                .order_by(TenantModel.name.asc())
+                .all()
+            )
+
+            accounts.append(
+                LoginAccount(
+                    username=candidate.username,
+                    account_type="organization" if memberships else "individual",
+                    organization_names=[
+                        tenant.name
+                        for _, tenant in memberships
+                    ],
+                )
+            )
+
+        return LoginAccountSelectionResponse(
+            accounts=accounts,
+        )
+
+    user = matching_users[0]
+
+    # A user may belong to multiple organizations.
+    # Select the first active organization as the initial login context.
+    memberships = (
+        db.query(TenantMembershipModel, TenantModel)
+        .join(
+            TenantModel,
+            TenantMembershipModel.tenant_id == TenantModel.id,
+        )
+        .filter(
+            TenantMembershipModel.user_id == user.id,
+            TenantMembershipModel.access_status == "active",
+        )
+        .order_by(TenantModel.name.asc())
+        .all()
+    )
+
+    if memberships:
+        membership, tenant = memberships[0]
+
+        access_token = create_access_token(
+            user_id=user.id,
+            username=user.username,
+            tenant_id=membership.tenant_id,
+            role=membership.role,
+            account_type="organization",
+        )
+    else:
+        access_token = create_access_token(
+            user_id=user.id,
+            username=user.username,
+            account_type="individual",
+        )
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+    )
+
+
+@router.post("/select-account", response_model=TokenResponse)
+def select_login_account(
+    payload: SelectLoginAccountRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    email = payload.email.strip().lower()
+    username = payload.username.strip()
+
     user = (
         db.query(UserModel)
-        .filter(UserModel.username == payload.username)
+        .filter(
+            UserModel.username == username,
+            UserModel.email.ilike(email),
+        )
         .first()
     )
 
-    if not user or not verify_password(payload.password, user.password_hash):
+    if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            detail="Invalid account selection",
         )
 
-    if not user.is_active:
+    if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is inactive",
+            detail="Invalid email or password",
         )
 
-    access_token = create_access_token(
-        user_id=user.id,
-        username=user.username,
+    memberships = (
+        db.query(TenantMembershipModel, TenantModel)
+        .join(
+            TenantModel,
+            TenantMembershipModel.tenant_id == TenantModel.id,
+        )
+        .filter(
+            TenantMembershipModel.user_id == user.id,
+            TenantMembershipModel.access_status == "active",
+        )
+        .order_by(TenantModel.name.asc())
+        .all()
     )
+
+    if memberships:
+        membership, tenant = memberships[0]
+
+        access_token = create_access_token(
+            user_id=user.id,
+            username=user.username,
+            tenant_id=membership.tenant_id,
+            role=membership.role,
+            account_type="organization",
+        )
+    else:
+        access_token = create_access_token(
+            user_id=user.id,
+            username=user.username,
+            account_type="individual",
+        )
 
     return TokenResponse(
         access_token=access_token,

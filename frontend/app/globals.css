@@ -6124,3 +6124,1105 @@ html[data-theme="dark"] .change-password-form .settings-save-button:disabled {
   flex: 0 0 auto;
 }
 
+
+/* ============================================================
+   Login background — decorative only
+   Does not change login markup, card, form, or auth behavior.
+   ============================================================ */
+
+.login-page {
+  overflow: hidden;
+}
+
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 18% 28%,
+      rgba(139, 92, 246, 0.20) 0,
+      rgba(139, 92, 246, 0.08) 14%,
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 82% 68%,
+      rgba(59, 130, 246, 0.14) 0,
+      rgba(59, 130, 246, 0.06) 15%,
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(124, 58, 237, 0.10) 0,
+      transparent 38%
+    ),
+    repeating-linear-gradient(
+      115deg,
+      transparent 0,
+      transparent 78px,
+      rgba(167, 139, 250, 0.045) 79px,
+      rgba(167, 139, 250, 0.045) 80px,
+      transparent 81px,
+      transparent 156px
+    );
+
+  opacity: 0.95;
+}
+
+.login-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    radial-gradient(circle at 8% 18%, rgba(196, 181, 253, 0.7) 0 2px, transparent 3px),
+    radial-gradient(circle at 14% 31%, rgba(196, 181, 253, 0.5) 0 2px, transparent 3px),
+    radial-gradient(circle at 23% 19%, rgba(167, 139, 250, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 31% 34%, rgba(196, 181, 253, 0.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 69% 24%, rgba(196, 181, 253, 0.50) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 18%, rgba(167, 139, 250, 0.65) 0 2px, transparent 3px),
+    radial-gradient(circle at 87% 33%, rgba(196, 181, 253, 0.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 92% 63%, rgba(167, 139, 250, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 76% 78%, rgba(196, 181, 253, 0.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 20% 76%, rgba(167, 139, 250, 0.48) 0 2px, transparent 3px),
+    linear-gradient(
+      28deg,
+      transparent 0 24%,
+      rgba(167, 139, 250, 0.09) 24.1%,
+      transparent 24.25% 100%
+    ),
+    linear-gradient(
+      152deg,
+      transparent 0 69%,
+      rgba(129, 140, 248, 0.08) 69.1%,
+      transparent 69.25% 100%
+    );
+
+  animation: login-background-drift 18s ease-in-out infinite alternate;
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+}
+
+.login-theme-toggle {
+  z-index: 2;
+}
+
+@keyframes login-background-drift {
+  from {
+    transform: translate3d(-8px, -4px, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(8px, 6px, 0) scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page::after {
+    animation: none;
+  }
+}
+
+/* Light mode: same existing login design, only a softer backdrop */
+html[data-theme="light"] .login-page::before {
+  background:
+    radial-gradient(
+      circle at 18% 28%,
+      rgba(139, 92, 246, 0.10) 0,
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 82% 68%,
+      rgba(59, 130, 246, 0.07) 0,
+      transparent 35%
+    ),
+    repeating-linear-gradient(
+      115deg,
+      transparent 0,
+      transparent 78px,
+      rgba(124, 58, 237, 0.025) 79px,
+      rgba(124, 58, 237, 0.025) 80px,
+      transparent 81px,
+      transparent 156px
+    );
+}
+
+html[data-theme="light"] .login-page::after {
+  opacity: 0.45;
+}
+
+
+/* ============================================================
+   Stronger decorative login background
+   Background only — existing login UI remains untouched.
+   ============================================================ */
+
+.login-page::before {
+  opacity: 1 !important;
+  background:
+    radial-gradient(
+      circle at 14% 28%,
+      rgba(139, 92, 246, 0.24) 0,
+      rgba(139, 92, 246, 0.10) 18%,
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 86% 68%,
+      rgba(96, 165, 250, 0.18) 0,
+      rgba(96, 165, 250, 0.07) 18%,
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 50% 48%,
+      rgba(124, 58, 237, 0.10),
+      transparent 34%
+    ),
+    repeating-linear-gradient(
+      28deg,
+      transparent 0,
+      transparent 118px,
+      rgba(124, 58, 237, 0.075) 119px,
+      rgba(124, 58, 237, 0.075) 120px,
+      transparent 121px,
+      transparent 235px
+    ),
+    repeating-linear-gradient(
+      152deg,
+      transparent 0,
+      transparent 145px,
+      rgba(96, 165, 250, 0.055) 146px,
+      rgba(96, 165, 250, 0.055) 147px,
+      transparent 148px,
+      transparent 290px
+    );
+}
+
+.login-page::after {
+  opacity: 1 !important;
+  background:
+    radial-gradient(circle at 8% 18%, rgba(124, 58, 237, 0.85) 0 3px, transparent 4px),
+    radial-gradient(circle at 15% 31%, rgba(167, 139, 250, 0.70) 0 3px, transparent 4px),
+    radial-gradient(circle at 23% 20%, rgba(96, 165, 250, 0.65) 0 3px, transparent 4px),
+    radial-gradient(circle at 31% 34%, rgba(124, 58, 237, 0.65) 0 3px, transparent 4px),
+    radial-gradient(circle at 69% 23%, rgba(167, 139, 250, 0.70) 0 3px, transparent 4px),
+    radial-gradient(circle at 78% 17%, rgba(96, 165, 250, 0.70) 0 3px, transparent 4px),
+    radial-gradient(circle at 87% 32%, rgba(124, 58, 237, 0.70) 0 3px, transparent 4px),
+    radial-gradient(circle at 92% 64%, rgba(167, 139, 250, 0.65) 0 3px, transparent 4px),
+    radial-gradient(circle at 76% 80%, rgba(96, 165, 250, 0.62) 0 3px, transparent 4px),
+    radial-gradient(circle at 20% 77%, rgba(124, 58, 237, 0.62) 0 3px, transparent 4px),
+    radial-gradient(circle at 42% 13%, rgba(167, 139, 250, 0.45) 0 2px, transparent 3px),
+    radial-gradient(circle at 61% 86%, rgba(96, 165, 250, 0.45) 0 2px, transparent 3px);
+  filter: none;
+  animation: login-background-drift 16s ease-in-out infinite alternate;
+}
+
+html[data-theme="light"] .login-page::before {
+  background:
+    radial-gradient(
+      circle at 14% 28%,
+      rgba(139, 92, 246, 0.18),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 86% 68%,
+      rgba(96, 165, 250, 0.14),
+      transparent 36%
+    ),
+    repeating-linear-gradient(
+      28deg,
+      transparent 0,
+      transparent 118px,
+      rgba(124, 58, 237, 0.055) 119px,
+      rgba(124, 58, 237, 0.055) 120px,
+      transparent 121px,
+      transparent 235px
+    ),
+    repeating-linear-gradient(
+      152deg,
+      transparent 0,
+      transparent 145px,
+      rgba(96, 165, 250, 0.045) 146px,
+      rgba(96, 165, 250, 0.045) 147px,
+      transparent 148px,
+      transparent 290px
+    );
+}
+
+html[data-theme="light"] .login-page::after {
+  opacity: 0.75 !important;
+}
+
+
+
+/* Rich login background — decorative layer only */
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml;base64,CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMTYwMCA5MDAiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJsaW5lIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzhiNWNmNiIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjQ1IiBzdG9wLWNvbG9yPSIjOGI1Y2Y2IiBzdG9wLW9wYWNpdHk9Ii42Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjciIHN0b3AtY29sb3I9IiM2MGE1ZmEiIHN0b3Atb3BhY2l0eT0iLjUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJjYXJkIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzhiNWNmNiIgc3RvcC1vcGFjaXR5PSIuMTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9Ii4wOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KCiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9Imdsb3ciPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNjNGI1ZmQiIHN0b3Atb3BhY2l0eT0iLjkiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjOGI1Y2Y2IiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CgogICAgPGZpbHRlciBpZD0iYmx1ciI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjE4Ii8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CgogIDwhLS0gYW1iaWVudCBnbG93cyAtLT4KICA8Y2lyY2xlIGN4PSIxODAiIGN5PSI0MzAiIHI9IjI2MCIgZmlsbD0idXJsKCNnbG93KSIgb3BhY2l0eT0iLjIyIiBmaWx0ZXI9InVybCgjYmx1cikiLz4KICA8Y2lyY2xlIGN4PSIxNDIwIiBjeT0iNDcwIiByPSIyODAiIGZpbGw9InVybCgjZ2xvdykiIG9wYWNpdHk9Ii4xOCIgZmlsdGVyPSJ1cmwoI2JsdXIpIi8+CgogIDwhLS0gbmV0d29yayAtLT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9InVybCgjbGluZSkiIHN0cm9rZS13aWR0aD0iMiI+CiAgICA8cGF0aCBkPSJNMzAgMTgwIEMxNzAgNzAgMzAwIDE0MCA0MzAgMjUwIFM2NTAgMzAwIDc2MCAxOTAiLz4KICAgIDxwYXRoIGQ9Ik0wIDM5MCBDMTUwIDI4MCAzMDAgMzQwIDQxMCA0NDAgUzY1MCA1MjAgNzcwIDQwMCIvPgogICAgPHBhdGggZD0iTTMwIDY1MCBDMTcwIDU0MCAzMDAgNjAwIDQyMCA3MDAgUzYyMCA3NjAgNzYwIDY0MCIvPgoKICAgIDxwYXRoIGQ9Ik0xNTcwIDE2MCBDMTQzMCA2MCAxMzAwIDEzMCAxMTcwIDI0MCBTOTUwIDMwMCA4NDAgMTkwIi8+CiAgICA8cGF0aCBkPSJNMTYwMCAzOTAgQzE0NTAgMjgwIDEzMDAgMzQwIDExOTAgNDQwIFM5NTAgNTIwIDgzMCA0MDAiLz4KICAgIDxwYXRoIGQ9Ik0xNTcwIDY1MCBDMTQzMCA1NDAgMTMwMCA2MDAgMTE4MCA3MDAgUzk4MCA3NjAgODQwIDY0MCIvPgogIDwvZz4KCiAgPCEtLSBub2RlcyAtLT4KICA8ZyBmaWxsPSIjYTc4YmZhIj4KICAgIDxjaXJjbGUgY3g9Ijg1IiBjeT0iMTY1IiByPSI1Ii8+CiAgICA8Y2lyY2xlIGN4PSIyMDUiIGN5PSIxMDUiIHI9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjM0MCIgY3k9IjE4MCIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iNDU1IiBjeT0iMjYwIiByPSI0Ii8+CiAgICA8Y2lyY2xlIGN4PSI1OTAiIGN5PSIyODUiIHI9IjUiLz4KICAgIDxjaXJjbGUgY3g9IjcyMCIgY3k9IjIyMCIgcj0iNCIvPgoKICAgIDxjaXJjbGUgY3g9IjkwIiBjeT0iMzk1IiByPSI1Ii8+CiAgICA8Y2lyY2xlIGN4PSIyMzAiIGN5PSIzMzAiIHI9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjM3MCIgY3k9IjQwNSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iNTEwIiBjeT0iNDc1IiByPSI0Ii8+CiAgICA8Y2lyY2xlIGN4PSI2NTAiIGN5PSI0OTUiIHI9IjUiLz4KCiAgICA8Y2lyY2xlIGN4PSIxMDAiIGN5PSI2NTAiIHI9IjUiLz4KICAgIDxjaXJjbGUgY3g9IjI0MCIgY3k9IjU4NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMzgwIiBjeT0iNjYwIiByPSI1Ii8+CiAgICA8Y2lyY2xlIGN4PSI1MjAiIGN5PSI3MjAiIHI9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjY3MCIgY3k9IjY4NSIgcj0iNSIvPgoKICAgIDxjaXJjbGUgY3g9IjE1MTUiIGN5PSIxNDUiIHI9IjUiLz4KICAgIDxjaXJjbGUgY3g9IjEzOTAiIGN5PSI5NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTI2MCIgY3k9IjE3NSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTE0NSIgY3k9IjI1MCIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTAxMCIgY3k9IjI4NSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iODgwIiBjeT0iMjIwIiByPSI0Ii8+CgogICAgPGNpcmNsZSBjeD0iMTUxMCIgY3k9IjM5NSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTM3MCIgY3k9IjMzMCIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTIzMCIgY3k9IjQwNSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTA5MCIgY3k9IjQ3NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iOTUwIiBjeT0iNDk1IiByPSI1Ii8+CgogICAgPGNpcmNsZSBjeD0iMTUwMCIgY3k9IjY1MCIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTM2MCIgY3k9IjU4NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTIyMCIgY3k9IjY2MCIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTA4MCIgY3k9IjcyMCIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iOTMwIiBjeT0iNjg1IiByPSI1Ii8+CiAgPC9nPgoKICA8IS0tIGxlZnQgZG9jdW1lbnQgY2FyZHMgLS0+CiAgPGc+CiAgICA8cmVjdCB4PSI3MCIgeT0iNzAiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTI1IiByeD0iMjAiCiAgICAgIGZpbGw9InVybCgjY2FyZCkiIHN0cm9rZT0iI2E3OGJmYSIgc3Ryb2tlLW9wYWNpdHk9Ii40MiIvPgoKICAgIDxyZWN0IHg9IjEwMCIgeT0iMTAwIiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHJ4PSI4IgogICAgICBmaWxsPSIjN2MzYWVkIiBmaWxsLW9wYWNpdHk9Ii4yOCIKICAgICAgc3Ryb2tlPSIjYzRiNWZkIiBzdHJva2Utb3BhY2l0eT0iLjU1Ii8+CgogICAgPHBhdGggZD0iTTExMiAxMTRoMThNMTEyIDEyNmgxOE0xMTIgMTM4aDE4IiBzdHJva2U9IiNkZGQ2ZmUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CgogICAgPHBhdGggZD0iTTE2MCAxMDJoOTVNMTYwIDEyMWg3OE0xNjAgMTQwaDYyIgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8Zz4KICAgIDxyZWN0IHg9IjQwIiB5PSIzNDAiIHdpZHRoPSIyMzUiIGhlaWdodD0iMTM1IiByeD0iMjAiCiAgICAgIGZpbGw9InVybCgjY2FyZCkiIHN0cm9rZT0iIzkzYzVmZCIgc3Ryb2tlLW9wYWNpdHk9Ii40Ii8+CgogICAgPHBhdGggZD0iTTcwIDQzNVYzODBoMzV2NTV6IgogICAgICBmaWxsPSIjNjBhNWZhIiBmaWxsLW9wYWNpdHk9Ii4yIgogICAgICBzdHJva2U9IiNiZmRiZmUiIHN0cm9rZS1vcGFjaXR5PSIuNiIvPgoKICAgIDxwYXRoIGQ9Ik04MCA0MjBsMTAtMTQgMTAgMTAgOC0xNCIKICAgICAgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYmZkYmZlIiBzdHJva2Utd2lkdGg9IjMiLz4KCiAgICA8cGF0aCBkPSJNMTMwIDM3NWgxMTBNMTMwIDM5NWg5Mk0xMzAgNDE1aDc2IgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8L2c+CgogIDxnPgogICAgPHJlY3QgeD0iOTAiIHk9IjYyNSIgd2lkdGg9IjIyMCIgaGVpZ2h0PSIxMjUiIHJ4PSIyMCIKICAgICAgZmlsbD0idXJsKCNjYXJkKSIgc3Ryb2tlPSIjYTc4YmZhIiBzdHJva2Utb3BhY2l0eT0iLjQyIi8+CgogICAgPHJlY3QgeD0iMTIwIiB5PSI2NTUiIHdpZHRoPSI0MiIgaGVpZ2h0PSI1NSIgcng9IjgiCiAgICAgIGZpbGw9IiM4YjVjZjYiIGZpbGwtb3BhY2l0eT0iLjI0IgogICAgICBzdHJva2U9IiNkZGQ2ZmUiIHN0cm9rZS1vcGFjaXR5PSIuNSIvPgoKICAgIDxwYXRoIGQ9Ik0xMzIgNjcwaDE4TTEzMiA2ODJoMThNMTMyIDY5NGgxOCIKICAgICAgc3Ryb2tlPSIjZGRkNmZlIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICAgIDxwYXRoIGQ9Ik0xODAgNjYyaDk1TTE4MCA2ODJoNzhNMTgwIDcwMmg2MiIKICAgICAgc3Ryb2tlPSIjYzRiNWZkIiBzdHJva2Utb3BhY2l0eT0iLjU1IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDwvZz4KCiAgPCEtLSByaWdodCBkb2N1bWVudCBjYXJkcyAtLT4KICA8Zz4KICAgIDxyZWN0IHg9IjEzMTAiIHk9IjY1IiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjEyNSIgcng9IjIwIgogICAgICBmaWxsPSJ1cmwoI2NhcmQpIiBzdHJva2U9IiNhNzhiZmEiIHN0cm9rZS1vcGFjaXR5PSIuNDIiLz4KCiAgICA8cmVjdCB4PSIxMzQwIiB5PSI5NSIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiByeD0iOCIKICAgICAgZmlsbD0iIzdjM2FlZCIgZmlsbC1vcGFjaXR5PSIuMjgiCiAgICAgIHN0cm9rZT0iI2M0YjVmZCIgc3Ryb2tlLW9wYWNpdHk9Ii41NSIvPgoKICAgIDxwYXRoIGQ9Ik0xMzUyIDEwOWgxOE0xMzUyIDEyMWgxOE0xMzUyIDEzM2gxOCIKICAgICAgc3Ryb2tlPSIjZGRkNmZlIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICAgIDxwYXRoIGQ9Ik0xNDAwIDk4aDk1TTE0MDAgMTE3aDc4TTE0MDAgMTM2aDYyIgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8Zz4KICAgIDxyZWN0IHg9IjEzMzUiIHk9IjM0NSIgd2lkdGg9IjIyNSIgaGVpZ2h0PSIxMzIiIHJ4PSIyMCIKICAgICAgZmlsbD0idXJsKCNjYXJkKSIgc3Ryb2tlPSIjOTNjNWZkIiBzdHJva2Utb3BhY2l0eT0iLjQyIi8+CgogICAgPGNpcmNsZSBjeD0iMTM3NSIgY3k9IjQwNiIgcj0iMjciCiAgICAgIGZpbGw9IiM2MGE1ZmEiIGZpbGwtb3BhY2l0eT0iLjE0IgogICAgICBzdHJva2U9IiNiZmRiZmUiIHN0cm9rZS1vcGFjaXR5PSIuNTUiLz4KCiAgICA8cGF0aCBkPSJNMTM3NSAzODd2MzhNMTM1NiA0MDZoMzgiCiAgICAgIHN0cm9rZT0iI2JmZGJmZSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgICA8cGF0aCBkPSJNMTQyNSAzNzhoMTAyTTE0MjUgMzk4aDg2TTE0MjUgNDE4aDcyIgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8Zz4KICAgIDxyZWN0IHg9IjEzMDAiIHk9IjYzMCIgd2lkdGg9IjIyNSIgaGVpZ2h0PSIxMjUiIHJ4PSIyMCIKICAgICAgZmlsbD0idXJsKCNjYXJkKSIgc3Ryb2tlPSIjYTc4YmZhIiBzdHJva2Utb3BhY2l0eT0iLjQyIi8+CgogICAgPHJlY3QgeD0iMTMzMCIgeT0iNjYwIiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHJ4PSI4IgogICAgICBmaWxsPSIjOGI1Y2Y2IiBmaWxsLW9wYWNpdHk9Ii4yNCIKICAgICAgc3Ryb2tlPSIjZGRkNmZlIiBzdHJva2Utb3BhY2l0eT0iLjUiLz4KCiAgICA8cGF0aCBkPSJNMTM0MiA2NzVoMThNMTM0MiA2ODdoMThNMTM0MiA2OTloMTgiCiAgICAgIHN0cm9rZT0iI2RkZDZmZSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgICA8cGF0aCBkPSJNMTM5MCA2NjdoMTAwTTEzOTAgNjg3aDgyTTEzOTAgNzA3aDY3IgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8IS0tIGNlbnRyYWwga25vd2xlZGdlIGF1cmEsIGtlcHQgYmVoaW5kIGxvZ2luIGNhcmQgLS0+CiAgPGNpcmNsZSBjeD0iODAwIiBjeT0iNDUwIiByPSIxOTAiCiAgICBmaWxsPSJub25lIgogICAgc3Ryb2tlPSIjYTc4YmZhIgogICAgc3Ryb2tlLW9wYWNpdHk9Ii4xMCIKICAgIHN0cm9rZS13aWR0aD0iMiIvPgoKICA8Y2lyY2xlIGN4PSI4MDAiIGN5PSI0NTAiIHI9IjI0MCIKICAgIGZpbGw9Im5vbmUiCiAgICBzdHJva2U9IiM2MGE1ZmEiCiAgICBzdHJva2Utb3BhY2l0eT0iLjA2IgogICAgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPgo="),
+    radial-gradient(circle at 50% 50%, rgba(124,58,237,.08), transparent 38%);
+  background-size: cover, cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 1 !important;
+}
+
+.login-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 10% 22%, rgba(139,92,246,.28), transparent 20%),
+    radial-gradient(circle at 90% 70%, rgba(59,130,246,.20), transparent 22%);
+  animation: login-rich-bg-drift 16s ease-in-out infinite alternate;
+}
+
+.login-card {
+  position: relative;
+  z-index: 2;
+}
+
+.login-theme-toggle {
+  z-index: 3;
+}
+
+@keyframes login-rich-bg-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.035);
+  }
+}
+
+html[data-theme="light"] .login-page::before {
+  opacity: .72 !important;
+}
+
+html[data-theme="light"] .login-page::after {
+  opacity: .45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page::after {
+    animation: none;
+  }
+}
+
+
+/* Final light-mode background override.
+   Decorative background only. */
+html[data-theme="light"] .login-page::before {
+  background-image: url("data:image/svg+xml;base64,CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2aWV3Qm94PSIwIDAgMTYwMCA5MDAiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJsaW5lIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzhiNWNmNiIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjQ1IiBzdG9wLWNvbG9yPSIjOGI1Y2Y2IiBzdG9wLW9wYWNpdHk9Ii42Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjciIHN0b3AtY29sb3I9IiM2MGE1ZmEiIHN0b3Atb3BhY2l0eT0iLjUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJjYXJkIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzhiNWNmNiIgc3RvcC1vcGFjaXR5PSIuMTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNjBhNWZhIiBzdG9wLW9wYWNpdHk9Ii4wOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KCiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9Imdsb3ciPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNjNGI1ZmQiIHN0b3Atb3BhY2l0eT0iLjkiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjOGI1Y2Y2IiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CgogICAgPGZpbHRlciBpZD0iYmx1ciI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjE4Ii8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CgogIDwhLS0gYW1iaWVudCBnbG93cyAtLT4KICA8Y2lyY2xlIGN4PSIxODAiIGN5PSI0MzAiIHI9IjI2MCIgZmlsbD0idXJsKCNnbG93KSIgb3BhY2l0eT0iLjIyIiBmaWx0ZXI9InVybCgjYmx1cikiLz4KICA8Y2lyY2xlIGN4PSIxNDIwIiBjeT0iNDcwIiByPSIyODAiIGZpbGw9InVybCgjZ2xvdykiIG9wYWNpdHk9Ii4xOCIgZmlsdGVyPSJ1cmwoI2JsdXIpIi8+CgogIDwhLS0gbmV0d29yayAtLT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9InVybCgjbGluZSkiIHN0cm9rZS13aWR0aD0iMiI+CiAgICA8cGF0aCBkPSJNMzAgMTgwIEMxNzAgNzAgMzAwIDE0MCA0MzAgMjUwIFM2NTAgMzAwIDc2MCAxOTAiLz4KICAgIDxwYXRoIGQ9Ik0wIDM5MCBDMTUwIDI4MCAzMDAgMzQwIDQxMCA0NDAgUzY1MCA1MjAgNzcwIDQwMCIvPgogICAgPHBhdGggZD0iTTMwIDY1MCBDMTcwIDU0MCAzMDAgNjAwIDQyMCA3MDAgUzYyMCA3NjAgNzYwIDY0MCIvPgoKICAgIDxwYXRoIGQ9Ik0xNTcwIDE2MCBDMTQzMCA2MCAxMzAwIDEzMCAxMTcwIDI0MCBTOTUwIDMwMCA4NDAgMTkwIi8+CiAgICA8cGF0aCBkPSJNMTYwMCAzOTAgQzE0NTAgMjgwIDEzMDAgMzQwIDExOTAgNDQwIFM5NTAgNTIwIDgzMCA0MDAiLz4KICAgIDxwYXRoIGQ9Ik0xNTcwIDY1MCBDMTQzMCA1NDAgMTMwMCA2MDAgMTE4MCA3MDAgUzk4MCA3NjAgODQwIDY0MCIvPgogIDwvZz4KCiAgPCEtLSBub2RlcyAtLT4KICA8ZyBmaWxsPSIjYTc4YmZhIj4KICAgIDxjaXJjbGUgY3g9Ijg1IiBjeT0iMTY1IiByPSI1Ii8+CiAgICA8Y2lyY2xlIGN4PSIyMDUiIGN5PSIxMDUiIHI9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjM0MCIgY3k9IjE4MCIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iNDU1IiBjeT0iMjYwIiByPSI0Ii8+CiAgICA8Y2lyY2xlIGN4PSI1OTAiIGN5PSIyODUiIHI9IjUiLz4KICAgIDxjaXJjbGUgY3g9IjcyMCIgY3k9IjIyMCIgcj0iNCIvPgoKICAgIDxjaXJjbGUgY3g9IjkwIiBjeT0iMzk1IiByPSI1Ii8+CiAgICA8Y2lyY2xlIGN4PSIyMzAiIGN5PSIzMzAiIHI9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjM3MCIgY3k9IjQwNSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iNTEwIiBjeT0iNDc1IiByPSI0Ii8+CiAgICA8Y2lyY2xlIGN4PSI2NTAiIGN5PSI0OTUiIHI9IjUiLz4KCiAgICA8Y2lyY2xlIGN4PSIxMDAiIGN5PSI2NTAiIHI9IjUiLz4KICAgIDxjaXJjbGUgY3g9IjI0MCIgY3k9IjU4NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMzgwIiBjeT0iNjYwIiByPSI1Ii8+CiAgICA8Y2lyY2xlIGN4PSI1MjAiIGN5PSI3MjAiIHI9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjY3MCIgY3k9IjY4NSIgcj0iNSIvPgoKICAgIDxjaXJjbGUgY3g9IjE1MTUiIGN5PSIxNDUiIHI9IjUiLz4KICAgIDxjaXJjbGUgY3g9IjEzOTAiIGN5PSI5NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTI2MCIgY3k9IjE3NSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTE0NSIgY3k9IjI1MCIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTAxMCIgY3k9IjI4NSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iODgwIiBjeT0iMjIwIiByPSI0Ii8+CgogICAgPGNpcmNsZSBjeD0iMTUxMCIgY3k9IjM5NSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTM3MCIgY3k9IjMzMCIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTIzMCIgY3k9IjQwNSIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTA5MCIgY3k9IjQ3NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iOTUwIiBjeT0iNDk1IiByPSI1Ii8+CgogICAgPGNpcmNsZSBjeD0iMTUwMCIgY3k9IjY1MCIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTM2MCIgY3k9IjU4NSIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iMTIyMCIgY3k9IjY2MCIgcj0iNSIvPgogICAgPGNpcmNsZSBjeD0iMTA4MCIgY3k9IjcyMCIgcj0iNCIvPgogICAgPGNpcmNsZSBjeD0iOTMwIiBjeT0iNjg1IiByPSI1Ii8+CiAgPC9nPgoKICA8IS0tIGxlZnQgZG9jdW1lbnQgY2FyZHMgLS0+CiAgPGc+CiAgICA8cmVjdCB4PSI3MCIgeT0iNzAiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTI1IiByeD0iMjAiCiAgICAgIGZpbGw9InVybCgjY2FyZCkiIHN0cm9rZT0iI2E3OGJmYSIgc3Ryb2tlLW9wYWNpdHk9Ii40MiIvPgoKICAgIDxyZWN0IHg9IjEwMCIgeT0iMTAwIiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHJ4PSI4IgogICAgICBmaWxsPSIjN2MzYWVkIiBmaWxsLW9wYWNpdHk9Ii4yOCIKICAgICAgc3Ryb2tlPSIjYzRiNWZkIiBzdHJva2Utb3BhY2l0eT0iLjU1Ii8+CgogICAgPHBhdGggZD0iTTExMiAxMTRoMThNMTEyIDEyNmgxOE0xMTIgMTM4aDE4IiBzdHJva2U9IiNkZGQ2ZmUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CgogICAgPHBhdGggZD0iTTE2MCAxMDJoOTVNMTYwIDEyMWg3OE0xNjAgMTQwaDYyIgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8Zz4KICAgIDxyZWN0IHg9IjQwIiB5PSIzNDAiIHdpZHRoPSIyMzUiIGhlaWdodD0iMTM1IiByeD0iMjAiCiAgICAgIGZpbGw9InVybCgjY2FyZCkiIHN0cm9rZT0iIzkzYzVmZCIgc3Ryb2tlLW9wYWNpdHk9Ii40Ii8+CgogICAgPHBhdGggZD0iTTcwIDQzNVYzODBoMzV2NTV6IgogICAgICBmaWxsPSIjNjBhNWZhIiBmaWxsLW9wYWNpdHk9Ii4yIgogICAgICBzdHJva2U9IiNiZmRiZmUiIHN0cm9rZS1vcGFjaXR5PSIuNiIvPgoKICAgIDxwYXRoIGQ9Ik04MCA0MjBsMTAtMTQgMTAgMTAgOC0xNCIKICAgICAgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYmZkYmZlIiBzdHJva2Utd2lkdGg9IjMiLz4KCiAgICA8cGF0aCBkPSJNMTMwIDM3NWgxMTBNMTMwIDM5NWg5Mk0xMzAgNDE1aDc2IgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8L2c+CgogIDxnPgogICAgPHJlY3QgeD0iOTAiIHk9IjYyNSIgd2lkdGg9IjIyMCIgaGVpZ2h0PSIxMjUiIHJ4PSIyMCIKICAgICAgZmlsbD0idXJsKCNjYXJkKSIgc3Ryb2tlPSIjYTc4YmZhIiBzdHJva2Utb3BhY2l0eT0iLjQyIi8+CgogICAgPHJlY3QgeD0iMTIwIiB5PSI2NTUiIHdpZHRoPSI0MiIgaGVpZ2h0PSI1NSIgcng9IjgiCiAgICAgIGZpbGw9IiM4YjVjZjYiIGZpbGwtb3BhY2l0eT0iLjI0IgogICAgICBzdHJva2U9IiNkZGQ2ZmUiIHN0cm9rZS1vcGFjaXR5PSIuNSIvPgoKICAgIDxwYXRoIGQ9Ik0xMzIgNjcwaDE4TTEzMiA2ODJoMThNMTMyIDY5NGgxOCIKICAgICAgc3Ryb2tlPSIjZGRkNmZlIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICAgIDxwYXRoIGQ9Ik0xODAgNjYyaDk1TTE4MCA2ODJoNzhNMTgwIDcwMmg2MiIKICAgICAgc3Ryb2tlPSIjYzRiNWZkIiBzdHJva2Utb3BhY2l0eT0iLjU1IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDwvZz4KCiAgPCEtLSByaWdodCBkb2N1bWVudCBjYXJkcyAtLT4KICA8Zz4KICAgIDxyZWN0IHg9IjEzMTAiIHk9IjY1IiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjEyNSIgcng9IjIwIgogICAgICBmaWxsPSJ1cmwoI2NhcmQpIiBzdHJva2U9IiNhNzhiZmEiIHN0cm9rZS1vcGFjaXR5PSIuNDIiLz4KCiAgICA8cmVjdCB4PSIxMzQwIiB5PSI5NSIgd2lkdGg9IjQyIiBoZWlnaHQ9IjU1IiByeD0iOCIKICAgICAgZmlsbD0iIzdjM2FlZCIgZmlsbC1vcGFjaXR5PSIuMjgiCiAgICAgIHN0cm9rZT0iI2M0YjVmZCIgc3Ryb2tlLW9wYWNpdHk9Ii41NSIvPgoKICAgIDxwYXRoIGQ9Ik0xMzUyIDEwOWgxOE0xMzUyIDEyMWgxOE0xMzUyIDEzM2gxOCIKICAgICAgc3Ryb2tlPSIjZGRkNmZlIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgoKICAgIDxwYXRoIGQ9Ik0xNDAwIDk4aDk1TTE0MDAgMTE3aDc4TTE0MDAgMTM2aDYyIgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8Zz4KICAgIDxyZWN0IHg9IjEzMzUiIHk9IjM0NSIgd2lkdGg9IjIyNSIgaGVpZ2h0PSIxMzIiIHJ4PSIyMCIKICAgICAgZmlsbD0idXJsKCNjYXJkKSIgc3Ryb2tlPSIjOTNjNWZkIiBzdHJva2Utb3BhY2l0eT0iLjQyIi8+CgogICAgPGNpcmNsZSBjeD0iMTM3NSIgY3k9IjQwNiIgcj0iMjciCiAgICAgIGZpbGw9IiM2MGE1ZmEiIGZpbGwtb3BhY2l0eT0iLjE0IgogICAgICBzdHJva2U9IiNiZmRiZmUiIHN0cm9rZS1vcGFjaXR5PSIuNTUiLz4KCiAgICA8cGF0aCBkPSJNMTM3NSAzODd2MzhNMTM1NiA0MDZoMzgiCiAgICAgIHN0cm9rZT0iI2JmZGJmZSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgICA8cGF0aCBkPSJNMTQyNSAzNzhoMTAyTTE0MjUgMzk4aDg2TTE0MjUgNDE4aDcyIgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8Zz4KICAgIDxyZWN0IHg9IjEzMDAiIHk9IjYzMCIgd2lkdGg9IjIyNSIgaGVpZ2h0PSIxMjUiIHJ4PSIyMCIKICAgICAgZmlsbD0idXJsKCNjYXJkKSIgc3Ryb2tlPSIjYTc4YmZhIiBzdHJva2Utb3BhY2l0eT0iLjQyIi8+CgogICAgPHJlY3QgeD0iMTMzMCIgeT0iNjYwIiB3aWR0aD0iNDIiIGhlaWdodD0iNTUiIHJ4PSI4IgogICAgICBmaWxsPSIjOGI1Y2Y2IiBmaWxsLW9wYWNpdHk9Ii4yNCIKICAgICAgc3Ryb2tlPSIjZGRkNmZlIiBzdHJva2Utb3BhY2l0eT0iLjUiLz4KCiAgICA8cGF0aCBkPSJNMTM0MiA2NzVoMThNMTM0MiA2ODdoMThNMTM0MiA2OTloMTgiCiAgICAgIHN0cm9rZT0iI2RkZDZmZSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgICA8cGF0aCBkPSJNMTM5MCA2NjdoMTAwTTEzOTAgNjg3aDgyTTEzOTAgNzA3aDY3IgogICAgICBzdHJva2U9IiNjNGI1ZmQiIHN0cm9rZS1vcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPC9nPgoKICA8IS0tIGNlbnRyYWwga25vd2xlZGdlIGF1cmEsIGtlcHQgYmVoaW5kIGxvZ2luIGNhcmQgLS0+CiAgPGNpcmNsZSBjeD0iODAwIiBjeT0iNDUwIiByPSIxOTAiCiAgICBmaWxsPSJub25lIgogICAgc3Ryb2tlPSIjYTc4YmZhIgogICAgc3Ryb2tlLW9wYWNpdHk9Ii4xMCIKICAgIHN0cm9rZS13aWR0aD0iMiIvPgoKICA8Y2lyY2xlIGN4PSI4MDAiIGN5PSI0NTAiIHI9IjI0MCIKICAgIGZpbGw9Im5vbmUiCiAgICBzdHJva2U9IiM2MGE1ZmEiCiAgICBzdHJva2Utb3BhY2l0eT0iLjA2IgogICAgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPgo=") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  opacity: 0.42 !important;
+  filter: brightness(1.45) saturate(0.65) !important;
+}
+
+html[data-theme="light"] .login-page::after {
+  background:
+    radial-gradient(
+      circle at 14% 28%,
+      rgba(139, 92, 246, 0.12),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 86% 70%,
+      rgba(96, 165, 250, 0.10),
+      transparent 30%
+    ) !important;
+  opacity: 0.35 !important;
+}
+
+/* Slightly stronger light-mode decorative background */
+html[data-theme="light"] .login-page::before {
+  opacity: 0.62 !important;
+  filter: brightness(1.28) saturate(0.78) !important;
+}
+
+html[data-theme="light"] .login-page::after {
+  opacity: 0.50 !important;
+}
+
+
+/* Slightly stronger light-mode background visibility */
+html[data-theme="light"] .login-page::before {
+  opacity: 0.74 !important;
+  filter: brightness(1.18) saturate(0.88) !important;
+}
+
+html[data-theme="light"] .login-page::after {
+  opacity: 0.62 !important;
+}
+
+
+/* Login account selection - theme-consistent slide-in notification */
+
+.login-account-notification {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  z-index: 20;
+  width: min(370px, calc(100vw - 48px));
+  padding: 24px;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 40px rgba(124, 58, 237, 0.10),
+    var(--shadow);
+
+  backdrop-filter: blur(18px);
+  box-sizing: border-box;
+
+  transform: translateY(-50%);
+  animation: login-account-notification-in
+    0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-account-notification-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.login-account-notification-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.login-account-notification-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.login-account-notification-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.login-account-notification-close:hover:not(:disabled) {
+  background: rgba(196, 181, 253, 0.08);
+  border-color: rgba(196, 181, 253, 0.12);
+  color: var(--text);
+}
+
+.login-account-notification-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.login-account-notification-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 11px 13px;
+
+  border: 1px solid rgba(196, 181, 253, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.login-account-notification-option:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.06);
+  transform: translateX(2px);
+}
+
+.login-account-notification-option.selected {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.09);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.login-account-notification-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-account-notification-radio {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 1px solid rgba(196, 181, 253, 0.38);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.login-account-notification-option.selected
+.login-account-notification-radio {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.10);
+}
+
+.login-account-notification-option.selected
+.login-account-notification-radio::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.login-account-notification-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.login-account-notification-content strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-account-notification-content small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-account-notification-error {
+  margin: -3px 0 10px;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.login-account-notification > .full-width {
+  width: 100%;
+}
+
+@keyframes login-account-notification-in {
+  from {
+    opacity: 0;
+    transform: translate(-110%, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+html[data-theme="light"] .login-account-notification {
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 48px rgba(49, 33, 92, 0.08);
+}
+
+html[data-theme="light"] .login-account-notification-option {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(91, 64, 160, 0.16);
+}
+
+html[data-theme="light"] .login-account-notification-option:hover {
+  background: rgba(124, 58, 237, 0.05);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+html[data-theme="light"] .login-account-notification-option.selected {
+  background: rgba(124, 58, 237, 0.07);
+  border-color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .login-account-notification {
+    left: 12px;
+    bottom: 12px;
+    top: auto;
+    width: calc(100vw - 24px);
+    transform: none;
+    animation-name: login-account-notification-mobile-in;
+  }
+
+  @keyframes login-account-notification-mobile-in {
+    from {
+      opacity: 0;
+      transform: translateY(110%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-account-notification {
+    animation: none;
+  }
+}
+
+
+/* Login account selection - theme-consistent slide-in notification */
+
+.login-account-notification {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  z-index: 20;
+  width: min(370px, calc(100vw - 48px));
+  padding: 24px;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 40px rgba(124, 58, 237, 0.10),
+    var(--shadow);
+
+  backdrop-filter: blur(18px);
+  box-sizing: border-box;
+
+  transform: translateY(-50%);
+  animation: login-account-notification-in
+    0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-account-notification-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.login-account-notification-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.login-account-notification-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.login-account-notification-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.login-account-notification-close:hover:not(:disabled) {
+  background: rgba(196, 181, 253, 0.08);
+  border-color: rgba(196, 181, 253, 0.12);
+  color: var(--text);
+}
+
+.login-account-notification-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.login-account-notification-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 11px 13px;
+
+  border: 1px solid rgba(196, 181, 253, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.login-account-notification-option:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.06);
+  transform: translateX(2px);
+}
+
+.login-account-notification-option.selected {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.09);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.login-account-notification-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-account-notification-radio {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 1px solid rgba(196, 181, 253, 0.38);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.login-account-notification-option.selected
+.login-account-notification-radio {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.10);
+}
+
+.login-account-notification-option.selected
+.login-account-notification-radio::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.login-account-notification-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.login-account-notification-content strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-account-notification-content small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-account-notification-error {
+  margin: -3px 0 10px;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.login-account-notification > .full-width {
+  width: 100%;
+}
+
+@keyframes login-account-notification-in {
+  from {
+    opacity: 0;
+    transform: translate(-110%, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+html[data-theme="light"] .login-account-notification {
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 48px rgba(49, 33, 92, 0.08);
+}
+
+html[data-theme="light"] .login-account-notification-option {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(91, 64, 160, 0.16);
+}
+
+html[data-theme="light"] .login-account-notification-option:hover {
+  background: rgba(124, 58, 237, 0.05);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+html[data-theme="light"] .login-account-notification-option.selected {
+  background: rgba(124, 58, 237, 0.07);
+  border-color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .login-account-notification {
+    left: 12px;
+    bottom: 12px;
+    top: auto;
+    width: calc(100vw - 24px);
+    transform: none;
+    animation-name: login-account-notification-mobile-in;
+  }
+
+  @keyframes login-account-notification-mobile-in {
+    from {
+      opacity: 0;
+      transform: translateY(110%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-account-notification {
+    animation: none;
+  }
+}
+
+
+/* Login account selection - theme-consistent slide-in notification */
+
+.login-account-notification {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  z-index: 20;
+  width: min(370px, calc(100vw - 48px));
+  padding: 24px;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 40px rgba(124, 58, 237, 0.10),
+    var(--shadow);
+
+  backdrop-filter: blur(18px);
+  box-sizing: border-box;
+
+  transform: translateY(-50%);
+  animation: login-account-notification-in
+    0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-account-notification-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.login-account-notification-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.login-account-notification-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.login-account-notification-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.login-account-notification-close:hover:not(:disabled) {
+  background: rgba(196, 181, 253, 0.08);
+  border-color: rgba(196, 181, 253, 0.12);
+  color: var(--text);
+}
+
+.login-account-notification-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.login-account-notification-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 11px 13px;
+
+  border: 1px solid rgba(196, 181, 253, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.login-account-notification-option:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.06);
+  transform: translateX(2px);
+}
+
+.login-account-notification-option.selected {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.09);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.login-account-notification-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-account-notification-radio {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 1px solid rgba(196, 181, 253, 0.38);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.login-account-notification-option.selected
+.login-account-notification-radio {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.10);
+}
+
+.login-account-notification-option.selected
+.login-account-notification-radio::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.login-account-notification-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.login-account-notification-content strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-account-notification-content small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-account-notification-error {
+  margin: -3px 0 10px;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.login-account-notification > .full-width {
+  width: 100%;
+}
+
+@keyframes login-account-notification-in {
+  from {
+    opacity: 0;
+    transform: translate(-110%, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+html[data-theme="light"] .login-account-notification {
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 48px rgba(49, 33, 92, 0.08);
+}
+
+html[data-theme="light"] .login-account-notification-option {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(91, 64, 160, 0.16);
+}
+
+html[data-theme="light"] .login-account-notification-option:hover {
+  background: rgba(124, 58, 237, 0.05);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+html[data-theme="light"] .login-account-notification-option.selected {
+  background: rgba(124, 58, 237, 0.07);
+  border-color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .login-account-notification {
+    left: 12px;
+    bottom: 12px;
+    top: auto;
+    width: calc(100vw - 24px);
+    transform: none;
+    animation-name: login-account-notification-mobile-in;
+  }
+
+  @keyframes login-account-notification-mobile-in {
+    from {
+      opacity: 0;
+      transform: translateY(110%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-account-notification {
+    animation: none;
+  }
+}
+

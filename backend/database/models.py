@@ -32,7 +32,7 @@ class UserModel(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     username = Column(String, nullable=False, unique=True, index=True)
-    email = Column(String, nullable=True, unique=True, index=True)
+    email = Column(String, nullable=True, unique=False, index=True)
     password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=utc_now)
@@ -52,7 +52,11 @@ class PasswordResetTokenModel(Base):
 class TenantMembershipModel(Base):
     __tablename__ = "tenant_memberships"
     __table_args__ = (
-        UniqueConstraint("user_id", name="uq_tenant_membership_user"),
+        UniqueConstraint(
+            "user_id",
+            "tenant_id",
+            name="uq_tenant_membership_user_tenant",
+        ),
         Index("ix_tenant_memberships_user", "user_id"),
         Index("ix_tenant_memberships_tenant", "tenant_id"),
     )

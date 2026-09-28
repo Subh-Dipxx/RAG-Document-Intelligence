@@ -731,18 +731,19 @@ function App() {
 
   const handleLogin = (accessToken, loggedInUsername) => {
     const claims = decodeJwtPayload(accessToken)
+    const nextUsername = claims.username || loggedInUsername || null
     const nextRole = claims.role || null
     const nextTenantId = claims.tenant_id || null
     const nextAccountType = claims.account_type || null
 
     localStorage.setItem("access_token", accessToken)
-    localStorage.setItem("username", loggedInUsername)
+    localStorage.setItem("username", nextUsername || "")
     localStorage.setItem("role", nextRole || "")
     localStorage.setItem("tenant_id", nextTenantId || "")
     localStorage.setItem("account_type", nextAccountType || "")
 
     setToken(accessToken)
-    setUsername(loggedInUsername)
+    setUsername(nextUsername)
     setRole(nextRole)
     setTenantId(nextTenantId)
     setAccountType(nextAccountType)
@@ -876,6 +877,17 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [organizationName, setOrganizationName] = useState('')
+  const [newOrganizationName, setNewOrganizationName] = useState('')
+  const [organizationCurrentPassword, setOrganizationCurrentPassword] = useState('')
+
+  const [myOrganizations, setMyOrganizations] = useState([])
+  const [loadingMyOrganizations, setLoadingMyOrganizations] = useState(false)
+  const [switchingOrganizationId, setSwitchingOrganizationId] = useState(null)
+  const [organizationSwitchError, setOrganizationSwitchError] = useState('')
+  const [organizationNameSaving, setOrganizationNameSaving] = useState(false)
+  const [organizationNameMessage, setOrganizationNameMessage] = useState('')
+  const [organizationNameError, setOrganizationNameError] = useState('')
 const [pendingDeleteDocument, setPendingDeleteDocument] = useState(null)
 const [deletingDocument, setDeletingDocument] = useState(false)
 const [deleteError, setDeleteError] = useState('')
@@ -921,6 +933,191 @@ const [usernameError, setUsernameError] = useState('')
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [documentPreview, setDocumentPreview] = useState(null)
+
+  const fetchMyOrganizations = async () => {
+    if (!token || accountType !== 'organization') {
+      setMyOrganizations([])
+      return []
+    }
+
+    setLoadingMyOrganizations(true)
+    setOrganizationSwitchError('')
+
+    try {
+      const res = await fetch(
+        '/api/v1/organization-members/my-organizations',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const data = await res.json().catch(() => [])
+
+      if (res.status === 401) {
+        handleLogout()
+        return []
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          `Failed to load organizations (${res.status})`
+        )
+      }
+
+      const organizations = Array.isArray(data) ? data : []
+
+      setMyOrganizations(organizations)
+
+      return organizations
+    } catch (error) {
+      console.error('Failed to load organizations:', error)
+      setOrganizationSwitchError(
+        error?.message || 'Failed to load organizations.'
+      )
+      return []
+    } finally {
+      setLoadingMyOrganizations(false)
+    }
+  }
+
+  const switchOrganization = async (organizationId) => {
+    if (
+      !token ||
+      accountType !== 'organization' ||
+      !organizationId ||
+      organizationId === tenantId
+    ) {
+      return
+    }
+
+    setSwitchingOrganizationId(organizationId)
+    setOrganizationSwitchError('')
+
+    try {
+      const res = await fetch(
+        '/api/v1/organization-members/switch',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            organization_id: organizationId,
+          }),
+        }
+      )
+
+      const data = await res.json().catch(() => ({}))
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          `Failed to switch organization (${res.status})`
+        )
+      }
+
+      const accessToken = data?.access_token
+
+      if (!accessToken) {
+        throw new Error('Organization switch did not return an access token.')
+      }
+
+      const claims = decodeJwtPayload(accessToken)
+
+      const nextRole = claims.role || data?.role || null
+      const nextTenantId =
+        claims.tenant_id || data?.organization_id || null
+      const nextAccountType =
+        claims.account_type || 'organization'
+
+      localStorage.setItem('access_token', accessToken)
+      localStorage.setItem('role', nextRole || '')
+      localStorage.setItem('tenant_id', nextTenantId || '')
+      localStorage.setItem('account_type', nextAccountType || '')
+
+      setToken(accessToken)
+      setRole(nextRole)
+      setTenantId(nextTenantId)
+      setAccountType(nextAccountType)
+
+      const switchedName =
+        data?.organization_name ||
+        myOrganizations.find(
+          (organization) =>
+            String(organization.organization_id) ===
+            String(organizationId)
+        )?.organization_name ||
+        ''
+
+      setOrganizationName(switchedName)
+      setNewOrganizationName(switchedName)
+      setOrganizationCurrentPassword('')
+      setOrganizationNameError('')
+      setOrganizationNameMessage('')
+
+      setSelectedDocument(null)
+      setDocuments([])
+      setAccessRequests([])
+      setAccessRequestStatus({})
+      setOrganizationMembers([])
+      setPendingOrganizationInvitations([])
+
+      setShowSettings(false)
+    } catch (error) {
+      console.error('Failed to switch organization:', error)
+      setOrganizationSwitchError(
+        error?.message || 'Failed to switch organization.'
+      )
+    } finally {
+      setSwitchingOrganizationId(null)
+    }
+  }
+
+  const fetchOrganizationSettings = async () => {
+    if (!token || accountType !== 'organization') {
+      setOrganizationName('')
+      setNewOrganizationName('')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/v1/organization-members/settings', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        return
+      }
+
+      const data = await res.json()
+      const name = data?.organization_name || ''
+
+      setOrganizationName(name)
+      setNewOrganizationName(name)
+    } catch (error) {
+      console.error('Failed to load organization settings:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (!token || accountType !== 'organization') {
+      setMyOrganizations([])
+      return
+    }
+
+    fetchMyOrganizations()
+  }, [token, accountType, tenantId])
 
   useEffect(() => {
     if (!token || accountType !== 'organization' || role !== 'member') {
@@ -1160,6 +1357,69 @@ const [usernameError, setUsernameError] = useState('')
       setInvitationActionError(error?.message || 'Unable to process invitation')
     } finally {
       setInvitationActionId(null)
+    }
+  }
+
+  const updateOrganizationName = async (event) => {
+    event.preventDefault()
+
+    if (!token || accountType !== 'organization' || role !== 'admin') {
+      return
+    }
+
+    const name = newOrganizationName.trim()
+
+    if (!name) {
+      setOrganizationNameError('Organization name is required.')
+      setOrganizationNameMessage('')
+      return
+    }
+
+    if (!organizationCurrentPassword) {
+      setOrganizationNameError('Current password is required.')
+      setOrganizationNameMessage('')
+      return
+    }
+
+    setOrganizationNameSaving(true)
+    setOrganizationNameError('')
+    setOrganizationNameMessage('')
+
+    try {
+      const res = await fetch('/api/v1/organization-members/settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          organization_name: name,
+          current_password: organizationCurrentPassword,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+            `Failed to update organization name (${res.status})`
+        )
+      }
+
+      const updatedName = data?.organization_name || name
+
+      setOrganizationName(updatedName)
+      setNewOrganizationName(updatedName)
+      setOrganizationCurrentPassword('')
+      setOrganizationNameMessage('Organization name updated successfully.')
+    } catch (error) {
+      console.error('Failed to update organization name:', error)
+      setOrganizationNameError(
+        error?.message || 'Failed to update organization name.'
+      )
+    } finally {
+      setOrganizationNameSaving(false)
     }
   }
 
@@ -3286,6 +3546,63 @@ const handleNewConversation = () => {
             </div>
 
             <div className="settings-content">
+        {accountType === 'organization' && myOrganizations.length > 1 && (
+          <div className="settings-section">
+            <h3>Organizations</h3>
+
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-title">
+                  Current organization
+                </div>
+                <div className="settings-row-description">
+                  Switch between organizations you have active access to.
+                </div>
+              </div>
+
+              <div className="settings-action-group">
+                <select
+                  className="settings-theme-button"
+                  value={tenantId || ''}
+                  onChange={(event) =>
+                    switchOrganization(event.target.value)
+                  }
+                  disabled={
+                    loadingMyOrganizations ||
+                    switchingOrganizationId !== null
+                  }
+                >
+                  {myOrganizations
+                    .filter(
+                      (organization) =>
+                        organization.access_status === 'active'
+                    )
+                    .map((organization) => (
+                      <option
+                        key={organization.organization_id}
+                        value={organization.organization_id}
+                      >
+                        {organization.organization_name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {switchingOrganizationId && (
+              <p className="settings-description">
+                Switching organization...
+              </p>
+            )}
+
+            {organizationSwitchError && (
+              <p className="settings-error-message">
+                {organizationSwitchError}
+              </p>
+            )}
+          </div>
+        )}
+
         {accountType === 'organization' && role === 'member' && (
           <div className="settings-section">
             <h3>Organization Invitations</h3>
@@ -3333,6 +3650,93 @@ const handleNewConversation = () => {
           </div>
         )}
 
+
+              {accountType === 'organization' && role === 'admin' && (
+                <div className="settings-section">
+                  <h3>Organization</h3>
+
+                  <form
+                    className="change-password-form"
+                    onSubmit={updateOrganizationName}
+                  >
+                    <div className="settings-row">
+                      <div>
+                        <div className="settings-row-title">
+                          Organization Name
+                        </div>
+                        <div className="settings-row-description">
+                          Change the name of your organization.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="change-password-field">
+                      <label htmlFor="organization-name">
+                        Organization name
+                      </label>
+                      <input
+                        id="organization-name"
+                        type="text"
+                        value={newOrganizationName}
+                        onChange={(event) => {
+                          setNewOrganizationName(event.target.value)
+                          setOrganizationNameError('')
+                          setOrganizationNameMessage('')
+                        }}
+                        placeholder="Enter organization name"
+                        maxLength={200}
+                        disabled={organizationNameSaving}
+                      />
+                    </div>
+
+                    <div className="change-password-field">
+                      <label htmlFor="organization-current-password">
+                        Current password
+                      </label>
+                      <input
+                        id="organization-current-password"
+                        type="password"
+                        value={organizationCurrentPassword}
+                        onChange={(event) => {
+                          setOrganizationCurrentPassword(event.target.value)
+                          setOrganizationNameError('')
+                          setOrganizationNameMessage('')
+                        }}
+                        autoComplete="current-password"
+                        placeholder="Enter current password"
+                        disabled={organizationNameSaving}
+                      />
+                    </div>
+
+                    {organizationNameError && (
+                      <p className="settings-error-message">
+                        {organizationNameError}
+                      </p>
+                    )}
+
+                    {organizationNameMessage && (
+                      <p className="settings-success-message">
+                        {organizationNameMessage}
+                      </p>
+                    )}
+
+                    <div className="settings-action-group">
+                      <button
+                        type="submit"
+                        className="settings-save-button"
+                        disabled={
+                          organizationNameSaving ||
+                          !newOrganizationName.trim()
+                        }
+                      >
+                        {organizationNameSaving
+                          ? 'Saving...'
+                          : 'Save Changes'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               <div className="settings-section">
                 <h3>Appearance</h3>

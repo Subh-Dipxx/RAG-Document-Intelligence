@@ -3,8 +3,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from backend.auth.dependencies import AuthContext, get_auth_context
+from backend.auth.security import create_access_token, verify_password
 from backend.database.models import OrganizationInvitationModel, TenantModel
 from datetime import datetime, timezone
 from backend.database.database import get_db
@@ -21,12 +23,28 @@ class InviteMemberRequest(BaseModel):
     email: str
 
 
+class UpdateOrganizationNameRequest(BaseModel):
+    organization_name: str
+    current_password: str
+
+
 class OrganizationMemberResponse(BaseModel):
     user_id: str
     username: str
     email: str | None = None
     role: str
     access_status: str = "pending"
+
+
+class OrganizationContextResponse(BaseModel):
+    organization_id: str
+    organization_name: str
+    role: str
+    access_status: str
+
+
+class SwitchOrganizationRequest(BaseModel):
+    organization_id: str
 
 
 def require_organization_admin(auth: AuthContext):
@@ -41,6 +59,193 @@ def require_organization_admin(auth: AuthContext):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Organization admin access required",
         )
+
+
+@router.get(
+    "/my-organizations",
+    response_model=List[OrganizationContextResponse],
+)
+def list_my_organizations(
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    rows = (
+        db.query(TenantMembershipModel, TenantModel)
+        .join(
+            TenantModel,
+            TenantMembershipModel.tenant_id == TenantModel.id,
+        )
+        .filter(
+            TenantMembershipModel.user_id == auth.user_id,
+        )
+        .order_by(TenantModel.name.asc())
+        .all()
+    )
+
+    return [
+        OrganizationContextResponse(
+            organization_id=tenant.id,
+            organization_name=tenant.name,
+            role=membership.role,
+            access_status=membership.access_status,
+        )
+        for membership, tenant in rows
+    ]
+
+
+@router.post("/switch", response_model=dict)
+def switch_organization(
+    payload: SwitchOrganizationRequest,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    membership = (
+        db.query(TenantMembershipModel, TenantModel)
+        .join(
+            TenantModel,
+            TenantMembershipModel.tenant_id == TenantModel.id,
+        )
+        .filter(
+            TenantMembershipModel.user_id == auth.user_id,
+            TenantMembershipModel.tenant_id == payload.organization_id,
+            TenantMembershipModel.access_status == "active",
+        )
+        .first()
+    )
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have active access to this organization",
+        )
+
+    membership_row, tenant = membership
+
+    access_token = create_access_token(
+        user_id=auth.user_id,
+        username=auth.username,
+        tenant_id=tenant.id,
+        role=membership_row.role,
+        account_type="organization",
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "organization_id": tenant.id,
+        "organization_name": tenant.name,
+        "role": membership_row.role,
+    }
+
+
+@router.get("/settings")
+def get_organization_settings(
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    if not auth.tenant_id or auth.account_type != "organization":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization access is required",
+        )
+
+    tenant = (
+        db.query(TenantModel)
+        .filter(TenantModel.id == auth.tenant_id)
+        .first()
+    )
+
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+
+    return {
+        "organization_name": tenant.name,
+    }
+
+
+@router.patch("/settings")
+def update_organization_settings(
+    payload: UpdateOrganizationNameRequest,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    require_organization_admin(auth)
+
+    organization_name = payload.organization_name.strip()
+
+    if not organization_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization name is required",
+        )
+
+    if len(organization_name) > 200:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization name must be 200 characters or fewer",
+        )
+
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.id == auth.user_id)
+        .first()
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive",
+        )
+
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    tenant = (
+        db.query(TenantModel)
+        .filter(TenantModel.id == auth.tenant_id)
+        .first()
+    )
+
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+
+    duplicate = (
+        db.query(TenantModel)
+        .filter(
+            TenantModel.id != auth.tenant_id,
+            func.lower(TenantModel.name) == organization_name.lower(),
+        )
+        .first()
+    )
+
+    if duplicate is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An organization with this name already exists",
+        )
+
+    tenant.name = organization_name
+    db.commit()
+    db.refresh(tenant)
+
+    return {
+        "organization_name": tenant.name,
+    }
 
 
 @router.get(
@@ -161,14 +366,12 @@ def invite_organization_member(
 
     membership = (
         db.query(TenantMembershipModel)
-        .filter(TenantMembershipModel.user_id == user.id)
+        .filter(
+            TenantMembershipModel.user_id == user.id,
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+        )
         .first()
     )
-    if membership and membership.tenant_id != auth.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This user already belongs to another organization",
-        )
 
     if membership and membership.role == "admin":
         raise HTTPException(

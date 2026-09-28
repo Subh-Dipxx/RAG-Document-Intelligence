@@ -33,6 +33,9 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
   const isLight = theme === 'light'
   const [accountType, setAccountType] = useState('individual')
   const [organizationLogin, setOrganizationLogin] = useState('')
+  const [loginAccounts, setLoginAccounts] = useState([])
+  const [showAccountSelection, setShowAccountSelection] = useState(false)
+  const [selectedLoginUsername, setSelectedLoginUsername] = useState('')
   const isOrganization = accountType === 'organization'
 
   const isSignup = mode === 'signup'
@@ -61,51 +64,11 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
     setConfirmPassword('')
   }
 
-  const handleOrganizationLogin = async (event) => {
-  event.preventDefault()
-  setError("")
-  setSuccess("")
-
-  if (!organizationLogin.trim() || !username.trim() || !password) {
-    setError("Please enter organization name, username, and password.")
-    return
-  }
-
-  setLoading(true)
-
-  try {
-    const res = await fetch("/api/v1/auth/organization-login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        organization_name: organizationLogin.trim(),
-        username: username.trim(),
-        password,
-      }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(data?.detail || "Organization login failed")
-    }
-
-    onLogin(data.access_token, username.trim())
-  } catch (err) {
-    console.error(err)
-    setError(err.message || "Organization login failed.")
-  } finally {
-    setLoading(false)
-  }
-}
-
   const handleLogin = async (e) => {
     e.preventDefault()
 
-    if (!username.trim() || !password) {
-      setError('Please enter username and password.')
+    if (!email.trim() || !password) {
+      setError('Please enter email and password.')
       return
     }
 
@@ -119,7 +82,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: username.trim(),
+          email: email.trim(),
           password,
         }),
       })
@@ -130,10 +93,58 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         throw new Error(data?.detail || 'Login failed')
       }
 
-      onLogin(data.access_token, username.trim())
+      if (data.requires_account_selection) {
+        setLoginAccounts(data.accounts || [])
+        setSelectedLoginUsername('')
+        setShowAccountSelection(true)
+        return
+      }
+
+      onLogin(data.access_token, email.trim())
     } catch (err) {
       console.error(err)
       setError(err.message || 'Login failed.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSelectLoginAccount = async () => {
+    if (!selectedLoginUsername) {
+      setError('Please select an account.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/v1/auth/select-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          username: selectedLoginUsername,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.detail || 'Unable to select account')
+      }
+
+      setShowAccountSelection(false)
+      setLoginAccounts([])
+      setSelectedLoginUsername('')
+
+      onLogin(data.access_token, email.trim())
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Unable to select account.')
     } finally {
       setLoading(false)
     }
@@ -342,11 +353,11 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
                 ? handleForgotPassword
                 : isSignup
                   ? handleSignup
-                  : isOrganization ? handleOrganizationLogin : handleLogin
+                  : handleLogin
           }
           className="login-form"
         >
-          {!isForgot && !isReset && (
+          {isSignup && !isForgot && !isReset && (
             <div className="account-type-control">
               <div className="account-type-label">Account Type</div>
               <div className="account-type-switch">
@@ -377,7 +388,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
             </div>
           )}
 
-          {isOrganization && !isForgot && !isReset && (
+          {isSignup && isOrganization && !isForgot && !isReset && (
             <>
               <label htmlFor="organization-login">Organization Name</label>
               <input
@@ -393,16 +404,33 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
           )}
           {!isForgot && !isReset && (
             <>
-              <label htmlFor="username">Username</label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
-                autoComplete="username"
-                disabled={loading}
-              />
+              {isSignup ? (
+                <>
+                  <label htmlFor="username">Username</label>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    autoComplete="username"
+                    disabled={loading}
+                  />
+                </>
+              ) : (
+                <>
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter email"
+                    autoComplete="email"
+                    disabled={loading}
+                  />
+                </>
+              )}
             </>
           )}
 
@@ -463,6 +491,7 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
               )}
             </>
           )}
+
 
           {!isForgot && !isSignup && !isReset && (
             <button
@@ -539,7 +568,90 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
             )}
           </div>
         </form>
+
+
       </div>
+
+        {showAccountSelection && !isSignup && !isForgot && !isReset && (
+          <div className="login-account-notification" role="dialog" aria-modal="false">
+            <div className="login-account-notification-header">
+              <div>
+                <div className="login-account-notification-title">
+                  Choose an account
+                </div>
+                <div className="login-account-notification-subtitle">
+                  Multiple accounts use this email
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="login-account-notification-close"
+                onClick={() => {
+                  setShowAccountSelection(false)
+                  setLoginAccounts([])
+                  setSelectedLoginUsername('')
+                  setError('')
+                }}
+                disabled={loading}
+                aria-label="Close account selection"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="login-account-notification-options">
+              {loginAccounts.map((account) => (
+                <label
+                  key={account.username}
+                  className={`login-account-notification-option${
+                    selectedLoginUsername === account.username ? " selected" : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="login-account"
+                    value={account.username}
+                    checked={selectedLoginUsername === account.username}
+                    onChange={() => {
+                      setSelectedLoginUsername(account.username)
+                      setError('')
+                    }}
+                    disabled={loading}
+                  />
+
+                  <span className="login-account-notification-radio" />
+
+                  <span className="login-account-notification-content">
+                    <strong>{account.username}</strong>
+
+                    {account.organization_names?.length > 0 && (
+                      <small>
+                        {account.organization_names.join(', ')}
+                      </small>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {error && (
+              <div className="login-account-notification-error">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="primary-button full-width"
+              onClick={handleSelectLoginAccount}
+              disabled={loading || !selectedLoginUsername}
+            >
+              {loading ? "Signing in..." : "Continue"}
+            </button>
+          </div>
+        )}
+
     </main>
   )
 }
