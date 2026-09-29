@@ -58,6 +58,8 @@ export default function SettingsPage() {
   const [organizationMembers, setOrganizationMembers] = useState([])
   const [loadingOrganizationMembers, setLoadingOrganizationMembers] = useState(false)
   const [showOrganizationMembers, setShowOrganizationMembers] = useState(false)
+  const [organizationMemberSearch, setOrganizationMemberSearch] = useState('')
+  const [organizationMemberSearchInput, setOrganizationMemberSearchInput] = useState('')
   const [memberEmail, setMemberEmail] = useState('')
   const [invitingMember, setInvitingMember] = useState(false)
   const [memberInviteError, setMemberInviteError] = useState('')
@@ -84,6 +86,18 @@ export default function SettingsPage() {
   const [deleteOrganizationPasswordVisible, setDeleteOrganizationPasswordVisible] = useState(false)
   const [deletingOrganizationId, setDeletingOrganizationId] = useState(null)
   const [deleteOrganizationError, setDeleteOrganizationError] = useState('')
+
+  const filteredOrganizationMembers = organizationMembers.filter((member) => {
+    const search = organizationMemberSearch.trim().toLowerCase()
+
+    if (!search) {
+      return true
+    }
+
+    return String(member.username || '')
+      .toLowerCase()
+      .includes(search)
+  })
 
   const getToken = () =>
     localStorage.getItem('access_token') ||
@@ -2272,6 +2286,51 @@ export default function SettingsPage() {
                             </div>
                           )}
 
+                          {!loadingOrganizationMembers &&
+                            organizationMembers.length > 0 && (
+                              <div
+                                className="organization-members-search-wrapper"
+                              >
+                                <input
+                                  type="search"
+                                  className="organization-members-search"
+                                  value={organizationMemberSearchInput}
+                                  onChange={(event) =>
+                                    setOrganizationMemberSearchInput(
+                                      event.target.value
+                                    )
+                                  }
+                                  placeholder="Search members by name..."
+                                  aria-label="Search organization members by name"
+                                />
+
+                                <button
+                                  type="button"
+                                  className="organization-members-search-icon"
+                                  onClick={() =>
+                                    setOrganizationMemberSearch(
+                                      organizationMemberSearchInput
+                                    )
+                                  }
+                                  aria-label="Search organization members"
+                                  title="Search"
+                                >
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <circle
+                                      cx="11"
+                                      cy="11"
+                                      r="6.5"
+                                    />
+                                    <path d="M16 16L21 21" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+
                           {loadingOrganizationMembers ? (
                             <div
                               className="settings-row-description"
@@ -2291,7 +2350,15 @@ export default function SettingsPage() {
                               className="organization-members-list"
                               style={{ marginTop: '10px' }}
                             >
-                              {organizationMembers.map((member) => {
+                              {filteredOrganizationMembers.length === 0 ? (
+                                <div
+                                  className="settings-row-description"
+                                  style={{ padding: '10px 0' }}
+                                >
+                                  No members match your search.
+                                </div>
+                              ) : (
+                                filteredOrganizationMembers.map((member) => {
                                 const isAdmin = member.role === 'admin'
                                 const hasAccess =
                                   member.access_status === 'active'
@@ -2393,7 +2460,8 @@ export default function SettingsPage() {
                                     </div>
                                   </div>
                                 )
-                              })}
+                                })
+                              )}
                             </div>
                           )}
                         </div>

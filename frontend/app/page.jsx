@@ -883,6 +883,28 @@ function App() {
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showOrganizationSection, setShowOrganizationSection] = useState(false)
+
+  useEffect(() => {
+    if (!showProfileMenu) {
+      return
+    }
+
+    const handleOutsideProfileClick = (event) => {
+      const profileArea = event.target.closest('.sidebar-profile')
+
+      if (!profileArea) {
+        setShowProfileMenu(false)
+      }
+    }
+
+    document.addEventListener('click', handleOutsideProfileClick)
+
+    return () => {
+      document.removeEventListener('click', handleOutsideProfileClick)
+    }
+  }, [showProfileMenu])
+
   const [showSettings, setShowSettings] = useState(false)
   const [showChangeOrganization, setShowChangeOrganization] = useState(false)
   const [settingsSection, setSettingsSection] = useState('account')
@@ -917,6 +939,42 @@ const [deleteError, setDeleteError] = useState('')
   const [accessRequestError, setAccessRequestError] = useState('')
   const [organizationMembers, setOrganizationMembers] = useState([])
   const [loadingOrganizationMembers, setLoadingOrganizationMembers] = useState(false)
+
+  const organizationAdminMember =
+    organizationMembers.find((member) => member?.role === 'admin') || null
+
+  const organizationAdminName =
+    organizationAdminMember?.username ||
+    organizationAdminMember?.email ||
+    'Organization Admin'
+
+  const organizationSidebarMembers =
+    role === 'admin'
+      ? organizationMembers.map((member) => ({
+          key:
+            member?.user_id ||
+            member?.email ||
+            member?.username,
+          name:
+            member?.username ||
+            member?.email ||
+            'Organization Member',
+          role: member?.role === 'admin' ? 'ADMIN' : 'MEMBER',
+        }))
+      : [
+          {
+            key:
+              organizationAdminMember?.user_id ||
+              'organization-admin',
+            name: organizationAdminName,
+            role: 'ADMIN',
+          },
+          {
+            key: 'current-member',
+            name: username || 'Current Member',
+            role: 'MEMBER',
+          },
+        ]
   const [showOrganizationMembers, setShowOrganizationMembers] = useState(false)
   const [memberEmail, setMemberEmail] = useState('')
   const [invitingMember, setInvitingMember] = useState(false)
@@ -3426,6 +3484,88 @@ const handleNewConversation = () => {
           <span className="sidebar-documents-icon">▣</span>
           <span className="sidebar-documents-text">Documents</span>
         </button>
+
+        {accountType === 'organization' && (
+          <div className="sidebar-organization">
+            <button
+              type="button"
+              className="sidebar-organization-toggle"
+              onClick={() =>
+                setShowOrganizationSection((open) => !open)
+              }
+              aria-expanded={showOrganizationSection}
+              aria-label="Organization"
+            >
+              <span
+                className="sidebar-organization-icon"
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4 21V5.5C4 4.67 4.67 4 5.5 4H14.5C15.33 4 16 4.67 16 5.5V21"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M16 9H18.5C19.33 9 20 9.67 20 10.5V21"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M8 8H12M8 12H12M8 16H12M18 13H20M18 17H20"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+
+              <span className="sidebar-organization-text">
+                {organizationName || 'Organization'}
+              </span>
+
+              <span
+                className={`sidebar-organization-chevron ${
+                  showOrganizationSection ? 'is-open' : ''
+                }`}
+                aria-hidden="true"
+              >
+                ›
+              </span>
+            </button>
+
+            {showOrganizationSection && (
+              <div className="sidebar-organization-members">
+                {organizationSidebarMembers.map((member) => (
+                  <div
+                    key={member.key}
+                    className="sidebar-organization-member"
+                  >
+                    <span className="sidebar-organization-member-name">
+                      {member.name}
+                    </span>
+
+                    <span
+                      className={`sidebar-organization-member-role ${
+                        member.role === 'ADMIN'
+                          ? 'is-admin'
+                          : 'is-member'
+                      }`}
+                    >
+                      {member.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="sidebar-profile">
           {showProfileMenu && (
