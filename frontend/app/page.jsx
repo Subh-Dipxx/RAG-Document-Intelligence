@@ -975,6 +975,28 @@ const [deleteError, setDeleteError] = useState('')
             role: 'MEMBER',
           },
         ]
+
+  const currentOrg = myOrganizations.find(
+    (org) => String(org?.organization_id) === String(tenantId)
+  ) || myOrganizations[0] || null
+
+  const currentOrgName =
+    organizationName ||
+    currentOrg?.organization_name ||
+    (accountType === 'organization' ? 'Organization' : '')
+
+  const currentRole =
+    role ||
+    currentOrg?.role ||
+    (typeof window !== 'undefined' ? localStorage.getItem('role') : '') ||
+    ''
+
+  const userRoleFormatted = currentRole
+    ? currentRole.toLowerCase() === 'admin'
+      ? 'Admin'
+      : 'Member'
+    : 'Member'
+
   const [showOrganizationMembers, setShowOrganizationMembers] = useState(false)
   const [memberEmail, setMemberEmail] = useState('')
   const [invitingMember, setInvitingMember] = useState(false)
@@ -1342,10 +1364,12 @@ const [usernameError, setUsernameError] = useState('')
   useEffect(() => {
     if (!token || accountType !== 'organization') {
       setMyOrganizations([])
+      setOrganizationName('')
       return
     }
 
     fetchMyOrganizations()
+    fetchOrganizationSettings()
   }, [token, accountType, tenantId])
 
   useEffect(() => {
@@ -3472,7 +3496,7 @@ const handleNewConversation = () => {
           <IconChatHistory />
           <span className="sidebar-history-text">Chat History</span>
         </button>
-<button
+        <button
           type="button"
           className="sidebar-documents"
           aria-label="Open Documents"
@@ -3485,135 +3509,64 @@ const handleNewConversation = () => {
           <span className="sidebar-documents-text">Documents</span>
         </button>
 
-        {accountType === 'organization' && (
-          <div className="sidebar-organization">
-            <button
-              type="button"
-              className="sidebar-organization-toggle"
-              onClick={() =>
-                setShowOrganizationSection((open) => !open)
-              }
-              aria-expanded={showOrganizationSection}
-              aria-label="Organization"
+        <button
+          type="button"
+          className="sidebar-documents sidebar-settings-btn"
+          aria-label="Settings"
+          onClick={() => {
+            window.location.href = '/settings?section=organization'
+          }}
+        >
+          <span className="sidebar-documents-icon">⚙</span>
+          <span className="sidebar-documents-text">Settings</span>
+          {pendingOrganizationInvitations.length > 0 && (
+            <span
+              className="sidebar-settings-badge"
+              aria-label={`${pendingOrganizationInvitations.length} pending invitation(s)`}
             >
-              <span
-                className="sidebar-organization-icon"
-                aria-hidden="true"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 21V5.5C4 4.67 4.67 4 5.5 4H14.5C15.33 4 16 4.67 16 5.5V21"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M16 9H18.5C19.33 9 20 9.67 20 10.5V21"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M8 8H12M8 12H12M8 16H12M18 13H20M18 17H20"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-
-              <span className="sidebar-organization-text">
-                {organizationName || 'Organization'}
-              </span>
-
-              <span
-                className={`sidebar-organization-chevron ${
-                  showOrganizationSection ? 'is-open' : ''
-                }`}
-                aria-hidden="true"
-              >
-                ›
-              </span>
-            </button>
-
-            {showOrganizationSection && (
-              <div className="sidebar-organization-members">
-                {organizationSidebarMembers.map((member) => (
-                  <div
-                    key={member.key}
-                    className="sidebar-organization-member"
-                  >
-                    <span className="sidebar-organization-member-name">
-                      {member.name}
-                    </span>
-
-                    <span
-                      className={`sidebar-organization-member-role ${
-                        member.role === 'ADMIN'
-                          ? 'is-admin'
-                          : 'is-member'
-                      }`}
-                    >
-                      {member.role}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+              {pendingOrganizationInvitations.length}
+            </span>
+          )}
+        </button>
 
         <div className="sidebar-profile">
           {showProfileMenu && (
             <div className="sidebar-profile-menu">
-              <div className="sidebar-profile-menu-user">
+              <div
+                className="sidebar-profile-menu-user"
+                role="button"
+                tabIndex={0}
+                title="Go to Account Settings"
+                onClick={() => {
+                  setShowProfileMenu(false)
+                  window.location.href = '/settings?section=account'
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setShowProfileMenu(false)
+                    window.location.href = '/settings?section=account'
+                  }
+                }}
+              >
                 <div className="sidebar-profile-menu-avatar">
                   <span>{username ? username.charAt(0).toUpperCase() : 'U'}</span>
                 </div>
-                <span>{username || 'User'}</span>
+                <div className="sidebar-profile-menu-details">
+                  <span className="sidebar-profile-menu-name">{username || 'User'}</span>
+                  {(accountType === 'organization' || currentOrgName) && (
+                    <div className="sidebar-profile-menu-org-info">
+                      <span className="sidebar-profile-menu-org-name" title={currentOrgName || 'Organization'}>
+                        {currentOrgName || 'Organization'}
+                      </span>
+                      <span className={`sidebar-profile-menu-role ${userRoleFormatted === 'Admin' ? 'is-admin' : 'is-member'}`}>
+                        {userRoleFormatted}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="sidebar-profile-menu-divider" />
-
-              <button
-                type="button"
-                className="sidebar-profile-settings"
-                style={{ position: 'relative' }}
-                onClick={() => {
-                  setShowProfileMenu(false)
-                  window.location.href = '/settings'
-                }}
-              >
-                <span className="sidebar-profile-settings-icon">⚙</span>
-                <span>Settings</span>
-                {pendingOrganizationInvitations.length > 0 && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginLeft: 'auto',
-                      minWidth: '18px',
-                      height: '18px',
-                      padding: '0 5px',
-                      borderRadius: '999px',
-                      backgroundColor: '#ef4444',
-                      color: '#ffffff',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      lineHeight: 1,
-                      boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
-                    }}
-                    aria-label={`${pendingOrganizationInvitations.length} pending invitation(s)`}
-                  >
-                    {pendingOrganizationInvitations.length}
-                  </span>
-                )}
-              </button>
 
               <button
                 type="button"
@@ -3875,9 +3828,9 @@ const handleNewConversation = () => {
             <div className="settings-header">
               <div>
                 <h2>
-                  {settingsSection === 'organization'
-                    ? 'Organization'
-                    : 'Account'}
+                  {settingsSection === 'account'
+                    ? 'Profile'
+                    : 'Settings'}
                 </h2>
               </div>
 
@@ -3892,51 +3845,7 @@ const handleNewConversation = () => {
             </div>
 
             <div className="settings-body">
-              <nav
-                className="settings-sidebar"
-                aria-label="Settings sections"
-              >
-                {accountType === 'organization' && role === 'admin' && (
-                  <button
-                    type="button"
-                    className={`settings-sidebar-item${settingsSection === 'organization' ? ' is-active' : ''}`}
-                    onClick={() => setSettingsSection('organization')}
-                    aria-current={
-                      settingsSection === 'organization'
-                        ? 'page'
-                        : undefined
-                    }
-                  >
-                    <span
-                      className="settings-sidebar-icon"
-                      aria-hidden="true"
-                    >
-                      ⌘
-                    </span>
-                    <span>Organization</span>
-                  </button>
-                )}
 
-                <button
-                  type="button"
-                  className={`settings-sidebar-item${settingsSection === 'account' ? ' is-active' : ''}`}
-                  onClick={() => setSettingsSection('account')}
-                  aria-current={
-                    settingsSection === 'account'
-                      ? 'page'
-                      : undefined
-                  }
-                >
-                  <span
-                    className="settings-sidebar-icon"
-                    aria-hidden="true"
-                  >
-                    ○
-                  </span>
-                  <span>Account</span>
-                </button>
-
-              </nav>
 
               <div
                 className="settings-content"

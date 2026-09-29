@@ -130,7 +130,10 @@ export default function SettingsPage() {
     setUsername(storedUsername || '')
     setTenantId(storedTenantId || null)
 
-    if (storedAccountType === 'organization' && storedRole === 'admin') {
+    const searchSection = new URLSearchParams(window.location.search).get('section')
+    if (searchSection) {
+      setSettingsSection(searchSection)
+    } else if (storedAccountType === 'organization' && storedRole === 'admin') {
       setSettingsSection('organization')
     }
 
@@ -1212,73 +1215,51 @@ export default function SettingsPage() {
       <main className="settings-page">
         <div className="settings-page-shell">
           <header className="settings-page-header">
-            <div>
-              <p className="eyebrow">DocGPT</p>
-              <h1>Settings</h1>
-              <p className="settings-page-subtitle">
-                Manage your account and organization access.
-              </p>
+            <div className="settings-header-left">
+              <button
+                type="button"
+                className="settings-back-button"
+                onClick={() => router.push('/')}
+                title="Back to DocGPT"
+                aria-label="Back to DocGPT"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M19 12H5M5 12L12 19M5 12L12 5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
 
-              {accountType === 'organization' && organizationName && (
-                <div className="settings-current-organization">
-                  Organization: {organizationName}
-                </div>
-              )}
+              <div>
+                <p className="eyebrow">DocGPT</p>
+                <h1>{settingsSection === 'account' ? 'Profile' : 'Settings'}</h1>
+                <p className="settings-page-subtitle">
+                  {settingsSection === 'account'
+                    ? 'Manage your account details and profile.'
+                    : 'Manage your organization and team access.'}
+                </p>
+
+                {accountType === 'organization' && organizationName && (
+                  <div className="settings-current-organization">
+                    Organization: {organizationName}
+                  </div>
+                )}
+              </div>
             </div>
-
-            <button
-              type="button"
-              className="settings-secondary-button"
-              onClick={() => router.push('/')}
-            >
-              Back to DocGPT
-            </button>
           </header>
 
           <div className="settings-page-body">
-            <nav
-              className="settings-sidebar"
-              aria-label="Settings sections"
-            >
 
-              {organizationAdminVisible && (
-                <button
-                  type="button"
-                  className={`settings-sidebar-item${
-                    settingsSection === 'organization'
-                      ? ' is-active'
-                      : ''
-                  }`}
-                  onClick={() => {
-                    setSettingsSection('organization')
-                    router.replace('/settings')
-                  }}
-                >
-                  <span className="settings-sidebar-icon" aria-hidden="true">
-                    ⌘
-                  </span>
-                  <span>Organization</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                className={`settings-sidebar-item${
-                  settingsSection === 'account'
-                    ? ' is-active'
-                    : ''
-                }`}
-                onClick={() => {
-                  setSettingsSection('account')
-                  router.replace('/settings')
-                }}
-              >
-                <span className="settings-sidebar-icon" aria-hidden="true">
-                  ○
-                </span>
-                <span>Account</span>
-              </button>
-            </nav>
 
             <div
               className="settings-content settings-page-content"
