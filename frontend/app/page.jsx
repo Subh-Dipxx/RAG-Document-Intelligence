@@ -894,6 +894,14 @@ function App() {
   const [loadingMyOrganizations, setLoadingMyOrganizations] = useState(false)
   const [switchingOrganizationId, setSwitchingOrganizationId] = useState(null)
   const [organizationSwitchError, setOrganizationSwitchError] = useState('')
+
+  const [adminOrganizations, setAdminOrganizations] = useState([])
+  const [loadingAdminOrganizations, setLoadingAdminOrganizations] = useState(false)
+  const [pendingDeleteOrganization, setPendingDeleteOrganization] = useState(null)
+  const [deleteOrganizationPassword, setDeleteOrganizationPassword] = useState('')
+  const [deleteOrganizationPasswordVisible, setDeleteOrganizationPasswordVisible] = useState(false)
+  const [deletingOrganizationId, setDeletingOrganizationId] = useState(null)
+  const [deleteOrganizationError, setDeleteOrganizationError] = useState('')
   const [organizationNameSaving, setOrganizationNameSaving] = useState(false)
   const [organizationNameMessage, setOrganizationNameMessage] = useState('')
   const [organizationNameError, setOrganizationNameError] = useState('')
@@ -989,6 +997,160 @@ const [usernameError, setUsernameError] = useState('')
       return []
     } finally {
       setLoadingMyOrganizations(false)
+    }
+  }
+
+  const fetchAdminOrganizations = async () => {
+    if (!token) {
+      setAdminOrganizations([])
+      return []
+    }
+
+    setLoadingAdminOrganizations(true)
+    setDeleteOrganizationError('')
+
+    try {
+      const res = await fetch('/api/v1/account-management/organizations', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await res.json().catch(() => [])
+
+      if (res.status === 401) {
+        handleLogout()
+        return []
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          `Failed to load organizations you administer (${res.status})`
+        )
+      }
+
+      const organizations = Array.isArray(data) ? data : []
+      setAdminOrganizations(organizations)
+      return organizations
+    } catch (error) {
+      console.error('Failed to load admin organizations:', error)
+      setDeleteOrganizationError(
+        error?.message || 'Failed to load organizations you administer.'
+      )
+      return []
+    } finally {
+      setLoadingAdminOrganizations(false)
+    }
+  }
+
+  const openDeleteOrganization = (organization) => {
+    if (!organization?.organization_id) {
+      return
+    }
+
+    if (organization.organization_id === tenantId) {
+      setDeleteOrganizationError(
+        'Switch to another organization before deleting this organization.'
+      )
+      return
+    }
+
+    setPendingDeleteOrganization(organization)
+    setDeleteOrganizationPassword('')
+    setDeleteOrganizationPasswordVisible(false)
+    setDeleteOrganizationError('')
+  }
+
+  const closeDeleteOrganization = () => {
+    if (deletingOrganizationId) {
+      return
+    }
+
+    setPendingDeleteOrganization(null)
+    setDeleteOrganizationPassword('')
+    setDeleteOrganizationPasswordVisible(false)
+    setDeleteOrganizationError('')
+  }
+
+  const deleteOrganization = async () => {
+    const organization = pendingDeleteOrganization
+
+    if (!token || !organization?.organization_id) {
+      return
+    }
+
+    if (organization.organization_id === tenantId) {
+      setDeleteOrganizationError(
+        'Switch to another organization before deleting this organization.'
+      )
+      return
+    }
+
+    if (!deleteOrganizationPassword) {
+      setDeleteOrganizationError(
+        'Enter the password for the account that administers this organization.'
+      )
+      return
+    }
+
+    setDeletingOrganizationId(organization.organization_id)
+    setDeleteOrganizationError('')
+
+    try {
+      const res = await fetch(
+        `/api/v1/account-management/organizations/${encodeURIComponent(
+          organization.organization_id
+        )}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            password: deleteOrganizationPassword,
+          }),
+        }
+      )
+
+      const data = await res.json().catch(() => ({}))
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          `Failed to delete organization (${res.status})`
+        )
+      }
+
+      const deletedId = organization.organization_id
+
+      setAdminOrganizations((current) =>
+        current.filter((item) => item.organization_id !== deletedId)
+      )
+      setMyOrganizations((current) =>
+        current.filter((item) => item.organization_id !== deletedId)
+      )
+
+      setPendingDeleteOrganization(null)
+      setDeleteOrganizationPassword('')
+      setDeleteOrganizationPasswordVisible(false)
+      setDeleteOrganizationError('')
+
+      await fetchAdminOrganizations()
+      await fetchMyOrganizations()
+    } catch (error) {
+      console.error('Failed to delete organization:', error)
+      setDeleteOrganizationError(
+        error?.message || 'Failed to delete organization.'
+      )
+    } finally {
+      setDeletingOrganizationId(null)
     }
   }
 
@@ -1359,6 +1521,12 @@ const [usernameError, setUsernameError] = useState('')
         setSelectedDocument(null)
         setAccountType('organization')
         localStorage.setItem('account_type', 'organization')
+
+        if (data?.organization_id) {
+          localStorage.setItem('tenant_id', data.organization_id)
+          setTenantId(data.organization_id)
+        }
+
         await fetchMyOrganizations()
         await fetchDocuments()
       }
@@ -3275,18 +3443,9 @@ const handleNewConversation = () => {
                 type="button"
                 className="sidebar-profile-settings"
                 style={{ position: 'relative' }}
-                onClick={async () => {
+                onClick={() => {
                   setShowProfileMenu(false)
-                  setSettingsSection(
-                    accountType === 'organization' && role === 'admin'
-                      ? 'organization'
-                      : 'account'
-                  )
-                  setShowSettings(true)
-                  await fetchOrganizationInvitations()
-                  if (accountType === 'organization' && role === 'admin') {
-                    await fetchOrganizationMembers()
-                  }
+                  window.location.href = '/settings'
                 }}
               >
                 <span className="sidebar-profile-settings-icon">⚙</span>
@@ -3578,9 +3737,7 @@ const handleNewConversation = () => {
                 <h2>
                   {settingsSection === 'organization'
                     ? 'Organization'
-                    : settingsSection === 'invitations'
-                      ? 'Organization Invitations'
-                      : 'Account'}
+                    : 'Account'}
                 </h2>
               </div>
 
@@ -3639,44 +3796,6 @@ const handleNewConversation = () => {
                   <span>Account</span>
                 </button>
 
-                {pendingOrganizationInvitations.length > 0 && (
-                  <button
-                    type="button"
-                    className={`settings-sidebar-item${settingsSection === 'invitations' ? ' is-active' : ''}`}
-                    onClick={() => setSettingsSection('invitations')}
-                    aria-current={
-                      settingsSection === 'invitations'
-                        ? 'page'
-                        : undefined
-                    }
-                  >
-                    <span
-                      className="settings-sidebar-icon"
-                      aria-hidden="true"
-                    >
-                      ✉
-                    </span>
-                    <span>Invitations</span>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginLeft: 'auto',
-                        minWidth: '16px',
-                        height: '16px',
-                        padding: '0 4px',
-                        borderRadius: '999px',
-                        backgroundColor: '#ef4444',
-                        color: '#ffffff',
-                        fontSize: '10px',
-                        fontWeight: '700',
-                      }}
-                    >
-                      {pendingOrganizationInvitations.length}
-                    </span>
-                  </button>
-                )}
               </nav>
 
               <div
@@ -4456,6 +4575,238 @@ const handleNewConversation = () => {
                 </div>
               )}
             </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingDeleteOrganization && (
+        <div
+          className="delete-confirm-overlay"
+          role="presentation"
+          onClick={closeDeleteOrganization}
+        >
+          <div
+            className="delete-confirm-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-organization-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="delete-confirm-content">
+              <h2 id="delete-organization-title">
+                Delete organization?
+              </h2>
+
+              <p className="delete-confirm-document">
+                {pendingDeleteOrganization.organization_name}
+              </p>
+
+              <p className="delete-confirm-message">
+                This permanently removes this organization and its memberships,
+                invitations, access grants, and access requests. Your account
+                will not be deleted, and your current session will remain active.
+              </p>
+
+              <div className="change-password-field">
+                <label htmlFor="delete-organization-password">
+                  Password for the account that administers this organization
+                </label>
+
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="delete-organization-password"
+                    type={
+                      deleteOrganizationPasswordVisible
+                        ? 'text'
+                        : 'password'
+                    }
+                    value={deleteOrganizationPassword}
+                    onChange={(event) => {
+                      setDeleteOrganizationPassword(event.target.value)
+                      setDeleteOrganizationError('')
+                    }}
+                    autoComplete="current-password"
+                    placeholder="Enter administrator account password"
+                    disabled={Boolean(deletingOrganizationId)}
+                    autoFocus
+                    style={{ paddingRight: '92px', width: '100%' }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDeleteOrganizationPasswordVisible(
+                        (current) => !current
+                      )
+                    }
+                    disabled={Boolean(deletingOrganizationId)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: '0',
+                      background: 'transparent',
+                      color: 'var(--muted)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {deleteOrganizationPasswordVisible
+                      ? 'Hide'
+                      : 'Show'}
+                  </button>
+                </div>
+              </div>
+
+              {deleteOrganizationError && (
+                <div className="delete-confirm-error">
+                  {deleteOrganizationError}
+                </div>
+              )}
+            </div>
+
+            <div className="delete-confirm-actions">
+              <button
+                type="button"
+                className="delete-confirm-cancel"
+                onClick={closeDeleteOrganization}
+                disabled={Boolean(deletingOrganizationId)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="delete-confirm-delete"
+                onClick={deleteOrganization}
+                disabled={
+                  Boolean(deletingOrganizationId) ||
+                  !deleteOrganizationPassword
+                }
+              >
+                {deletingOrganizationId
+                  ? 'Deleting...'
+                  : 'Delete Organization'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingDeleteOrganization && (
+        <div
+          className="delete-confirm-overlay"
+          role="presentation"
+          onClick={closeDeleteOrganization}
+        >
+          <div
+            className="delete-confirm-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-organization-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="delete-confirm-content">
+              <h2 id="delete-organization-title">
+                Delete organization?
+              </h2>
+
+              <p className="delete-confirm-document">
+                {pendingDeleteOrganization.organization_name}
+              </p>
+
+              <p className="delete-confirm-message">
+                This permanently removes this organization and its memberships,
+                invitations, access grants, and access requests. Your account
+                will not be deleted, and your current session will remain active.
+              </p>
+
+              <div className="change-password-field">
+                <label htmlFor="delete-organization-password">
+                  Password for the account that administers this organization
+                </label>
+
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="delete-organization-password"
+                    type={
+                      deleteOrganizationPasswordVisible
+                        ? 'text'
+                        : 'password'
+                    }
+                    value={deleteOrganizationPassword}
+                    onChange={(event) => {
+                      setDeleteOrganizationPassword(event.target.value)
+                      setDeleteOrganizationError('')
+                    }}
+                    autoComplete="current-password"
+                    placeholder="Enter administrator account password"
+                    disabled={Boolean(deletingOrganizationId)}
+                    autoFocus
+                    style={{ paddingRight: '92px', width: '100%' }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDeleteOrganizationPasswordVisible(
+                        (current) => !current
+                      )
+                    }
+                    disabled={Boolean(deletingOrganizationId)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: '0',
+                      background: 'transparent',
+                      color: 'var(--muted)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {deleteOrganizationPasswordVisible ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+
+              {deleteOrganizationError && (
+                <div className="delete-confirm-error">
+                  {deleteOrganizationError}
+                </div>
+              )}
+            </div>
+
+            <div className="delete-confirm-actions">
+              <button
+                type="button"
+                className="delete-confirm-cancel"
+                onClick={closeDeleteOrganization}
+                disabled={Boolean(deletingOrganizationId)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="delete-confirm-delete"
+                onClick={deleteOrganization}
+                disabled={
+                  Boolean(deletingOrganizationId) ||
+                  !deleteOrganizationPassword
+                }
+              >
+                {deletingOrganizationId
+                  ? 'Deleting...'
+                  : 'Delete Organization'}
+              </button>
             </div>
           </div>
         </div>

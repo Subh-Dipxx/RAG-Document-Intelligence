@@ -4441,6 +4441,69 @@ html.dark {
   border-color: #b91c1c;
 }
 
+.revoke-member-confirm-panel {
+  width: min(430px, calc(100vw - 40px));
+}
+
+.revoke-confirm-cancel,
+.revoke-confirm-revoke {
+  min-width: 88px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.revoke-confirm-cancel {
+  border: 1px solid rgba(124, 58, 237, 0.32);
+  background: #ffffff;
+  color: #7c3aed;
+}
+
+.revoke-confirm-cancel:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.06);
+  border-color: rgba(124, 58, 237, 0.48);
+}
+
+.revoke-confirm-revoke {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.revoke-confirm-revoke:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.revoke-confirm-cancel:active:not(:disabled),
+.revoke-confirm-revoke:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.revoke-confirm-cancel:disabled,
+.revoke-confirm-revoke:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+html[data-theme="dark"] .revoke-confirm-cancel,
+html.dark .revoke-confirm-cancel {
+  background: #ffffff;
+  border-color: rgba(167, 139, 250, 0.5);
+  color: #7c3aed;
+}
+
+
 .delete-confirm-cancel:active:not(:disabled),
 .delete-confirm-delete:active:not(:disabled) {
   transform: translateY(1px);
@@ -5803,7 +5866,7 @@ html[data-theme="dark"] .organization-invitation-actions .settings-secondary-but
 
 .organization-member-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 44px;
+  grid-template-columns: minmax(0, 1fr) max-content auto;
   align-items: center;
   column-gap: 16px;
   min-height: 64px;
@@ -5814,6 +5877,13 @@ html[data-theme="dark"] .organization-invitation-actions .settings-secondary-but
 
 .organization-member-info {
   min-width: 0;
+  overflow: hidden;
+}
+
+.organization-member-info .settings-row-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .organization-member-name {
@@ -5864,6 +5934,112 @@ html[data-theme="dark"] .organization-invitation-actions .settings-secondary-but
   align-items: center;
   justify-content: flex-end;
   width: 44px;
+}
+
+.organization-member-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  width: auto;
+}
+
+/* Grant Access button */
+.organization-member-grant-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.08);
+  color: #7c3aed;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+}
+
+.organization-member-grant-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.organization-member-grant-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.organization-member-grant-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+html.dark .organization-member-grant-button {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+html.dark .organization-member-grant-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+.organization-member-revoke-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.08);
+  color: #7c3aed;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+}
+
+.organization-member-revoke-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.organization-member-revoke-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.organization-member-revoke-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+html.dark .organization-member-revoke-button {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+html.dark .organization-member-revoke-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(167, 139, 250, 0.55);
 }
 
 .organization-member-delete-button {
@@ -5920,13 +6096,20 @@ html.dark .organization-member-delete-button:hover:not(:disabled) {
 
 @media (max-width: 640px) {
   .organization-member-row {
-    grid-template-columns: minmax(0, 1fr) 120px 40px;
-    column-gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
     padding: 10px;
   }
 
   .organization-member-access {
     font-size: 10px;
+    justify-self: start;
+  }
+
+  .organization-member-actions {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
   }
 }
 
@@ -8662,3 +8845,477 @@ html.dark .settings-sidebar-item.is-active {
   display: none !important;
 }
 
+
+/* Organization deletion confirmation */
+
+/* Organization deletion confirmation */
+.organization-admin-section {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.organization-admin-section h3 {
+  margin-bottom: 8px;
+}
+
+.organization-admin-section .organization-member-delete-button {
+  flex-shrink: 0;
+}
+
+
+/* Dedicated Settings page */
+.settings-page {
+  min-height: 100vh;
+  padding: 40px;
+  background: var(--bg);
+}
+
+.settings-page-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.settings-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.settings-page-header h1 {
+  margin: 4px 0 8px;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+}
+
+.settings-page-subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.settings-current-organization {
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+
+.settings-page-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  min-height: 650px;
+}
+
+.settings-page-content {
+  min-width: 0;
+}
+
+.organization-admin-section {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.organization-admin-section h3 {
+  margin-bottom: 8px;
+}
+
+.organization-admin-section .organization-member-delete-button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .settings-page {
+    padding: 20px;
+  }
+
+  .settings-page-header {
+    flex-direction: column;
+  }
+
+  .settings-page-body {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-sidebar {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .settings-sidebar-item {
+    white-space: nowrap;
+  }
+}
+
+/* Switch Accounts */
+.switch-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.switch-account-card {
+  width: 100%;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid rgba(124, 58, 237, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.switch-account-card:hover:not(:disabled) {
+  border-color: rgba(124, 58, 237, 0.38);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(76, 29, 149, 0.08);
+  transform: translateY(-1px);
+}
+
+.switch-account-card:disabled {
+  cursor: default;
+}
+
+.switch-account-card-current {
+  border-color: #8b5cf6;
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.07),
+    rgba(255, 255, 255, 0.94)
+  );
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.08),
+    0 8px 24px rgba(124, 58, 237, 0.08);
+}
+
+.switch-account-radio {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #a1a1aa;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.switch-account-radio-current {
+  border-color: #7c3aed;
+}
+
+.switch-account-radio-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  );
+}
+
+.switch-account-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.07);
+  color: #6d28d9;
+}
+
+.switch-account-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.switch-account-details {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.switch-account-name-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.switch-account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+  color: #17142b;
+}
+
+.switch-account-current {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.switch-account-username {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #7b7395;
+  font-size: 13px;
+}
+
+.switch-account-arrow {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9a94aa;
+}
+
+.switch-account-arrow svg {
+  width: 17px;
+  height: 17px;
+}
+
+.switch-account-card-current .switch-account-arrow {
+  color: #7c3aed;
+}
+
+@media (max-width: 640px) {
+  .switch-account-card {
+    min-height: 70px;
+    padding: 10px 12px;
+    gap: 11px;
+  }
+
+  .switch-account-icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .switch-account-name {
+    font-size: 14px;
+  }
+}
+
+
+.switch-account-delete {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.06);
+  color: #dc2626;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.switch-account-delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.40);
+}
+
+.switch-account-delete:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+
+/* Revoke dialog — match Logout confirmation exactly */
+
+.revoke-member-confirm-panel {
+  width: min(420px, calc(100vw - 40px));
+  padding: 30px;
+  border-radius: 20px;
+  box-sizing: border-box;
+}
+
+.revoke-member-confirm-panel .delete-confirm-content {
+  text-align: center;
+}
+
+.revoke-member-confirm-panel #revoke-member-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.revoke-member-confirm-panel .delete-confirm-document {
+  margin: 18px 0 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.revoke-member-confirm-panel .delete-confirm-message {
+  margin: 10px 0 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.revoke-member-confirm-panel .delete-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 26px;
+  width: 100%;
+}
+
+.revoke-confirm-revoke,
+.revoke-confirm-cancel {
+  width: 100%;
+  min-height: 48px;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  box-sizing: border-box;
+
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.revoke-confirm-revoke {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.18);
+}
+
+.revoke-confirm-revoke:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.revoke-confirm-cancel {
+  border: 1px solid #d8c4ff;
+  background: #ffffff;
+  color: #6d28d9;
+}
+
+.revoke-confirm-cancel:hover:not(:disabled) {
+  background: #f3eaff;
+  border-color: #c9adff;
+  color: #6d28d9;
+}
+
+.revoke-confirm-revoke:disabled,
+.revoke-confirm-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.revoke-confirm-revoke:active:not(:disabled),
+.revoke-confirm-cancel:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+html[data-theme="dark"] .revoke-member-confirm-panel,
+html.dark .revoke-member-confirm-panel {
+  background: var(--surface);
+}
+
+html[data-theme="dark"] .revoke-confirm-cancel,
+html.dark .revoke-confirm-cancel {
+  background: #ffffff;
+  border-color: #d8c4ff;
+  color: #6d28d9;
+}
+
+@media (max-width: 520px) {
+  .revoke-member-confirm-panel {
+    width: 100%;
+    padding: 30px;
+    border-radius: 20px;
+  }
+
+  .revoke-confirm-revoke,
+  .revoke-confirm-cancel {
+    width: 100%;
+  }
+}
+
+/* Back to DocGPT — match Change Organization Name button */
+.settings-page-header .settings-secondary-button {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  ) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.22) !important;
+}
+
+.settings-page-header .settings-secondary-button:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    #a78bfa 0%,
+    #7c3aed 100%
+  ) !important;
+  color: #ffffff !important;
+  filter: brightness(1.05);
+}
+
+
+/* Revoke Access — pill shape only */
+.organization-member-revoke-button {
+  border-radius: 999px !important;
+}

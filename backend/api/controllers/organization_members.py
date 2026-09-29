@@ -7,10 +7,20 @@ from sqlalchemy import func
 
 from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.auth.security import create_access_token, verify_password
-from backend.database.models import OrganizationInvitationModel, TenantModel
+from backend.database.models import (
+    AccessGrantModel,
+    AccessRequestModel,
+    OrganizationInvitationModel,
+    TenantModel,
+)
 from datetime import datetime, timezone
 from backend.database.database import get_db
-from backend.database.models import TenantMembershipModel, UserModel
+from backend.database.models import (
+    AccessGrantModel,
+    AccessRequestModel,
+    TenantMembershipModel,
+    UserModel,
+)
 
 
 router = APIRouter(
@@ -284,6 +294,80 @@ def list_organization_members(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/{user_id}/revoke-access",
+    response_model=OrganizationMemberResponse,
+)
+def revoke_organization_member_access(
+    user_id: str,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    require_organization_admin(auth)
+
+    if user_id == auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot revoke your own organization access",
+        )
+
+    membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.user_id == user_id,
+        )
+        .first()
+    )
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization member not found",
+        )
+
+    if membership.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization admin access cannot be revoked",
+        )
+
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization member account not found",
+        )
+
+    membership.access_status = "revoked"
+
+    db.query(AccessGrantModel).filter(
+        AccessGrantModel.tenant_id == auth.tenant_id,
+        AccessGrantModel.principal == user_id,
+    ).delete(synchronize_session=False)
+
+    db.query(AccessRequestModel).filter(
+        AccessRequestModel.tenant_id == auth.tenant_id,
+        AccessRequestModel.requester_id == user_id,
+    ).delete(synchronize_session=False)
+
+    db.commit()
+    db.refresh(membership)
+
+    return OrganizationMemberResponse(
+        user_id=user.id,
+        username=user.username,
+        email=user.email,
+        role=membership.role,
+        access_status=membership.access_status,
+    )
+
+
 def delete_organization_member(
     user_id: str,
     db: Session = Depends(get_db),
@@ -322,6 +406,108 @@ def delete_organization_member(
     db.commit()
 
     return None
+
+
+@router.post(
+    "/{user_id}/grant-access",
+    response_model=OrganizationMemberResponse,
+)
+def grant_organization_member_access(
+    user_id: str,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    require_organization_admin(auth)
+
+    if user_id == auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot grant access to yourself",
+        )
+
+    membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.user_id == user_id,
+        )
+        .first()
+    )
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization member not found",
+        )
+
+    if membership.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization administrators already have access",
+        )
+
+    user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.id == user_id,
+            UserModel.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization member account not found",
+        )
+
+    # The member remains without access until they explicitly accept.
+    membership.access_status = "pending"
+
+    # Remove any stale document-level grants/requests for this member.
+    db.query(AccessGrantModel).filter(
+        AccessGrantModel.tenant_id == auth.tenant_id,
+        AccessGrantModel.principal == user_id,
+    ).delete(synchronize_session=False)
+
+    db.query(AccessRequestModel).filter(
+        AccessRequestModel.tenant_id == auth.tenant_id,
+        AccessRequestModel.requester_id == user_id,
+    ).delete(synchronize_session=False)
+
+    # Create or refresh the organization-access notification.
+    invitation = (
+        db.query(OrganizationInvitationModel)
+        .filter(
+            OrganizationInvitationModel.tenant_id == auth.tenant_id,
+            OrganizationInvitationModel.invitee_user_id == user_id,
+            OrganizationInvitationModel.status == "pending",
+        )
+        .first()
+    )
+
+    if invitation:
+        invitation.created_at = datetime.now(timezone.utc)
+        invitation.invited_by_user_id = auth.user_id
+    else:
+        invitation = OrganizationInvitationModel(
+            tenant_id=auth.tenant_id,
+            invitee_user_id=user_id,
+            invited_by_user_id=auth.user_id,
+            status="pending",
+        )
+        db.add(invitation)
+
+    db.commit()
+    db.refresh(membership)
+
+    return OrganizationMemberResponse(
+        user_id=user.id,
+        username=user.username,
+        email=user.email,
+        role=membership.role,
+        access_status=membership.access_status,
+    )
 
 
 @router.post(
@@ -493,7 +679,24 @@ def accept_organization_invitation(
     db: Session = Depends(get_db),
     auth: AuthContext = Depends(get_auth_context),
 ):
-    invitation = _get_my_pending_invitation(db, auth, invitation_id)
+    invitation = _get_my_pending_invitation(
+        db,
+        auth,
+        invitation_id,
+    )
+
+    tenant = (
+        db.query(TenantModel)
+        .filter(TenantModel.id == invitation.tenant_id)
+        .first()
+    )
+
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization no longer exists",
+        )
+
     membership = (
         db.query(TenantMembershipModel)
         .filter(
@@ -502,16 +705,38 @@ def accept_organization_invitation(
         )
         .first()
     )
-    if not membership:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Organization membership no longer exists",
+
+    if membership:
+        if membership.role == "admin":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You are already an administrator of this organization",
+            )
+
+        membership.access_status = "active"
+        membership.role = "member"
+    else:
+        membership = TenantMembershipModel(
+            tenant_id=invitation.tenant_id,
+            user_id=auth.user_id,
+            role="member",
+            access_status="active",
         )
-    membership.access_status = "active"
+        db.add(membership)
+
     invitation.status = "accepted"
     invitation.responded_at = datetime.now(timezone.utc)
+
     db.commit()
-    return {"message": "Organization invitation accepted", "organization_id": invitation.tenant_id}
+    db.refresh(membership)
+
+    return {
+        "message": "Organization access granted",
+        "organization_id": invitation.tenant_id,
+        "organization_name": tenant.name,
+        "role": membership.role,
+        "access_status": membership.access_status,
+    }
 
 
 @router.post("/invitations/{invitation_id}/decline")
