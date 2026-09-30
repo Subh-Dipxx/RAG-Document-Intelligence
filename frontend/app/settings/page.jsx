@@ -151,6 +151,22 @@ export default function SettingsPage() {
     }
   }, [settingsSection, accountType, role, tenantId])
 
+  useEffect(() => {
+    if (
+      accountType !== 'organization' ||
+      role !== 'admin' ||
+      settingsSection !== 'organization'
+    ) {
+      return undefined
+    }
+
+    const intervalId = setInterval(() => {
+      fetchOrganizationMembers()
+    }, 10000)
+
+    return () => clearInterval(intervalId)
+  }, [accountType, role, settingsSection, tenantId])
+
   const fetchMyOrganizations = async () => {
     const token = getToken()
     if (!token) return
@@ -812,9 +828,6 @@ export default function SettingsPage() {
         )
       )
 
-      setMemberInviteMessage(
-        `Access request sent to ${member.username || member.email || 'this member'}.`
-      )
     } catch (error) {
       console.error('Failed to grant organization access:', error)
       setMemberInviteError(
@@ -1006,7 +1019,7 @@ export default function SettingsPage() {
         },
         body: JSON.stringify({
           new_username: newUsername.trim(),
-          password: usernamePassword,
+          current_password: usernamePassword,
         }),
       })
 
@@ -2343,6 +2356,8 @@ export default function SettingsPage() {
                                 const isAdmin = member.role === 'admin'
                                 const hasAccess =
                                   member.access_status === 'active'
+                                const accessRequestSent =
+                                  member.access_status === 'pending'
                                 const isDeleting =
                                   deletingOrganizationMemberId ===
                                   member.user_id
@@ -2367,7 +2382,9 @@ export default function SettingsPage() {
                                         className={`organization-member-access ${
                                           hasAccess
                                             ? 'is-granted'
-                                            : 'is-pending'
+                                            : accessRequestSent
+                                              ? 'is-requested'
+                                              : 'is-pending'
                                         }`}
                                       >
                                         <span
@@ -2377,14 +2394,18 @@ export default function SettingsPage() {
 
                                         {hasAccess
                                           ? 'ACCESS GRANTED'
-                                          : 'NO ACCESS'}
+                                          : accessRequestSent
+                                            ? 'REQUEST SENT'
+                                            : 'NO ACCESS'}
                                       </div>
                                     ) : (
                                       <div className="organization-member-access-spacer" />
                                     )}
 
                                     <div className="organization-member-actions">
-                                      {!isAdmin && !hasAccess && (
+                                      {!isAdmin &&
+                                        !hasAccess &&
+                                        !accessRequestSent && (
                                         <button
                                           type="button"
                                           className="settings-save-button organization-member-grant-button"
@@ -2768,8 +2789,10 @@ export default function SettingsPage() {
               <p className="delete-confirm-message">
                 This permanently removes this organization and its
                 memberships, invitations, access grants, and access
-                requests. Your account will not be deleted, and your
-                current session will remain active.
+                requests. If an account no longer belongs to any other
+                organization, that account and its credentials will also be
+                deleted. Accounts with memberships in other organizations
+                will remain active.
               </p>
 
               <div className="change-password-field">

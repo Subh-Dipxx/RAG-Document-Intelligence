@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from backend.auth.dependencies import AuthContext, get_auth_context
@@ -95,8 +96,13 @@ def list_switchable_accounts(
     auth: AuthContext = Depends(get_auth_context),
 ):
     """
-    Return active organization accounts that use the same email address
-    as the currently authenticated administrator.
+    Return active organization accounts that the currently authenticated
+    administrator is authorized to switch to.
+
+    Accounts are available when they use the same email identity as the
+    current administrator, when their organization was created by the
+    current administrator, or when they are connected through the creator
+    of the currently active organization.
 
     This endpoint is intentionally restricted to administrators.
     """
@@ -109,15 +115,54 @@ def list_switchable_accounts(
             detail="Only organization administrators can switch accounts.",
         )
 
-    if not current_user.email:
-        return []
+    current_tenant = (
+        db.query(TenantModel)
+        .filter(TenantModel.id == auth.tenant_id)
+        .first()
+    )
+
+    creator_user_id = (
+        current_tenant.created_by_user_id
+        if current_tenant
+        else None
+    )
+
+    account_access_condition = or_(
+        (
+            UserModel.email.ilike(current_user.email.strip())
+            if current_user.email
+            else False
+        ),
+        TenantModel.created_by_user_id == current_user.id,
+        (
+            UserModel.id == creator_user_id
+            if creator_user_id
+            else False
+        ),
+        (
+            TenantModel.created_by_user_id == creator_user_id
+            if creator_user_id
+            else False
+        ),
+    )
 
     users = (
         db.query(UserModel)
-        .filter(
-            UserModel.email.ilike(current_user.email.strip()),
-            UserModel.is_active.is_(True),
+        .join(
+            TenantMembershipModel,
+            TenantMembershipModel.user_id == UserModel.id,
         )
+        .join(
+            TenantModel,
+            TenantMembershipModel.tenant_id == TenantModel.id,
+        )
+        .filter(
+            UserModel.is_active.is_(True),
+            TenantMembershipModel.role == "admin",
+            TenantMembershipModel.access_status == "active",
+            account_access_condition,
+        )
+        .distinct()
         .order_by(UserModel.username.asc())
         .all()
     )
@@ -131,10 +176,15 @@ def list_switchable_accounts(
                 TenantModel,
                 TenantMembershipModel.tenant_id == TenantModel.id,
             )
+            .join(
+                UserModel,
+                TenantMembershipModel.user_id == UserModel.id,
+            )
             .filter(
                 TenantMembershipModel.user_id == user.id,
                 TenantMembershipModel.role == "admin",
                 TenantMembershipModel.access_status == "active",
+                account_access_condition,
             )
             .order_by(TenantModel.name.asc())
             .all()
@@ -165,7 +215,11 @@ def switch_account(
     auth: AuthContext = Depends(get_auth_context),
 ):
     """
-    Switch between organization accounts belonging to the same email identity.
+    Switch to an organization account authorized for the current administrator.
+
+    The target account may share the current administrator's email identity,
+    belong to an organization created by that administrator, or be connected
+    through the creator of the currently active organization.
 
     No password is required because the current authenticated administrator
     session is used to authorize the switch.
@@ -187,6 +241,37 @@ def switch_account(
             detail="Organization ID is required.",
         )
 
+    current_tenant = (
+        db.query(TenantModel)
+        .filter(TenantModel.id == auth.tenant_id)
+        .first()
+    )
+
+    creator_user_id = (
+        current_tenant.created_by_user_id
+        if current_tenant
+        else None
+    )
+
+    account_access_condition = or_(
+        (
+            UserModel.email.ilike(current_user.email.strip())
+            if current_user.email
+            else False
+        ),
+        TenantModel.created_by_user_id == current_user.id,
+        (
+            UserModel.id == creator_user_id
+            if creator_user_id
+            else False
+        ),
+        (
+            TenantModel.created_by_user_id == creator_user_id
+            if creator_user_id
+            else False
+        ),
+    )
+
     target = (
         db.query(UserModel, TenantMembershipModel, TenantModel)
         .join(
@@ -198,7 +283,7 @@ def switch_account(
             TenantMembershipModel.tenant_id == TenantModel.id,
         )
         .filter(
-            UserModel.email.ilike(current_user.email.strip()),
+            account_access_condition,
             UserModel.is_active.is_(True),
             TenantMembershipModel.tenant_id == organization_id,
             TenantMembershipModel.role == "admin",
@@ -248,7 +333,8 @@ def delete_organization(
     Security requirements:
     1. Current authenticated user must be an admin of the target organization.
     2. The target organization's admin account password must be supplied.
-    3. The target admin account itself is NOT deleted.
+    3. The target admin account is deleted only if it has no remaining
+       organization memberships after the target organization is removed.
     4. The current JWT/session is NOT changed.
     5. The organization currently represented by the JWT cannot be deleted.
     """
@@ -477,17 +563,59 @@ def delete_organization(
     ).delete(synchronize_session=False)
 
     # ---------------------------------------------------------------
-    # 5. Remove organization memberships.
+    # 5. Remove organization memberships and collect affected users.
     #
-    # User accounts themselves are deliberately preserved because a user
-    # may belong to other organizations or have other accounts.
+    # The user accounts must only be deleted when they no longer belong
+    # to ANY organization. This preserves shared accounts such as an
+    # administrator who belongs to both Org1 and Org2.
     # ---------------------------------------------------------------
+    organization_memberships = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == organization_id
+        )
+        .all()
+    )
+
+    affected_user_ids = {
+        membership.user_id
+        for membership in organization_memberships
+        if membership.user_id
+    }
+
     db.query(TenantMembershipModel).filter(
         TenantMembershipModel.tenant_id == organization_id
     ).delete(synchronize_session=False)
 
     # ---------------------------------------------------------------
-    # 6. Delete organization documents.
+    # 6. Delete user accounts that no longer belong to any organization.
+    #
+    # A user who still has a membership in another organization is kept.
+    # This is what allows the same admin credentials to continue working
+    # for Org2 after Org1 is deleted.
+    # ---------------------------------------------------------------
+    if affected_user_ids:
+        remaining_user_ids = {
+            user_id
+            for (user_id,) in (
+                db.query(TenantMembershipModel.user_id)
+                .filter(
+                    TenantMembershipModel.user_id.in_(affected_user_ids)
+                )
+                .distinct()
+                .all()
+            )
+        }
+
+        users_to_delete = affected_user_ids - remaining_user_ids
+
+        if users_to_delete:
+            db.query(UserModel).filter(
+                UserModel.id.in_(users_to_delete)
+            ).delete(synchronize_session=False)
+
+    # ---------------------------------------------------------------
+    # 7. Delete organization documents.
     #
     # Document relationships cascade to versions/pages/chunks/tables/
     # findings/citations. The tenant/corpus rows are then removed when
@@ -499,7 +627,7 @@ def delete_organization(
         ).delete(synchronize_session=False)
 
     # ---------------------------------------------------------------
-    # 7. Delete the organization.
+    # 8. Delete the organization.
     #
     # Tenant -> Corpus is configured with delete-orphan/cascade, so the
     # organization's corpora are removed as part of this operation.
@@ -631,6 +759,7 @@ def add_account(
     if account_type == "organization":
         tenant = TenantModel(
             name=organization_name,
+            created_by_user_id=auth.user_id,
         )
         db.add(tenant)
         db.flush()

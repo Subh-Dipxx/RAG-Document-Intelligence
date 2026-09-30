@@ -6019,6 +6019,15 @@ html[data-theme="dark"] .organization-invitation-actions .settings-secondary-but
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
 }
 
+.organization-member-access.is-requested {
+  color: #d97706;
+}
+
+.organization-member-access.is-requested .organization-member-access-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
+}
+
 .organization-member-access.is-pending {
   color: #dc2626;
 }
@@ -6178,6 +6187,10 @@ html.dark .organization-member-revoke-button:hover:not(:disabled) {
 
 html.dark .organization-member-access.is-granted {
   color: #4ade80;
+}
+
+html.dark .organization-member-access.is-requested {
+  color: #fbbf24;
 }
 
 html.dark .organization-member-access.is-pending {

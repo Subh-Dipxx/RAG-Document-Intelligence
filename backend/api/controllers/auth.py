@@ -307,28 +307,31 @@ def login(
             detail="Invalid email or password",
         )
 
-    if len(matching_users) > 1:
-        accounts = []
+    # Only users with at least one active organization membership are
+    # valid organization accounts for the account chooser. Orphaned
+    # UserModel rows must not cause the chooser to appear.
+    valid_accounts = []
 
-        for candidate in matching_users:
-            memberships = (
-                db.query(TenantMembershipModel, TenantModel)
-                .join(
-                    TenantModel,
-                    TenantMembershipModel.tenant_id == TenantModel.id,
-                )
-                .filter(
-                    TenantMembershipModel.user_id == candidate.id,
-                    TenantMembershipModel.access_status == "active",
-                )
-                .order_by(TenantModel.name.asc())
-                .all()
+    for candidate in matching_users:
+        memberships = (
+            db.query(TenantMembershipModel, TenantModel)
+            .join(
+                TenantModel,
+                TenantMembershipModel.tenant_id == TenantModel.id,
             )
+            .filter(
+                TenantMembershipModel.user_id == candidate.id,
+                TenantMembershipModel.access_status == "active",
+            )
+            .order_by(TenantModel.name.asc())
+            .all()
+        )
 
-            accounts.append(
+        if memberships:
+            valid_accounts.append(
                 LoginAccount(
                     username=candidate.username,
-                    account_type="organization" if memberships else "individual",
+                    account_type="organization",
                     organization_names=[
                         tenant.name
                         for _, tenant in memberships
@@ -336,8 +339,43 @@ def login(
                 )
             )
 
+    if len(valid_accounts) > 1:
         return LoginAccountSelectionResponse(
-            accounts=accounts,
+            accounts=valid_accounts,
+        )
+
+    if len(valid_accounts) == 1:
+        user = next(
+            candidate
+            for candidate in matching_users
+            if candidate.username == valid_accounts[0].username
+        )
+
+        membership, tenant = (
+            db.query(TenantMembershipModel, TenantModel)
+            .join(
+                TenantModel,
+                TenantMembershipModel.tenant_id == TenantModel.id,
+            )
+            .filter(
+                TenantMembershipModel.user_id == user.id,
+                TenantMembershipModel.access_status == "active",
+            )
+            .order_by(TenantModel.name.asc())
+            .first()
+        )
+
+        access_token = create_access_token(
+            user_id=user.id,
+            username=user.username,
+            tenant_id=membership.tenant_id,
+            role=membership.role,
+            account_type="organization",
+        )
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
         )
 
     user = matching_users[0]

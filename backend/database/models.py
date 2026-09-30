@@ -92,6 +92,7 @@ class TenantModel(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     name = Column(String, nullable=False)
+    created_by_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     quota_documents = Column(Integer, nullable=True)
     quota_pages = Column(Integer, nullable=True)
     quota_storage_bytes = Column(Integer, nullable=True)

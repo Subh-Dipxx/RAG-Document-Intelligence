@@ -1032,7 +1032,7 @@ const [usernameError, setUsernameError] = useState('')
   const [documentPreview, setDocumentPreview] = useState(null)
 
   const fetchMyOrganizations = async () => {
-    if (!token || accountType !== 'organization') {
+    if (!token) {
       setMyOrganizations([])
       return []
     }
@@ -1362,14 +1362,19 @@ const [usernameError, setUsernameError] = useState('')
   }
 
   useEffect(() => {
-    if (!token || accountType !== 'organization') {
+    if (!token) {
       setMyOrganizations([])
       setOrganizationName('')
       return
     }
 
     fetchMyOrganizations()
-    fetchOrganizationSettings()
+
+    if (accountType === 'organization') {
+      fetchOrganizationSettings()
+    } else {
+      setOrganizationName('')
+    }
   }, [token, accountType, tenantId])
 
   useEffect(() => {
@@ -2113,6 +2118,10 @@ const [usernameError, setUsernameError] = useState('')
     if (token && accountType === 'organization') {
       const handleWindowFocus = () => {
         fetchAccessRequests()
+
+        if (role === 'admin') {
+          fetchOrganizationMembers()
+        }
       }
 
       window.addEventListener('focus', handleWindowFocus)
@@ -2121,7 +2130,7 @@ const [usernameError, setUsernameError] = useState('')
         window.removeEventListener('focus', handleWindowFocus)
       }
     }
-  }, [token, accountType])
+  }, [token, accountType, role])
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -3087,9 +3096,50 @@ const handleChangeUsername = async (event) => {
     const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-      throw new Error(
-        data?.detail || 'Unable to change username.'
-      )
+      const detail = data?.detail
+
+      let errorMessage = 'Unable to change username.'
+
+      if (typeof detail === 'string' && detail.trim()) {
+        errorMessage = detail
+      } else if (Array.isArray(detail)) {
+        const messages = detail
+          .map((item) => {
+            if (typeof item === 'string') {
+              return item
+            }
+
+            if (typeof item?.msg === 'string') {
+              return item.msg
+            }
+
+            if (typeof item?.message === 'string') {
+              return item.message
+            }
+
+            return null
+          })
+          .filter(Boolean)
+
+        if (messages.length > 0) {
+          errorMessage = messages.join(', ')
+        }
+      } else if (detail && typeof detail === 'object') {
+        if (typeof detail.message === 'string' && detail.message.trim()) {
+          errorMessage = detail.message
+        } else if (typeof detail.msg === 'string' && detail.msg.trim()) {
+          errorMessage = detail.msg
+        } else if (typeof data?.message === 'string' && data.message.trim()) {
+          errorMessage = data.message
+        }
+      } else if (
+        typeof data?.message === 'string' &&
+        data.message.trim()
+      ) {
+        errorMessage = data.message
+      }
+
+      throw new Error(errorMessage)
     }
 
     const updatedUsername =
@@ -3509,25 +3559,27 @@ const handleNewConversation = () => {
           <span className="sidebar-documents-text">Documents</span>
         </button>
 
-        <button
-          type="button"
-          className="sidebar-documents sidebar-settings-btn"
-          aria-label="Settings"
-          onClick={() => {
-            window.location.href = '/settings?section=organization'
-          }}
-        >
-          <span className="sidebar-documents-icon">⚙</span>
-          <span className="sidebar-documents-text">Settings</span>
-          {pendingOrganizationInvitations.length > 0 && (
-            <span
-              className="sidebar-settings-badge"
-              aria-label={`${pendingOrganizationInvitations.length} pending invitation(s)`}
-            >
-              {pendingOrganizationInvitations.length}
-            </span>
-          )}
-        </button>
+        {role === 'admin' && (
+          <button
+            type="button"
+            className="sidebar-documents sidebar-settings-btn"
+            aria-label="Settings"
+            onClick={() => {
+              window.location.href = '/settings?section=organization'
+            }}
+          >
+            <span className="sidebar-documents-icon">⚙</span>
+            <span className="sidebar-documents-text">Settings</span>
+            {pendingOrganizationInvitations.length > 0 && (
+              <span
+                className="sidebar-settings-badge"
+                aria-label={`${pendingOrganizationInvitations.length} pending invitation(s)`}
+              >
+                {pendingOrganizationInvitations.length}
+              </span>
+            )}
+          </button>
+        )}
 
         <div className="sidebar-profile">
           {showProfileMenu && (
