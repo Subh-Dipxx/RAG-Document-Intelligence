@@ -22,6 +22,7 @@ from backend.api.controllers import (
     chat as chat_route,
     access_requests,
     activity,
+    profile,
 )
 
 
@@ -52,6 +53,7 @@ app.include_router(chat_route.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(access_requests.router, prefix="/api/v1")
 app.include_router(activity.router, prefix="/api/v1")
+app.include_router(profile.router, prefix="/api/v1")
 app.include_router(organization_members.router, prefix="/api/v1")
 app.include_router(account_management.router, prefix="/api/v1")
 

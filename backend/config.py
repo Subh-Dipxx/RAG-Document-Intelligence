@@ -52,6 +52,7 @@ class Settings:
     minio_bucket_ocr_output: str
     minio_bucket_tables: str
     minio_bucket_thumbnails: str
+    minio_bucket_profile_pictures: str
     minio_presign_expires_seconds: int
 
     # Redis / Celery
@@ -93,6 +94,7 @@ class Settings:
             self.minio_bucket_ocr_output,
             self.minio_bucket_tables,
             self.minio_bucket_thumbnails,
+            self.minio_bucket_profile_pictures,
         )
 
 
@@ -120,6 +122,9 @@ def load_settings() -> Settings:
         minio_bucket_tables=_required("MINIO_BUCKET_TABLES"),
         minio_bucket_thumbnails=_required(
             "MINIO_BUCKET_THUMBNAILS"
+        ),
+        minio_bucket_profile_pictures=_required(
+            "MINIO_BUCKET_PROFILE_PICTURES"
         ),
         minio_presign_expires_seconds=_required_int(
             "MINIO_PRESIGN_EXPIRES_SECONDS"

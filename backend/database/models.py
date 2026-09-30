@@ -34,6 +34,7 @@ class UserModel(Base):
     username = Column(String, nullable=False, unique=True, index=True)
     email = Column(String, nullable=True, unique=False, index=True)
     password_hash = Column(String, nullable=False)
+    profile_picture_key = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=utc_now)
 

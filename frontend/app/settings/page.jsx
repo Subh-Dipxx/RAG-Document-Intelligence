@@ -12,6 +12,11 @@ export default function SettingsPage() {
   const [username, setUsername] = useState('')
   const [tenantId, setTenantId] = useState(null)
 
+  const [profilePictureUrl, setProfilePictureUrl] = useState('')
+  const [profilePictureUploading, setProfilePictureUploading] = useState(false)
+  const [profilePictureDeleting, setProfilePictureDeleting] = useState(false)
+  const [profilePictureError, setProfilePictureError] = useState('')
+
   const [myOrganizations, setMyOrganizations] = useState([])
   const [loadingMyOrganizations, setLoadingMyOrganizations] = useState(false)
   const [switchingOrganizationId, setSwitchingOrganizationId] = useState(null)
@@ -140,6 +145,7 @@ export default function SettingsPage() {
     fetchMyOrganizations()
     fetchOrganizationInvitations()
     fetchAdminOrganizations()
+    fetchProfilePicture()
   }, [])
 
   useEffect(() => {
@@ -166,6 +172,151 @@ export default function SettingsPage() {
 
     return () => clearInterval(intervalId)
   }, [accountType, role, settingsSection, tenantId])
+
+  const fetchProfilePicture = async () => {
+    const token = getToken()
+    if (!token) return
+
+    try {
+      const res = await fetch('/api/v1/profile/picture', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.status === 404) {
+        setProfilePictureUrl('')
+        return
+      }
+
+      if (res.status === 401) {
+        handleUnauthorized()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error('Unable to load profile picture.')
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+
+      setProfilePictureUrl((currentUrl) => {
+        if (currentUrl) {
+          URL.revokeObjectURL(currentUrl)
+        }
+        return url
+      })
+    } catch (error) {
+      console.error('Failed to load profile picture:', error)
+      setProfilePictureUrl('')
+    }
+  }
+
+  const handleProfilePictureChange = async (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    setProfilePictureError('')
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+
+    if (!allowedTypes.includes(file.type)) {
+      setProfilePictureError('Please select a JPG, PNG, or WebP image.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfilePictureError('Profile picture must be 5 MB or smaller.')
+      event.target.value = ''
+      return
+    }
+
+    const token = getToken()
+    if (!token) return
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    setProfilePictureUploading(true)
+
+    try {
+      const res = await fetch('/api/v1/profile/picture', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (res.status === 401) {
+        handleUnauthorized()
+        return
+      }
+
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail || 'Unable to update profile picture.'
+        )
+      }
+
+      await fetchProfilePicture()
+    } catch (error) {
+      console.error('Failed to upload profile picture:', error)
+      setProfilePictureError(
+        error.message || 'Unable to update profile picture.'
+      )
+    } finally {
+      setProfilePictureUploading(false)
+      event.target.value = ''
+    }
+  }
+
+  const handleProfilePictureDelete = async () => {
+    const token = getToken()
+    if (!token) return
+
+    setProfilePictureError('')
+    setProfilePictureDeleting(true)
+
+    try {
+      const res = await fetch('/api/v1/profile/picture', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (res.status === 401) {
+        handleUnauthorized()
+        return
+      }
+
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail || 'Unable to remove profile picture.'
+        )
+      }
+
+      setProfilePictureUrl((currentUrl) => {
+        if (currentUrl) {
+          URL.revokeObjectURL(currentUrl)
+        }
+        return ''
+      })
+    } catch (error) {
+      console.error('Failed to delete profile picture:', error)
+      setProfilePictureError(
+        error.message || 'Unable to remove profile picture.'
+      )
+    } finally {
+      setProfilePictureDeleting(false)
+    }
+  }
 
   const fetchMyOrganizations = async () => {
     const token = getToken()
@@ -1390,6 +1541,87 @@ export default function SettingsPage() {
                     )}
                   </div>
                 )}
+
+                <div className="profile-picture-section">
+                  <div className="profile-picture-avatar-wrap">
+                    <label
+                      htmlFor="profile-picture-upload"
+                      className="profile-picture-preview"
+                      title="Change profile picture"
+                    >
+                      {profilePictureUrl ? (
+                        <img
+                          src={profilePictureUrl}
+                          alt={`${username || 'User'} profile`}
+                          className="profile-picture-image"
+                        />
+                      ) : (
+                        <div
+                          className="profile-picture-placeholder"
+                          aria-label="No profile picture"
+                        >
+                          {(username || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </label>
+
+                    {profilePictureUrl && (
+                      <button
+                        type="button"
+                        className="profile-picture-remove-icon"
+                        aria-label="Remove profile picture"
+                        title="Remove profile picture"
+                        onClick={handleProfilePictureDelete}
+                        disabled={
+                          profilePictureUploading ||
+                          profilePictureDeleting
+                        }
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="14"
+                          height="14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M6 6l12 12" />
+                          <path d="M18 6L6 18" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="profile-picture-details">
+                    <div className="settings-row-title">
+                      Profile picture
+                    </div>
+
+                    <div className="settings-row-description">
+                      Add a profile picture to personalize your account.
+                    </div>
+
+                    <input
+                      id="profile-picture-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleProfilePictureChange}
+                      disabled={
+                        profilePictureUploading ||
+                        profilePictureDeleting
+                      }
+                      hidden
+                    />
+
+                    {profilePictureError && (
+                      <div className="profile-picture-error">
+                        {profilePictureError}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {!showChangeUsername ? (
                   <div className="settings-row settings-account-action">

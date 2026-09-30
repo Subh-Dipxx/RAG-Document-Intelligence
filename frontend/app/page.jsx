@@ -939,6 +939,8 @@ const [deleteError, setDeleteError] = useState('')
   const [accessRequestError, setAccessRequestError] = useState('')
   const [organizationMembers, setOrganizationMembers] = useState([])
   const [loadingOrganizationMembers, setLoadingOrganizationMembers] = useState(false)
+  const [profilePictureUrl, setProfilePictureUrl] = useState('')
+  const [sidebarOrganizationMembers, setSidebarOrganizationMembers] = useState([])
 
   const organizationAdminMember =
     organizationMembers.find((member) => member?.role === 'admin') || null
@@ -1693,6 +1695,59 @@ const [usernameError, setUsernameError] = useState('')
     }
   }
 
+  const fetchCurrentProfilePicture = async () => {
+    if (!token) {
+      setProfilePictureUrl('')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/v1/profile/picture', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (res.status === 404) {
+        setProfilePictureUrl((currentUrl) => {
+          if (currentUrl) {
+            URL.revokeObjectURL(currentUrl)
+          }
+          return ''
+        })
+        return
+      }
+
+      if (res.status === 401) {
+        handleLogout()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error('Unable to load profile picture.')
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+
+      setProfilePictureUrl((currentUrl) => {
+        if (currentUrl) {
+          URL.revokeObjectURL(currentUrl)
+        }
+        return url
+      })
+    } catch (error) {
+      console.error('Failed to load current profile picture:', error)
+
+      setProfilePictureUrl((currentUrl) => {
+        if (currentUrl) {
+          URL.revokeObjectURL(currentUrl)
+        }
+        return ''
+      })
+    }
+  }
+
   const fetchOrganizationMembers = async () => {
     if (!token || accountType !== 'organization' || role !== 'admin') {
       return []
@@ -1741,6 +1796,59 @@ const [usernameError, setUsernameError] = useState('')
       return []
     } finally {
       setLoadingOrganizationMembers(false)
+    }
+  }
+
+
+  const fetchSidebarOrganizationMembers = async () => {
+    if (!token || accountType !== 'organization') {
+      setSidebarOrganizationMembers([])
+      return []
+    }
+
+    try {
+      const res = await fetch(
+        '/api/v1/organization-members/sidebar-members',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (res.status === 401) {
+        handleLogout()
+        return []
+      }
+
+      const rawBody = await res.text()
+      let data = []
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : []
+      } catch {
+        data = []
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          rawBody ||
+          `Failed to load organization sidebar members (${res.status})`
+        )
+      }
+
+      const members = Array.isArray(data) ? data : []
+      setSidebarOrganizationMembers(members)
+
+      return members
+    } catch (error) {
+      console.error(
+        'Failed to load organization sidebar members:',
+        error
+      )
+      setSidebarOrganizationMembers([])
+      return []
     }
   }
 
@@ -2107,10 +2215,12 @@ const [usernameError, setUsernameError] = useState('')
       setAccessRequests([])
       setAccessRequestStatus({})
       setOrganizationMembers([])
+      setSidebarOrganizationMembers([])
       return
     }
 
     fetchAccessRequests()
+    fetchSidebarOrganizationMembers()
 
     if (role === 'admin') {
       fetchOrganizationMembers()
@@ -2123,6 +2233,7 @@ const [usernameError, setUsernameError] = useState('')
     if (token && accountType === 'organization') {
       const handleWindowFocus = () => {
         fetchAccessRequests()
+        fetchSidebarOrganizationMembers()
 
         if (role === 'admin') {
           fetchOrganizationMembers()
@@ -2136,6 +2247,19 @@ const [usernameError, setUsernameError] = useState('')
       }
     }
   }, [token, accountType, role])
+
+  useEffect(() => {
+    fetchCurrentProfilePicture()
+
+    return () => {
+      setProfilePictureUrl((currentUrl) => {
+        if (currentUrl) {
+          URL.revokeObjectURL(currentUrl)
+        }
+        return ''
+      })
+    }
+  }, [token])
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -3712,6 +3836,7 @@ const handleNewConversation = () => {
           </button>
         )}
 
+
         <div className="sidebar-profile">
           {showProfileMenu && (
             <div className="sidebar-profile-menu">
@@ -3732,7 +3857,24 @@ const handleNewConversation = () => {
                 }}
               >
                 <div className="sidebar-profile-menu-avatar">
-                  <span>{username ? username.charAt(0).toUpperCase() : 'U'}</span>
+                  {profilePictureUrl ? (
+                    <img
+                      src={profilePictureUrl}
+                      alt=""
+                      aria-hidden="true"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'block',
+                        objectFit: 'cover',
+                        borderRadius: '50%',
+                      }}
+                    />
+                  ) : (
+                    <span>
+                      {username ? username.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                  )}
                 </div>
                 <div className="sidebar-profile-menu-details">
                   <span className="sidebar-profile-menu-name">{username || 'User'}</span>
@@ -3773,7 +3915,24 @@ const handleNewConversation = () => {
             aria-label="Open profile menu"
             aria-expanded={showProfileMenu}
           >
-            <span>{username ? username.charAt(0).toUpperCase() : 'U'}</span>
+            {profilePictureUrl ? (
+              <img
+                src={profilePictureUrl}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  objectFit: 'cover',
+                  borderRadius: '50%',
+                }}
+              />
+            ) : (
+              <span>
+                {username ? username.charAt(0).toUpperCase() : 'U'}
+              </span>
+            )}
             {pendingOrganizationInvitations.length > 0 && (
               <span
                 style={{

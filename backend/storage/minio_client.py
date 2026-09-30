@@ -104,4 +104,5 @@ PAGE_IMAGES_BUCKET = get_settings().minio_bucket_page_images
 OCR_OUTPUT_BUCKET = get_settings().minio_bucket_ocr_output
 TABLES_BUCKET = get_settings().minio_bucket_tables
 THUMBNAILS_BUCKET = get_settings().minio_bucket_thumbnails
+PROFILE_PICTURES_BUCKET = get_settings().minio_bucket_profile_pictures
 ALL_BUCKETS = list(get_settings().object_buckets())

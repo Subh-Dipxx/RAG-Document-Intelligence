@@ -293,6 +293,61 @@ def list_organization_members(
     ]
 
 
+@router.get(
+    "/sidebar-members",
+    response_model=List[OrganizationMemberResponse],
+)
+def list_sidebar_organization_members(
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+):
+    if not auth.tenant_id or auth.account_type != "organization":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization access is required",
+        )
+
+    requester_membership = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.user_id == auth.user_id,
+            TenantMembershipModel.access_status == "active",
+        )
+        .first()
+    )
+
+    if not requester_membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Active organization access is required",
+        )
+
+    rows = (
+        db.query(TenantMembershipModel, UserModel)
+        .join(
+            UserModel,
+            TenantMembershipModel.user_id == UserModel.id,
+        )
+        .filter(
+            TenantMembershipModel.tenant_id == auth.tenant_id,
+            TenantMembershipModel.access_status == "active",
+            UserModel.is_active.is_(True),
+        )
+        .order_by(UserModel.username.asc())
+        .all()
+    )
+
+    return [
+        OrganizationMemberResponse(
+            user_id=user.id,
+            username=user.username,
+            email=None,
+            role=membership.role,
+            access_status=membership.access_status,
+        )
+        for membership, user in rows
+    ]
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 @router.post(
     "/{user_id}/revoke-access",
