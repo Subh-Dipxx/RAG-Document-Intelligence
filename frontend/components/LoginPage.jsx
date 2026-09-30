@@ -87,10 +87,10 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
 
       if (!res.ok) {
-        throw new Error(data?.detail || 'Login failed')
+        throw new Error(data?.detail || data?.message || 'Login failed')
       }
 
       if (data.requires_account_selection) {
@@ -131,10 +131,10 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
 
       if (!res.ok) {
-        throw new Error(data?.detail || 'Unable to select account')
+        throw new Error(data?.detail || data?.message || 'Unable to select account')
       }
 
       setShowAccountSelection(false)
@@ -169,10 +169,10 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         body: JSON.stringify({ email: forgotEmail.trim() }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
 
       if (!res.ok) {
-        throw new Error(data?.detail || 'Unable to send reset link')
+        throw new Error(data?.detail || data?.message || 'Unable to send reset link')
       }
 
       setSuccess(data?.message || 'If an account with that email exists, a password reset link has been sent.')
@@ -224,10 +224,10 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
 
       if (!res.ok) {
-        throw new Error(data?.detail || 'Unable to reset password.')
+        throw new Error(data?.detail || data?.message || 'Unable to reset password.')
       }
 
       setSuccess('Password reset successfully. You can now sign in with your new password.')
@@ -285,10 +285,10 @@ function LoginPage({ onLogin, theme = 'dark', onToggleTheme }) {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
 
       if (!res.ok) {
-        throw new Error(data?.detail || "Signup failed")
+        throw new Error(data?.detail || data?.message || "Signup failed")
       }
 
       setSuccess(

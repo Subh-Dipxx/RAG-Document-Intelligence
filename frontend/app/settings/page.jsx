@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [settingsSection, setSettingsSection] = useState('account')
+  const [settingsSection, setSettingsSection] = useState('organization')
 
   const [accountType, setAccountType] = useState('individual')
   const [role, setRole] = useState(null)
@@ -138,7 +138,7 @@ export default function SettingsPage() {
     const searchSection = new URLSearchParams(window.location.search).get('section')
     if (searchSection) {
       setSettingsSection(searchSection)
-    } else if (storedAccountType === 'organization' && storedRole === 'admin') {
+    } else {
       setSettingsSection('organization')
     }
 
@@ -1376,1553 +1376,743 @@ export default function SettingsPage() {
 
   return (
     <>
-      <main className="settings-page">
-        <div className="settings-page-shell">
-          <header className="settings-page-header">
-            <div className="settings-header-left">
-              <button
-                type="button"
-                className="settings-back-button"
-                onClick={() => router.push('/')}
-                title="Back to DocGPT"
-                aria-label="Back to DocGPT"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M19 12H5M5 12L12 19M5 12L12 5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+      <div className="settings-page-wrapper">
+      {/* Main Settings Container */}
+      <main className="settings-container">
+        {/* Page Hero Header */}
+        <div className="settings-hero-header">
+          <div className="settings-hero-left">
+            <button
+              type="button"
+              className="settings-back-btn"
+              onClick={() => router.push('/')}
+              title="Back to DocGPT"
+              aria-label="Back to DocGPT"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+
+            <div>
+              <div className="settings-eyebrow">SETTINGS</div>
+              <h1 className="settings-title">
+                {settingsSection === 'organization' ? 'Organization' : 'Profile'}
+              </h1>
+              <p className="settings-subtitle">
+                {settingsSection === 'organization'
+                  ? 'Manage your organization details, members, and access permissions.'
+                  : 'Manage your account details and profile.'}
+              </p>
+
+              <div className="settings-org-badge" style={{ marginBottom: '12px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                  <path d="M3 21h18M5 21V7l8-4 6 4v14M9 10h2M9 14h2M13 10h2M13 14h2"/>
                 </svg>
-              </button>
+                <span>Organization: <strong className="settings-org-name">{organizationName || 'Org2'}</strong></span>
+              </div>
 
+
+            </div>
+          </div>
+
+          {/* Decorative 3D Banner Graphic */}
+          <div className="settings-hero-illustration" aria-hidden="true">
+            <div className="illustration-dots-grid" />
+            <div className="illustration-blob" />
+            <div className="illustration-card-mockup">
+              <div className="illustration-avatar">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </div>
+              <div className="illustration-lines">
+                <div className="illustration-line line-long" />
+                <div className="illustration-line line-short" />
+              </div>
+              <div className="illustration-gear">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Conditional Cards Rendering */}
+        {settingsSection === 'organization' ? (
+          <>
+            {/* Organization Card 1: Organization Name */}
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <div className="settings-card-icon-box">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 21h18M5 21V7l8-4 6 4v14M9 10h2M9 14h2M13 10h2M13 14h2"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="settings-card-title">Organization Name</h3>
+                  <p className="settings-card-subtitle">Change your current organization name.</p>
+                </div>
+              </div>
+
+              <div className="settings-row-item">
+                <div className="settings-row-left">
+                  <div className="settings-sub-icon-circle">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="settings-row-label">Organization Name</div>
+                    <div className="settings-row-desc">{organizationName || 'No organization name set'}</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="settings-btn-outline"
+                  onClick={() => {
+                    setShowChangeOrganization(!showChangeOrganization)
+                    setNewOrganizationName(organizationName)
+                    setOrganizationCurrentPassword('')
+                    setOrganizationNameError('')
+                    setOrganizationNameMessage('')
+                  }}
+                >
+                  Change Name
+                </button>
+              </div>
+
+              {showChangeOrganization && (
+                <form className="change-password-form" onSubmit={updateOrganizationName} style={{ marginTop: '16px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <div className="change-password-field">
+                    <label htmlFor="org-new-name" style={{ color: '#0f172a', fontWeight: 600 }}>New Organization Name</label>
+                    <input
+                      id="org-new-name"
+                      type="text"
+                      value={newOrganizationName}
+                      onChange={(e) => setNewOrganizationName(e.target.value)}
+                      placeholder="Enter new organization name"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }}
+                    />
+                  </div>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label htmlFor="org-pwd" style={{ color: '#0f172a', fontWeight: 600 }}>Current Password</label>
+                    <input
+                      id="org-pwd"
+                      type="password"
+                      value={organizationCurrentPassword}
+                      onChange={(e) => setOrganizationCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }}
+                    />
+                  </div>
+                  {organizationNameError && <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>{organizationNameError}</div>}
+                  {organizationNameMessage && <div style={{ color: '#22c55e', fontSize: '13px', marginTop: '8px' }}>{organizationNameMessage}</div>}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                    <button type="submit" className="settings-btn-primary" disabled={organizationNameSaving}>
+                      {organizationNameSaving ? 'Saving...' : 'Save Organization Name'}
+                    </button>
+                    <button type="button" className="settings-btn-outline" onClick={() => setShowChangeOrganization(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Organization Card 2: Members & Invitations */}
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <div className="settings-card-icon-box">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="settings-card-title">Organization Members</h3>
+                  <p className="settings-card-subtitle">Invite new members and manage document delete permissions.</p>
+                </div>
+              </div>
+
+              {/* Invite Form */}
+              <form onSubmit={inviteOrganizationMember} style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                <label style={{ fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>Invite a member by email</label>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <input
+                    type="email"
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    placeholder="member@example.com"
+                    style={{ flex: 1, minWidth: '220px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }}
+                  />
+                  <button type="submit" className="settings-btn-primary" disabled={invitingMember}>
+                    {invitingMember ? 'Inviting...' : 'Invite Member'}
+                  </button>
+                </div>
+                {memberInviteError && <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>{memberInviteError}</div>}
+                {memberInviteMessage && <div style={{ color: '#22c55e', fontSize: '13px', marginTop: '8px' }}>{memberInviteMessage}</div>}
+              </form>
+
+              {/* Member Search & List */}
               <div>
-                <p className="eyebrow">DocGPT</p>
-                <h1>{settingsSection === 'account' ? 'Profile' : 'Settings'}</h1>
-                <p className="settings-page-subtitle">
-                  {settingsSection === 'account'
-                    ? 'Manage your account details and profile.'
-                    : 'Manage your organization and team access.'}
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ margin: 0, color: '#0f172a' }}>Current Members ({organizationMembers.length})</h4>
+                  <input
+                    type="text"
+                    value={organizationMemberSearchInput}
+                    onChange={(e) => {
+                      setOrganizationMemberSearchInput(e.target.value)
+                      setOrganizationMemberSearch(e.target.value)
+                    }}
+                    placeholder="Search members..."
+                    style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  />
+                </div>
 
-                {accountType === 'organization' && organizationName && (
-                  <div className="settings-current-organization">
-                    Organization: {organizationName}
+                {loadingOrganizationMembers && organizationMembers.length === 0 ? (
+                  <p style={{ color: '#64748b' }}>Loading members...</p>
+                ) : filteredOrganizationMembers.length === 0 ? (
+                  <p style={{ color: '#64748b' }}>No members found.</p>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {filteredOrganizationMembers.map((member) => {
+                      const isAdmin = member.role === 'admin'
+                      const isDeleting = deletingOrganizationMemberId === member.user_id
+                      const hasAccess = member.has_document_delete_access
+                      const accessRequestSent = member.document_delete_access_requested
+
+                      return (
+                        <div
+                          key={member.user_id}
+                          style={{
+                            padding: '14px 16px',
+                            borderRadius: '12px',
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '12px'
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: '#0f172a' }}>{member.username}</strong>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>{member.email || 'No email'} · {member.role}</div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {!isAdmin && (
+                              hasAccess ? (
+                                <button
+                                  type="button"
+                                  className="settings-btn-outline"
+                                  style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                                  onClick={() => revokeOrganizationMemberAccess(member)}
+                                  disabled={isDeleting}
+                                >
+                                  Revoke Delete Access
+                                </button>
+                              ) : accessRequestSent ? (
+                                <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600 }}>Request Sent</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="settings-btn-primary"
+                                  onClick={() => grantOrganizationMemberAccess(member)}
+                                  disabled={grantingOrganizationMemberId === member.user_id || isDeleting}
+                                >
+                                  {grantingOrganizationMemberId === member.user_id ? 'Granting...' : 'Grant Delete Access'}
+                                </button>
+                              )
+                            )}
+
+                            {!isAdmin && (
+                              <button
+                                type="button"
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px' }}
+                                onClick={() => deleteOrganizationMember(member)}
+                                disabled={isDeleting}
+                                title="Remove member"
+                              >
+                                🗑
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
             </div>
-          </header>
 
-          <div className="settings-page-body">
+            {/* Organization Card 3: Access Requests */}
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <div className="settings-card-icon-box">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                  <div>
+                    <h3 className="settings-card-title">Document Access Requests</h3>
+                    <p className="settings-card-subtitle">Review member requests to grant or reject delete permissions.</p>
+                  </div>
+                  <button type="button" className="settings-btn-outline" onClick={fetchAccessRequests} disabled={loadingAccessRequests}>
+                    {loadingAccessRequests ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
 
+              {accessRequestError && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px' }}>{accessRequestError}</div>}
 
-            <div
-              className="settings-content settings-page-content"
-              data-settings-section={settingsSection}
-            >
+              {loadingAccessRequests && accessRequests.length === 0 ? (
+                <p style={{ color: '#64748b' }}>Loading access requests...</p>
+              ) : accessRequests.length === 0 ? (
+                <p style={{ color: '#64748b' }}>No pending access requests.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {accessRequests.map((request) => {
+                    const requestId = request?.id || request?.request_id
+                    const requestDocumentId = request?.document_id || request?.document?.id || request?.documentId
+                    const requester = request?.requester_username || request?.requester_name || request?.requester_id || 'Unknown member'
 
-              <div className="settings-section settings-section-account">
-                <h3>Account</h3>
-
-                {pendingOrganizationInvitations.length > 0 && (
-                  <div
-                    className="organization-invitations-list"
-                    style={{
-                      marginBottom: '20px',
-                      display: 'grid',
-                      gap: '12px',
-                    }}
-                  >
-                    {pendingOrganizationInvitations.map((invitation) => (
-                      <div
-                        key={invitation.id}
-                        className="organization-invitation-card"
-                        style={{
-                          padding: '16px',
-                          borderRadius: '12px',
-                          background: 'rgba(124, 58, 237, 0.09)',
-                          border: '1px solid rgba(124, 58, 237, 0.28)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '16px',
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          <div>
-                            <strong
-                              style={{
-                                fontSize: '1.05rem',
-                                color: 'var(--text-primary)',
-                              }}
-                            >
-                              {invitation.organization_name}
-                            </strong>
-
-                            <p
-                              className="settings-description"
-                              style={{
-                                marginTop: '4px',
-                                fontSize: '0.875rem',
-                              }}
-                            >
-                              You were given access by{' '}
-                              <strong>
-                                {invitation.invited_by_username}
-                              </strong>
-                              {invitation.invited_by_email
-                                ? `(${invitation.invited_by_email})`
-                                : ''}
-                              .
-                              Accept the invitation to access the
-                              organization's shared documents.
-                            </p>
-                          </div>
-
-                          <div
-                            className="organization-invitation-actions"
-                            style={{
-                              display: 'flex',
-                              gap: '8px',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <button
-                              type="button"
-                              className="settings-save-button"
-                              disabled={invitationActionId === invitation.id}
-                              onClick={() =>
-                                respondToOrganizationInvitation(
-                                  invitation.id,
-                                  'accept'
-                                )
-                              }
-                            >
-                              {invitationActionId === invitation.id
-                                ? 'Accepting...'
-                                : 'Accept Invitation'}
-                            </button>
-
-                            <button
-                              type="button"
-                              className="settings-secondary-button"
-                              disabled={invitationActionId === invitation.id}
-                              onClick={() =>
-                                respondToOrganizationInvitation(
-                                  invitation.id,
-                                  'decline'
-                                )
-                              }
-                            >
-                              Decline
-                            </button>
-                          </div>
+                    return (
+                      <div key={requestId || `${requestDocumentId}-${request?.created_at}`} style={{ padding: '14px 16px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <strong style={{ color: '#0f172a' }}>{request?.document_name || request?.document_title || `Document ${requestDocumentId}`}</strong>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>Requested by {requester} · Permission: delete</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button type="button" className="settings-btn-primary" onClick={() => resolveAccessRequest(requestId, 'approve')} disabled={loadingAccessRequests || !requestId}>
+                            Grant
+                          </button>
+                          <button type="button" className="settings-btn-outline" onClick={() => resolveAccessRequest(requestId, 'reject')} disabled={loadingAccessRequests || !requestId}>
+                            Reject
+                          </button>
                         </div>
                       </div>
-                    ))}
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
-                    {invitationActionError && (
-                      <p className="settings-error-message">
-                        {invitationActionError}
-                      </p>
-                    )}
+            {/* Organization Card 4: Administered Organizations */}
+            {adminOrganizations.length > 0 && (
+              <div className="settings-card">
+                <div className="settings-card-header">
+                  <div className="settings-card-icon-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="8.5" cy="7" r="4"/>
+                    </svg>
                   </div>
+                  <div>
+                    <h3 className="settings-card-title">Organizations You Administer</h3>
+                    <p className="settings-card-subtitle">Manage organizations administered by your accounts.</p>
+                  </div>
+                </div>
+
+                {deleteOrganizationError && !pendingDeleteOrganization && (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px' }}>{deleteOrganizationError}</div>
                 )}
 
-                <div className="profile-picture-section">
-                  <div className="profile-picture-avatar-wrap">
+                {loadingAdminOrganizations ? (
+                  <p style={{ color: '#64748b' }}>Loading organizations...</p>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {adminOrganizations.map((organization) => {
+                      const isCurrent = organization.organization_id === (localStorage.getItem('tenant_id') || tenantId)
+
+                      return (
+                        <div key={organization.organization_id} style={{ padding: '14px 16px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <strong style={{ color: '#0f172a' }}>{organization.organization_name}</strong>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>{isCurrent ? 'Currently active organization' : 'Administered by your account'}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className="settings-btn-outline"
+                            style={{ color: isCurrent ? '#94a3b8' : '#ef4444', borderColor: isCurrent ? '#cbd5e1' : '#fca5a5' }}
+                            disabled={isCurrent}
+                            onClick={() => openDeleteOrganization(organization)}
+                          >
+                            Delete Organization
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Card 1: Account Information */}
+            <div className="settings-card">
+              <div className="settings-card-header">
+                <div className="settings-card-icon-box">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="settings-card-title">Account Information</h3>
+                  <p className="settings-card-subtitle">Update your profile picture, username and password.</p>
+                </div>
+              </div>
+
+              {/* Profile Picture Row */}
+              <div className="settings-row-item">
+                <div className="settings-row-left">
+                  <div style={{ position: 'relative', width: '64px', height: '64px', flexShrink: 0 }}>
                     <label
                       htmlFor="profile-picture-upload"
-                      className="profile-picture-preview"
-                      title="Change profile picture"
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #e9d5ff, #c4b5fd)',
+                        color: '#6b21a8',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '24px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        overflow: 'hidden'
+                      }}
+                      title="Upload profile picture"
                     >
                       {profilePictureUrl ? (
-                        <img
-                          src={profilePictureUrl}
-                          alt={`${username || 'User'} profile`}
-                          className="profile-picture-image"
-                        />
+                        <img src={profilePictureUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <div
-                          className="profile-picture-placeholder"
-                          aria-label="No profile picture"
-                        >
-                          {(username || 'U').charAt(0).toUpperCase()}
-                        </div>
+                        (username || 'A').charAt(0).toUpperCase()
                       )}
                     </label>
 
-                    {profilePictureUrl && (
-                      <button
-                        type="button"
-                        className="profile-picture-remove-icon"
-                        aria-label="Remove profile picture"
-                        title="Remove profile picture"
-                        onClick={handleProfilePictureDelete}
-                        disabled={
-                          profilePictureUploading ||
-                          profilePictureDeleting
-                        }
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          width="14"
-                          height="14"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M6 6l12 12" />
-                          <path d="M18 6L6 18" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="profile-picture-details">
-                    <div className="settings-row-title">
-                      Profile picture
-                    </div>
-
-                    <div className="settings-row-description">
-                      Add a profile picture to personalize your account.
-                    </div>
+                    <label
+                      htmlFor="profile-picture-upload"
+                      style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        right: '0',
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: '#7c3aed',
+                        color: '#ffffff',
+                        display: 'grid',
+                        placeItems: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                      }}
+                      title="Change photo"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                    </label>
 
                     <input
                       id="profile-picture-upload"
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
                       onChange={handleProfilePictureChange}
-                      disabled={
-                        profilePictureUploading ||
-                        profilePictureDeleting
-                      }
                       hidden
                     />
+                  </div>
 
-                    {profilePictureError && (
-                      <div className="profile-picture-error">
-                        {profilePictureError}
-                      </div>
-                    )}
+                  <div>
+                    <div className="settings-row-label">Profile picture</div>
+                    <div className="settings-row-desc">Add a profile picture to personalize your account.</div>
+                    <div className="settings-row-hint">JPG, PNG or GIF. Max size 5MB.</div>
                   </div>
                 </div>
-
-                {!showChangeUsername ? (
-                  <div className="settings-row settings-account-action">
-                    <div>
-                      <div className="settings-row-title">Username</div>
-                      <div className="settings-row-description">
-                        Change your current username.
-                      </div>
-                    </div>
-
-                    <div className="settings-action-group">
-                      <button
-                        type="button"
-                        className="settings-theme-button"
-                        onClick={() => {
-                          setShowChangePassword(false)
-                          setShowChangeUsername(true)
-                          setUsernameError('')
-                          setUsernameMessage('')
-                          setNewUsername('')
-                          setUsernamePassword('')
-                        }}
-                      >
-                        Change Username
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <form
-                    className="change-password-form"
-                    onSubmit={handleChangeUsername}
-                  >
-                    <div className="change-password-title">
-                      Change Username
-                    </div>
-
-                    <div className="change-password-field">
-                      <label htmlFor="new-username">
-                        New username
-                      </label>
-                      <input
-                        id="new-username"
-                        type="text"
-                        value={newUsername}
-                        onChange={(event) =>
-                          setNewUsername(event.target.value)
-                        }
-                        autoComplete="username"
-                        placeholder="Enter new username"
-                        maxLength={100}
-                        disabled={usernameChanging}
-                      />
-                    </div>
-
-                    <div className="change-password-field">
-                      <label htmlFor="username-current-password">
-                        Current password
-                      </label>
-                      <input
-                        id="username-current-password"
-                        type="password"
-                        value={usernamePassword}
-                        onChange={(event) =>
-                          setUsernamePassword(event.target.value)
-                        }
-                        autoComplete="current-password"
-                        placeholder="Enter current password"
-                        disabled={usernameChanging}
-                      />
-                    </div>
-
-                    {usernameError && (
-                      <div className="change-password-error">
-                        {usernameError}
-                      </div>
-                    )}
-
-                    {usernameMessage && (
-                      <div className="change-password-success">
-                        {usernameMessage}
-                      </div>
-                    )}
-
-                    <div className="change-password-actions">
-                      <button
-                        type="button"
-                        className="settings-secondary-button"
-                        onClick={() => {
-                          setShowChangeUsername(false)
-                          setUsernameError('')
-                          setUsernameMessage('')
-                          setNewUsername('')
-                          setUsernamePassword('')
-                        }}
-                        disabled={usernameChanging}
-                      >
-                        Cancel
-                      </button>
-
-                      <button
-                        type="submit"
-                        className="settings-save-button"
-                        disabled={usernameChanging}
-                      >
-                        {usernameChanging
-                          ? 'Changing...'
-                          : 'Change Username'}
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {!showChangePassword ? (
-                  <div className="settings-row settings-password-action">
-                    <div>
-                      <div className="settings-row-title">
-                        Password
-                      </div>
-                      <div className="settings-row-description">
-                        Change your account password securely.
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="settings-theme-button"
-                      onClick={() => {
-                        setShowChangeUsername(false)
-                        setShowChangePassword(true)
-                        setPasswordError('')
-                        setPasswordMessage('')
-                      }}
-                    >
-                      Change Password
-                    </button>
-                  </div>
-                ) : (
-                  <form
-                    className="change-password-form"
-                    onSubmit={handleChangePassword}
-                  >
-                    <div className="change-password-title">
-                      Change Password
-                    </div>
-
-                    <div className="change-password-field">
-                      <label htmlFor="current-password">
-                        Current password
-                      </label>
-                      <input
-                        id="current-password"
-                        type="password"
-                        value={currentPassword}
-                        onChange={(event) =>
-                          setCurrentPassword(event.target.value)
-                        }
-                        autoComplete="current-password"
-                        placeholder="Enter current password"
-                        disabled={passwordChanging}
-                      />
-                    </div>
-
-                    <div className="change-password-field">
-                      <label htmlFor="new-password">
-                        New password
-                      </label>
-                      <input
-                        id="new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(event) =>
-                          setNewPassword(event.target.value)
-                        }
-                        autoComplete="new-password"
-                        placeholder="Minimum 8 characters"
-                        disabled={passwordChanging}
-                      />
-                    </div>
-
-                    <div className="change-password-field">
-                      <label htmlFor="confirm-password">
-                        Confirm new password
-                      </label>
-                      <input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(event) =>
-                          setConfirmPassword(event.target.value)
-                        }
-                        autoComplete="new-password"
-                        placeholder="Re-enter new password"
-                        disabled={passwordChanging}
-                      />
-                    </div>
-
-                    {passwordError && (
-                      <div className="change-password-error">
-                        {passwordError}
-                      </div>
-                    )}
-
-                    {passwordMessage && (
-                      <div className="change-password-success">
-                        {passwordMessage}
-                      </div>
-                    )}
-
-                    <div className="change-password-actions">
-                      <button
-                        type="button"
-                        className="settings-cancel-button"
-                        onClick={() => {
-                          setShowChangePassword(false)
-                          setCurrentPassword('')
-                          setNewPassword('')
-                          setConfirmPassword('')
-                          setPasswordError('')
-                          setPasswordMessage('')
-                        }}
-                        disabled={passwordChanging}
-                      >
-                        Cancel
-                      </button>
-
-                      <button
-                        type="submit"
-                        className="settings-save-button"
-                        disabled={passwordChanging}
-                      >
-                        {passwordChanging
-                          ? 'Changing...'
-                          : 'Change Password'}
-                      </button>
-                    </div>
-                  </form>
-                )}
               </div>
 
-              {role === 'admin' && (
-                <div className="settings-section settings-section-account">
-                  <div className="settings-row">
-                    <div>
-                      <div className="settings-row-title">
-                        Add Account
-                      </div>
-                      <div className="settings-row-description">
-                        Create another independent account while keeping
-                        your current account and session active.
-                      </div>
-                    </div>
-
-                    {!showAddAccount && (
-                      <button
-                        type="button"
-                        className="settings-theme-button"
-                        onClick={() => {
-                          setShowAddAccount(true)
-                          setAddAccountError('')
-                          setAddAccountMessage('')
-                        }}
-                      >
-                        Add Account
-                      </button>
-                    )}
+              {/* Username Row */}
+              <div className="settings-row-item">
+                <div className="settings-row-left">
+                  <div className="settings-sub-icon-circle">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
                   </div>
-
-                  {showAddAccount && (
-                    <form
-                      className="change-password-form"
-                      onSubmit={addAccount}
-                    >
-                      <div className="change-password-title">
-                        Create Additional Account
-                      </div>
-
-                      <div className="change-password-field">
-                        <label htmlFor="add-account-username">
-                          Username
-                        </label>
-                        <input
-                          id="add-account-username"
-                          type="text"
-                          value={addAccountUsername}
-                          onChange={(event) => {
-                            setAddAccountUsername(event.target.value)
-                            setAddAccountError('')
-                          }}
-                          autoComplete="username"
-                          placeholder="Enter username"
-                          maxLength={100}
-                          disabled={addingAccount}
-                        />
-                      </div>
-
-                      <div className="change-password-field">
-                        <label htmlFor="add-account-email">
-                          Email
-                        </label>
-                        <input
-                          id="add-account-email"
-                          type="email"
-                          value={addAccountEmail}
-                          onChange={(event) => {
-                            setAddAccountEmail(event.target.value)
-                            setAddAccountError('')
-                          }}
-                          autoComplete="email"
-                          placeholder="Enter email address"
-                          disabled={addingAccount}
-                        />
-                      </div>
-
-                      {addAccountType === 'organization' && (
-                        <div className="change-password-field">
-                          <label htmlFor="add-account-organization-name">
-                            Organization name
-                          </label>
-                          <input
-                            id="add-account-organization-name"
-                            type="text"
-                            value={addAccountOrganizationName}
-                            onChange={(event) => {
-                              setAddAccountOrganizationName(
-                                event.target.value
-                              )
-                              setAddAccountError('')
-                            }}
-                            placeholder="Enter organization name"
-                            disabled={addingAccount}
-                          />
-                        </div>
-                      )}
-
-                      <div className="change-password-field">
-                        <label htmlFor="add-account-password">
-                          Password
-                        </label>
-                        <input
-                          id="add-account-password"
-                          type="password"
-                          value={addAccountPassword}
-                          onChange={(event) => {
-                            setAddAccountPassword(event.target.value)
-                            setAddAccountError('')
-                          }}
-                          autoComplete="new-password"
-                          placeholder="Enter password"
-                          disabled={addingAccount}
-                        />
-                      </div>
-
-                      <div className="change-password-field">
-                        <label htmlFor="add-account-confirm-password">
-                          Confirm password
-                        </label>
-                        <input
-                          id="add-account-confirm-password"
-                          type="password"
-                          value={addAccountConfirmPassword}
-                          onChange={(event) => {
-                            setAddAccountConfirmPassword(event.target.value)
-                            setAddAccountError('')
-                          }}
-                          autoComplete="new-password"
-                          placeholder="Re-enter password"
-                          disabled={addingAccount}
-                        />
-                      </div>
-
-                      {addAccountError && (
-                        <div className="change-password-error">
-                          {addAccountError}
-                        </div>
-                      )}
-
-                      {addAccountMessage && (
-                        <div className="change-password-success">
-                          {addAccountMessage}
-                        </div>
-                      )}
-
-                      <div className="change-password-actions">
-                        <button
-                          type="button"
-                          className="settings-secondary-button"
-                          onClick={() => {
-                            if (addingAccount) return
-
-                            setShowAddAccount(false)
-                            setAddAccountType('organization')
-                            setAddAccountUsername('')
-                            setAddAccountEmail('')
-                            setAddAccountPassword('')
-                            setAddAccountConfirmPassword('')
-                            setAddAccountOrganizationName('')
-                            setAddAccountError('')
-                            setAddAccountMessage('')
-                          }}
-                          disabled={addingAccount}
-                        >
-                          Cancel
-                        </button>
-
-                        <button
-                          type="submit"
-                          className="settings-save-button"
-                          disabled={addingAccount}
-                        >
-                          {addingAccount
-                            ? 'Creating...'
-                            : 'Create Account'}
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                  <div>
+                    <div className="settings-row-label">Username</div>
+                    <div className="settings-row-desc">Change your current username.</div>
+                  </div>
                 </div>
 
+                <button
+                  type="button"
+                  className="settings-btn-outline"
+                  onClick={() => {
+                    setShowChangePassword(false)
+                    setShowChangeUsername(!showChangeUsername)
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Change Username
+                </button>
+              </div>
 
-              )}
-
-              {role === 'admin' && (
-                <div className="settings-section settings-section-account">
-                  <div className="settings-row">
-                    <div>
-                      <div className="settings-row-title">
-                        Switch Accounts
-                      </div>
-                      <div className="settings-row-description">
-                        Switch between organization accounts registered with
-                        your email without signing out.
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="settings-theme-button"
-                      onClick={openSwitchAccounts}
-                      disabled={loadingSwitchAccounts}
-                    >
-                      {loadingSwitchAccounts
-                        ? 'Loading...'
-                        : 'Switch Accounts'}
+              {showChangeUsername && (
+                <form className="change-password-form" onSubmit={handleChangeUsername} style={{ marginTop: '16px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <div className="change-password-field">
+                    <label htmlFor="new-username" style={{ color: '#0f172a', fontWeight: 600 }}>New Username</label>
+                    <input
+                      id="new-username"
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      placeholder="Enter new username"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }}
+                    />
+                  </div>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label htmlFor="user-pwd" style={{ color: '#0f172a', fontWeight: 600 }}>Current Password</label>
+                    <input
+                      id="user-pwd"
+                      type="password"
+                      value={usernamePassword}
+                      onChange={(e) => setUsernamePassword(e.target.value)}
+                      placeholder="Enter current password"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }}
+                    />
+                  </div>
+                  {usernameError && <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>{usernameError}</div>}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                    <button type="submit" className="settings-btn-primary" disabled={usernameChanging}>
+                      {usernameChanging ? 'Saving...' : 'Save Username'}
+                    </button>
+                    <button type="button" className="settings-btn-outline" onClick={() => setShowChangeUsername(false)}>
+                      Cancel
                     </button>
                   </div>
-
-                  {showSwitchAccounts && (
-                    <div className="change-password-form">
-                      <div className="change-password-title">
-                        Switch Organization Account
-                      </div>
-
-                      {loadingSwitchAccounts ? (
-                        <div className="settings-row-description">
-                          Loading available organization accounts...
-                        </div>
-                      ) : switchAccounts.length === 0 ? (
-                        <div className="settings-row-description">
-                          No other organization accounts are available for
-                          this email address.
-                        </div>
-                      ) : (
-                        <div className="switch-account-list">
-                          {switchAccounts.map((account) => (
-                            <div
-                              key={`${account.user_id}-${account.organization_id}`}
-                              className={`switch-account-card${
-                                account.current
-                                  ? ' switch-account-card-current'
-                                  : ''
-                              }`}
-                              role="button"
-                              tabIndex={account.current ? -1 : 0}
-                              onClick={() => {
-                                if (!account.current && !switchingAccountId) {
-                                  switchAccount(account.organization_id)
-                                }
-                              }}
-                              onKeyDown={(event) => {
-                                if (
-                                  !account.current &&
-                                  !switchingAccountId &&
-                                  (event.key === 'Enter' || event.key === ' ')
-                                ) {
-                                  event.preventDefault()
-                                  switchAccount(account.organization_id)
-                                }
-                              }}
-                            >
-                              <span
-                                className={`switch-account-radio${
-                                  account.current
-                                    ? ' switch-account-radio-current'
-                                    : ''
-                                }`}
-                              >
-                                {account.current && (
-                                  <span className="switch-account-radio-dot" />
-                                )}
-                              </span>
-
-                              <span className="switch-account-icon">
-                                <svg
-                                  viewBox="0 0 24 24"
-                                  aria-hidden="true"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="1.8"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M3 21h18" />
-                                  <path d="M5 21V7l7-4 7 4v14" />
-                                  <path d="M9 21v-4h6v4" />
-                                  <path d="M9 9h.01" />
-                                  <path d="M15 9h.01" />
-                                  <path d="M9 12h.01" />
-                                  <path d="M15 12h.01" />
-                                </svg>
-                              </span>
-
-                              <span className="switch-account-details">
-                                <span className="switch-account-name-row">
-                                  <span className="switch-account-name">
-                                    {account.organization_name}
-                                  </span>
-
-
-
-                                  {account.current && (
-                                    <span className="switch-account-current">
-                                      Current
-                                    </span>
-                                  )}
-                                </span>
-
-                                <span className="switch-account-username">
-                                  {account.username}
-                                </span>
-                              </span>
-
-                              <button
-                                type="button"
-                                className="switch-account-delete"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-
-                                  if (!account.current) {
-                                    openDeleteOrganization(account)
-                                  }
-                                }}
-                                disabled={
-                                  switchingAccountId !== null ||
-                                  deletingOrganizationId !== null ||
-                                  account.current
-                                }
-                                aria-label={`Delete ${account.organization_name}`}
-                              >
-                                <svg
-                                  viewBox="0 0 24 24"
-                                  aria-hidden="true"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="1.8"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  width="16"
-                                  height="16"
-                                >
-                                  <path d="M3 6h18" />
-                                  <path d="M8 6V4h8v2" />
-                                  <path d="M19 6l-1 14H6L5 6" />
-                                  <path d="M10 11v5" />
-                                  <path d="M14 11v5" />
-                                </svg>
-                              </button>
-
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {switchAccountError && (
-                        <div className="change-password-error">
-                          {switchAccountError}
-                        </div>
-                      )}
-
-                      <div className="change-password-actions">
-                        <button
-                          type="button"
-                          className="settings-secondary-button"
-                          onClick={() => {
-                            if (switchingAccountId) return
-
-                            setShowSwitchAccounts(false)
-                            setSwitchAccounts([])
-                            setSwitchAccountError('')
-                          }}
-                          disabled={switchingAccountId !== null}
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </form>
               )}
 
-              {accountType === 'organization' &&
-                myOrganizations.length > 1 && (
-                  <div className="settings-section">
-                    <h3>Organizations</h3>
-
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-title">
-                          Current organization
-                        </div>
-                        <div className="settings-row-description">
-                          Switch between organizations you have active access to.
-                        </div>
-                      </div>
-
-                      <div className="settings-action-group">
-                        <select
-                          className="settings-theme-button"
-                          value={tenantId || ''}
-                          onChange={(event) =>
-                            switchOrganization(event.target.value)
-                          }
-                          disabled={
-                            loadingMyOrganizations ||
-                            switchingOrganizationId !== null
-                          }
-                        >
-                          {myOrganizations
-                            .filter(
-                              (organization) =>
-                                organization.access_status === 'active'
-                            )
-                            .map((organization) => (
-                              <option
-                                key={organization.organization_id}
-                                value={organization.organization_id}
-                              >
-                                {organization.organization_name}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {switchingOrganizationId && (
-                      <p className="settings-description">
-                        Switching organization...
-                      </p>
-                    )}
-
-                    {organizationSwitchError && (
-                      <p className="settings-error-message">
-                        {organizationSwitchError}
-                      </p>
-                    )}
+              {/* Password Row */}
+              <div className="settings-row-item">
+                <div className="settings-row-left">
+                  <div className="settings-sub-icon-circle">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
                   </div>
-                )}
-
-              {organizationAdminVisible && (
-                <div className="settings-section settings-section-organization">
-                  <h3>Organization</h3>
-
-                  {!showChangeOrganization ? (
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-title">
-                          Organization Name
-                        </div>
-                        <div className="settings-row-description">
-                          Change your current organization name.
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="settings-theme-button"
-                        onClick={() => {
-                          setShowChangeOrganization(true)
-                          setNewOrganizationName(organizationName)
-                          setOrganizationCurrentPassword('')
-                          setOrganizationNameError('')
-                          setOrganizationNameMessage('')
-                        }}
-                      >
-                        Change Organization Name
-                      </button>
-                    </div>
-                  ) : (
-                    <form
-                      className="change-password-form"
-                      onSubmit={updateOrganizationName}
-                    >
-                      <div className="change-password-title">
-                        Change Organization Name Name
-                      </div>
-
-                      <div className="change-password-field">
-                        <label htmlFor="organization-name">
-                          New organization name
-                        </label>
-                        <input
-                          id="organization-name"
-                          type="text"
-                          value={newOrganizationName}
-                          onChange={(event) => {
-                            setNewOrganizationName(event.target.value)
-                            setOrganizationNameError('')
-                            setOrganizationNameMessage('')
-                          }}
-                          placeholder="Enter organization name"
-                          maxLength={200}
-                          disabled={organizationNameSaving}
-                        />
-                      </div>
-
-                      <div className="change-password-field">
-                        <label htmlFor="organization-current-password">
-                          Current password
-                        </label>
-                        <input
-                          id="organization-current-password"
-                          type="password"
-                          value={organizationCurrentPassword}
-                          onChange={(event) => {
-                            setOrganizationCurrentPassword(event.target.value)
-                            setOrganizationNameError('')
-                            setOrganizationNameMessage('')
-                          }}
-                          autoComplete="current-password"
-                          placeholder="Enter current password"
-                          disabled={organizationNameSaving}
-                        />
-                      </div>
-
-                      {organizationNameError && (
-                        <p className="settings-error-message">
-                          {organizationNameError}
-                        </p>
-                      )}
-
-                      {organizationNameMessage && (
-                        <p className="settings-success-message">
-                          {organizationNameMessage}
-                        </p>
-                      )}
-
-                      <div className="settings-action-group">
-                        <button
-                          type="button"
-                          className="settings-secondary-button"
-                          onClick={() => {
-                            setShowChangeOrganization(false)
-                            setOrganizationNameError('')
-                            setOrganizationNameMessage('')
-                            setOrganizationCurrentPassword('')
-                            setNewOrganizationName(organizationName)
-                          }}
-                          disabled={organizationNameSaving}
-                        >
-                          Cancel
-                        </button>
-
-                        <button
-                          type="submit"
-                          className="settings-save-button"
-                          disabled={
-                            organizationNameSaving ||
-                            !newOrganizationName.trim()
-                          }
-                        >
-                          {organizationNameSaving
-                            ? 'Changing...'
-                            : 'Change Organization Name'}
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                  <div>
+                    <div className="settings-row-label">Password</div>
+                    <div className="settings-row-desc">Change your account password securely.</div>
+                  </div>
                 </div>
-              )}
 
-              {organizationAdminVisible && (
-                <>
-                  <div className="settings-section settings-section-organization">
-                    <h3>Organization Members</h3>
+                <button
+                  type="button"
+                  className="settings-btn-outline"
+                  onClick={() => {
+                    setShowChangeUsername(false)
+                    setShowChangePassword(!showChangePassword)
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  Change Password
+                </button>
+              </div>
 
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-title">
-                          Invite a member
-                        </div>
-                        <div className="settings-row-description">
-                          Add an existing registered user to this organization by email.
-                        </div>
-                      </div>
-                    </div>
-
-                    <form
-                      className="change-password-form"
-                      onSubmit={inviteOrganizationMember}
-                    >
-                      <div className="change-password-field">
-                        <label htmlFor="organization-member-email">
-                          Member email
-                        </label>
-                        <input
-                          id="organization-member-email"
-                          type="email"
-                          value={memberEmail}
-                          onChange={(event) => {
-                            setMemberEmail(event.target.value)
-                            setMemberInviteError('')
-                            setMemberInviteMessage('')
-                          }}
-                          autoComplete="email"
-                          placeholder="member@example.com"
-                          disabled={invitingMember}
-                        />
-                      </div>
-
-                      {memberInviteError && (
-                        <div className="change-password-error">
-                          {memberInviteError}
-                        </div>
-                      )}
-
-                      {memberInviteMessage && (
-                        <div className="change-password-success">
-                          {memberInviteMessage}
-                        </div>
-                      )}
-
-                      <div className="change-password-actions">
-                        <button
-                          type="submit"
-                          className="settings-save-button"
-                          disabled={
-                            invitingMember ||
-                            !memberEmail.trim()
-                          }
-                        >
-                          {invitingMember
-                            ? 'Inviting...'
-                            : 'Invite Member'}
-                        </button>
-                      </div>
-                    </form>
-
-                    <div className="organization-members-section">
-                      <button
-                        type="button"
-                        className="organization-members-toggle"
-                        onClick={() =>
-                          setShowOrganizationMembers((current) => !current)
-                        }
-                        aria-expanded={showOrganizationMembers}
-                      >
-                        <span className="settings-row-description">
-                          Current organization members
-                        </span>
-
-                        <span
-                          className={`organization-members-chevron ${
-                            showOrganizationMembers ? 'is-open' : ''
-                          }`}
-                          aria-hidden="true"
-                        >
-                          <span className="organization-members-chevron-icon" />
-                        </span>
-                      </button>
-
-                      {showOrganizationMembers && (
-                        <div>
-                          {organizationMemberDeleteError && (
-                            <div
-                              className="change-password-error"
-                              style={{ marginTop: '10px' }}
-                            >
-                              {organizationMemberDeleteError}
-                            </div>
-                          )}
-
-                          {!loadingOrganizationMembers &&
-                            organizationMembers.length > 0 && (
-                              <div
-                                className="organization-members-search-wrapper"
-                              >
-                                <input
-                                  type="search"
-                                  className="organization-members-search"
-                                  value={organizationMemberSearchInput}
-                                  onChange={(event) =>
-                                    setOrganizationMemberSearchInput(
-                                      event.target.value
-                                    )
-                                  }
-                                  placeholder="Search members by name..."
-                                  aria-label="Search organization members by name"
-                                />
-
-                                <button
-                                  type="button"
-                                  className="organization-members-search-icon"
-                                  onClick={() =>
-                                    setOrganizationMemberSearch(
-                                      organizationMemberSearchInput
-                                    )
-                                  }
-                                  aria-label="Search organization members"
-                                  title="Search"
-                                >
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                  >
-                                    <circle
-                                      cx="11"
-                                      cy="11"
-                                      r="6.5"
-                                    />
-                                    <path d="M16 16L21 21" />
-                                  </svg>
-                                </button>
-                              </div>
-                            )}
-
-                          {loadingOrganizationMembers ? (
-                            <div
-                              className="settings-row-description"
-                              style={{ marginTop: '10px' }}
-                            >
-                              Loading members...
-                            </div>
-                          ) : organizationMembers.length === 0 ? (
-                            <div
-                              className="settings-row-description"
-                              style={{ marginTop: '10px' }}
-                            >
-                              No organization members found.
-                            </div>
-                          ) : (
-                            <div
-                              className="organization-members-list"
-                              style={{ marginTop: '10px' }}
-                            >
-                              {filteredOrganizationMembers.length === 0 ? (
-                                <div
-                                  className="settings-row-description"
-                                  style={{ padding: '10px 0' }}
-                                >
-                                  No members match your search.
-                                </div>
-                              ) : (
-                                filteredOrganizationMembers.map((member) => {
-                                const isAdmin = member.role === 'admin'
-                                const hasAccess =
-                                  member.access_status === 'active'
-                                const accessRequestSent =
-                                  member.access_status === 'pending'
-                                const isDeleting =
-                                  deletingOrganizationMemberId ===
-                                  member.user_id
-
-                                return (
-                                  <div
-                                    key={member.user_id}
-                                    className="organization-member-row"
-                                  >
-                                    <div className="organization-member-info">
-                                      <div className="organization-member-name">
-                                        {member.username}
-                                      </div>
-
-                                      <div className="settings-row-description">
-                                        {member.email || 'No email'} · {member.role}
-                                      </div>
-                                    </div>
-
-                                    {!isAdmin ? (
-                                      <div
-                                        className={`organization-member-access ${
-                                          hasAccess
-                                            ? 'is-granted'
-                                            : accessRequestSent
-                                              ? 'is-requested'
-                                              : 'is-pending'
-                                        }`}
-                                      >
-                                        <span
-                                          className="organization-member-access-dot"
-                                          aria-hidden="true"
-                                        />
-
-                                        {hasAccess
-                                          ? 'ACCESS GRANTED'
-                                          : accessRequestSent
-                                            ? 'REQUEST SENT'
-                                            : 'NO ACCESS'}
-                                      </div>
-                                    ) : (
-                                      <div className="organization-member-access-spacer" />
-                                    )}
-
-                                    <div className="organization-member-actions">
-                                      {!isAdmin &&
-                                        !hasAccess &&
-                                        !accessRequestSent && (
-                                        <button
-                                          type="button"
-                                          className="settings-save-button organization-member-grant-button"
-                                          onClick={() =>
-                                            grantOrganizationMemberAccess(member)
-                                          }
-                                          disabled={
-                                            grantingOrganizationMemberId ===
-                                              member.user_id || isDeleting
-                                          }
-                                        >
-                                          {grantingOrganizationMemberId ===
-                                          member.user_id
-                                            ? 'Granting...'
-                                            : 'Grant Access'}
-                                        </button>
-                                      )}
-
-                                      {!isAdmin && hasAccess && (
-                                        <button
-                                          type="button"
-                                          className="organization-member-revoke-button"
-                                          onClick={() =>
-                                            revokeOrganizationMemberAccess(member)
-                                          }
-                                          disabled={isDeleting}
-                                        >
-                                          {isDeleting
-                                            ? 'Revoking...'
-                                            : 'Revoke Access'}
-                                        </button>
-                                      )}
-
-                                      {!isAdmin && (
-                                        <button
-                                          type="button"
-                                          className="organization-member-delete-button"
-                                          onClick={() =>
-                                            deleteOrganizationMember(member)
-                                          }
-                                          disabled={isDeleting}
-                                          aria-label={`Remove ${
-                                            member.username || 'member'
-                                          }`}
-                                          title={
-                                            isDeleting
-                                              ? 'Removing member...'
-                                              : 'Remove member'
-                                          }
-                                        >
-                                          {isDeleting ? '…' : '🗑'}
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                )
-                                })
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+              {showChangePassword && (
+                <form className="change-password-form" onSubmit={handleChangePassword} style={{ marginTop: '16px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <div className="change-password-field">
+                    <label htmlFor="curr-pwd" style={{ color: '#0f172a', fontWeight: 600 }}>Current Password</label>
+                    <input id="curr-pwd" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
                   </div>
-
-                  <div className="settings-section settings-section-organization">
-                    <h3>Access Requests</h3>
-
-                    <div className="settings-row">
-                      <div>
-                        <div className="settings-row-title">
-                          Document delete permissions
-                        </div>
-                        <div className="settings-row-description">
-                          Review member requests and grant or reject delete access.
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="settings-theme-button"
-                        onClick={fetchAccessRequests}
-                        disabled={loadingAccessRequests}
-                      >
-                        {loadingAccessRequests
-                          ? 'Refreshing...'
-                          : 'Refresh'}
-                      </button>
-                    </div>
-
-                    {accessRequestError && (
-                      <div className="change-password-error">
-                        {accessRequestError}
-                      </div>
-                    )}
-
-                    {loadingAccessRequests && accessRequests.length === 0 ? (
-                      <div className="settings-row-description">
-                        Loading access requests...
-                      </div>
-                    ) : accessRequests.length === 0 ? (
-                      <div className="settings-row-description">
-                        No pending access requests.
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          display: 'grid',
-                          gap: '10px',
-                          marginTop: '12px',
-                        }}
-                      >
-                        {accessRequests.map((request) => {
-                          const requestId =
-                            request?.id || request?.request_id
-
-                          const requestDocumentId =
-                            request?.document_id ||
-                            request?.document?.id ||
-                            request?.documentId
-
-                          const requester =
-                            request?.requester_username ||
-                            request?.requester_name ||
-                            request?.requester_id ||
-                            'Unknown member'
-
-                          return (
-                            <div
-                              key={
-                                requestId ||
-                                `${requestDocumentId}-${request?.created_at || 'request'}`
-                              }
-                              style={{
-                                padding: '12px',
-                                border:
-                                  '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                                borderRadius: '10px',
-                              }}
-                            >
-                              <div style={{ fontWeight: 600 }}>
-                                {request?.document_name ||
-                                  request?.document_title ||
-                                  `Document ${
-                                    requestDocumentId || 'unknown'
-                                  }`}
-                              </div>
-
-                              <div
-                                className="settings-row-description"
-                                style={{ marginTop: '4px' }}
-                              >
-                                Requested by {requester}
-                              </div>
-
-                              <div
-                                className="settings-row-description"
-                                style={{ marginTop: '2px' }}
-                              >
-                                Permission: delete
-                              </div>
-
-                              <div
-                                className="settings-action-group"
-                                style={{ marginTop: '10px' }}
-                              >
-                                <button
-                                  type="button"
-                                  className="settings-save-button"
-                                  onClick={() =>
-                                    resolveAccessRequest(
-                                      requestId,
-                                      'approve'
-                                    )
-                                  }
-                                  disabled={
-                                    loadingAccessRequests ||
-                                    !requestId
-                                  }
-                                >
-                                  Grant Access
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="settings-secondary-button"
-                                  onClick={() =>
-                                    resolveAccessRequest(
-                                      requestId,
-                                      'reject'
-                                    )
-                                  }
-                                  disabled={
-                                    loadingAccessRequests ||
-                                    !requestId
-                                  }
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label htmlFor="new-pwd" style={{ color: '#0f172a', fontWeight: 600 }}>New Password</label>
+                    <input id="new-pwd" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
                   </div>
-
-                  {adminOrganizations.length > 0 && (
-                    <div className="settings-section organization-admin-section">
-                      <h3>Organizations you administer</h3>
-
-                      <div
-                        className="settings-row-description"
-                        style={{ marginBottom: '14px' }}
-                      >
-                        Manage organizations administered by your accounts.
-                        Deleting an organization permanently removes its
-                        organization membership, invitations, access grants,
-                        and access requests.
-                      </div>
-
-                      {deleteOrganizationError &&
-                        !pendingDeleteOrganization && (
-                          <div className="change-password-error">
-                            {deleteOrganizationError}
-                          </div>
-                        )}
-
-                      {loadingAdminOrganizations ? (
-                        <div className="settings-row-description">
-                          Loading organizations...
-                        </div>
-                      ) : (
-                        adminOrganizations.map((organization) => {
-                          const isCurrent =
-                            organization.organization_id ===
-                            (localStorage.getItem('tenant_id') || tenantId)
-
-                          return (
-                            <div
-                              key={organization.organization_id}
-                              className="organization-member-row"
-                            >
-                              <div className="organization-member-info">
-                                <div className="organization-member-name">
-                                  {organization.organization_name}
-                                </div>
-
-                                <div className="settings-row-description">
-                                  {isCurrent
-                                    ? 'Currently active organization'
-                                    : 'Administered by your account'}
-                                </div>
-                              </div>
-
-                              <div className="organization-member-delete">
-                                <button
-                                  type="button"
-                                  className="organization-member-delete-button"
-                                  disabled={isCurrent}
-                                  onClick={() =>
-                                    openDeleteOrganization(organization)
-                                  }
-                                  aria-label={`Delete ${organization.organization_name}`}
-                                  title={
-                                    isCurrent
-                                      ? 'Switch to another organization before deleting this organization'
-                                      : 'Delete organization'
-                                  }
-                                >
-                                  🗑
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  )}
-                </>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label htmlFor="conf-pwd" style={{ color: '#0f172a', fontWeight: 600 }}>Confirm New Password</label>
+                    <input id="conf-pwd" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
+                  </div>
+                  {passwordError && <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>{passwordError}</div>}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                    <button type="submit" className="settings-btn-primary" disabled={passwordChanging}>
+                      {passwordChanging ? 'Changing...' : 'Update Password'}
+                    </button>
+                    <button type="button" className="settings-btn-outline" onClick={() => setShowChangePassword(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
-          </div>
-        </div>
+
+            {/* Card 2: Add Account */}
+            <div className="settings-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div className="settings-row-left">
+                  <div className="settings-card-icon-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="8.5" cy="7" r="4"/>
+                      <line x1="20" y1="8" x2="20" y2="14"/>
+                      <line x1="17" y1="11" x2="23" y2="11"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="settings-card-title">Add Account</h3>
+                    <p className="settings-card-subtitle">Create another independent account while keeping your current account and session active.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="settings-btn-primary"
+                  onClick={() => setShowAddAccount(!showAddAccount)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Add Account
+                </button>
+              </div>
+
+              {showAddAccount && (
+                <form className="change-password-form" onSubmit={addAccount} style={{ marginTop: '20px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <div className="change-password-field">
+                    <label style={{ color: '#0f172a', fontWeight: 600 }}>Username</label>
+                    <input type="text" value={addAccountUsername} onChange={(e) => setAddAccountUsername(e.target.value)} placeholder="Username" style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
+                  </div>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label style={{ color: '#0f172a', fontWeight: 600 }}>Email</label>
+                    <input type="email" value={addAccountEmail} onChange={(e) => setAddAccountEmail(e.target.value)} placeholder="Email address" style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
+                  </div>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label style={{ color: '#0f172a', fontWeight: 600 }}>Organization Name</label>
+                    <input type="text" value={addAccountOrganizationName} onChange={(e) => setAddAccountOrganizationName(e.target.value)} placeholder="Organization name" style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
+                  </div>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label style={{ color: '#0f172a', fontWeight: 600 }}>Password</label>
+                    <input type="password" value={addAccountPassword} onChange={(e) => setAddAccountPassword(e.target.value)} placeholder="Password" style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
+                  </div>
+                  <div className="change-password-field" style={{ marginTop: '12px' }}>
+                    <label style={{ color: '#0f172a', fontWeight: 600 }}>Confirm Password</label>
+                    <input type="password" value={addAccountConfirmPassword} onChange={(e) => setAddAccountConfirmPassword(e.target.value)} placeholder="Confirm password" style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a' }} />
+                  </div>
+                  {addAccountError && <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>{addAccountError}</div>}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                    <button type="submit" className="settings-btn-primary" disabled={addingAccount}>
+                      {addingAccount ? 'Creating...' : 'Create Account'}
+                    </button>
+                    <button type="button" className="settings-btn-outline" onClick={() => setShowAddAccount(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Card 3: Switch Accounts */}
+            <div className="settings-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div className="settings-row-left">
+                  <div className="settings-card-icon-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="16 3 21 3 21 8"/>
+                      <line x1="4" y1="20" x2="21" y2="3"/>
+                      <polyline points="8 21 3 21 3 16"/>
+                      <line x1="20" y1="4" x2="3" y2="21"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="settings-card-title">Switch Accounts</h3>
+                    <p className="settings-card-subtitle">Switch between organization accounts registered with your email without signing out.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="settings-btn-outline"
+                  onClick={() => {
+                    if (showSwitchAccounts) {
+                      setShowSwitchAccounts(false)
+                    } else {
+                      openSwitchAccounts()
+                    }
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="16 3 21 3 21 8"/>
+                    <line x1="4" y1="20" x2="21" y2="3"/>
+                    <polyline points="8 21 3 21 3 16"/>
+                    <line x1="20" y1="4" x2="3" y2="21"/>
+                  </svg>
+                  Switch Accounts
+                </button>
+              </div>
+
+              {showSwitchAccounts && (
+                <div style={{ marginTop: '20px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ margin: '0 0 12px', color: '#0f172a' }}>Available Organization Accounts</h4>
+                  {loadingSwitchAccounts ? (
+                    <p style={{ color: '#64748b' }}>Loading available accounts...</p>
+                  ) : switchAccounts.length === 0 ? (
+                    <p style={{ color: '#64748b' }}>No other organization accounts available for your email.</p>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                      {switchAccounts.map((acc) => (
+                        <div
+                          key={`${acc.user_id}-${acc.organization_id}`}
+                          onClick={() => !acc.current && switchAccount(acc.organization_id)}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            background: acc.current ? '#f3e8ff' : '#ffffff',
+                            border: acc.current ? '1px solid #c4b5fd' : '1px solid #cbd5e1',
+                            cursor: acc.current ? 'default' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: '#0f172a' }}>{acc.organization_name}</strong>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>Username: {acc.username}</div>
+                          </div>
+                          {acc.current && <span style={{ fontSize: '12px', background: '#7c3aed', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontWeight: 600 }}>Current</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </main>
+    </div>
 
       {pendingRevokeMember && (
         <div

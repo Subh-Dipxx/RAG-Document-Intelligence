@@ -3814,7 +3814,7 @@ const handleNewConversation = () => {
           <span className="sidebar-documents-text">Documents</span>
         </button>
 
-        {role === 'admin' && (
+        {(role === 'admin' || currentRole?.toLowerCase() === 'admin') && (
           <button
             type="button"
             className="sidebar-documents sidebar-settings-btn"
