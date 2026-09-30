@@ -4067,7 +4067,11 @@ const handleNewConversation = () => {
                       <span className="activity-list-time">
                         {activity.created_at
                           ? new Date(
-                              activity.created_at
+                              /(?:Z|[+-]\d{2}:?\d{2})$/.test(
+                                String(activity.created_at)
+                              )
+                                ? activity.created_at
+                                : `${activity.created_at}Z`
                             ).toLocaleString([], {
                               dateStyle: 'medium',
                               timeStyle: 'short',
