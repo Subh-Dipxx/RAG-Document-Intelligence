@@ -19,6 +19,7 @@ from backend.database.crud import (
     get_versions,
 )
 from backend.database.database import get_db
+from backend.database.activity import log_activity
 from backend.config import get_settings
 from backend.domain.models import Query
 from sqlalchemy.orm import Session
@@ -100,6 +101,31 @@ def query_documents(
             document_id=payload.filters.get("document_id"),
         )
 
+        if auth.tenant_id:
+            log_activity(
+                db,
+                tenant_id=auth.tenant_id,
+                actor_id=current_user_id,
+                activity_type="CHAT_OPENED",
+                message=(
+                    f"Opened a chat with "
+                    f"{owned_document.file_name or owned_document.title or 'this document'}"
+                    if owned_document
+                    else "Opened a new chat"
+                ),
+                document_id=(
+                    owned_document.id
+                    if owned_document
+                    else None
+                ),
+                document_name=(
+                    owned_document.file_name or owned_document.title or "Untitled document"
+                    if owned_document
+                    else None
+                ),
+            )
+            db.commit()
+
     create_chat_message(
         db,
         conversation_id=conversation.id,
@@ -125,6 +151,30 @@ def query_documents(
     )
 
     intent = intent_result["intent"]
+
+    if (
+        intent == "DOCUMENT_QUERY"
+        and requested_document_id
+        and auth.tenant_id
+        and owned_document is not None
+    ):
+        log_activity(
+            db,
+            tenant_id=auth.tenant_id,
+            actor_id=current_user_id,
+            activity_type="DOCUMENT_QUERY",
+            message=(
+                f"Requested data from "
+                f"{owned_document.file_name or owned_document.title or 'this document'}"
+            ),
+            document_id=owned_document.id,
+            document_name=(
+                owned_document.file_name
+                or owned_document.title
+                or "Untitled document"
+            ),
+        )
+        db.commit()
 
     generator = GeminiGenerator()
 

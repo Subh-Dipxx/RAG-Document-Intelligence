@@ -356,6 +356,60 @@ class QueryLogModel(Base):
     created_at = Column(DateTime, default=utc_now)
 
 
+class ActivityLogModel(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+
+    tenant_id = Column(
+        String,
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    actor_id = Column(
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    actor_username = Column(String, nullable=False)
+
+    activity_type = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
+
+    message = Column(Text, nullable=False)
+
+    # Intentionally not a foreign key.
+    # This preserves activity history after a document is deleted.
+    document_id = Column(
+        String,
+        nullable=True,
+        index=True,
+    )
+
+    document_name = Column(
+        String,
+        nullable=True,
+    )
+
+    metadata_json = Column(
+        JSON,
+        default=dict,
+    )
+
+    created_at = Column(
+        DateTime,
+        default=utc_now,
+        index=True,
+    )
+
+
 class DeletionAuditModel(Base):
     __tablename__ = "deletion_audit"
 

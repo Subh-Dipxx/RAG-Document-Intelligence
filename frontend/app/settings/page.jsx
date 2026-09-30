@@ -2787,12 +2787,8 @@ export default function SettingsPage() {
               </p>
 
               <p className="delete-confirm-message">
-                This permanently removes this organization and its
-                memberships, invitations, access grants, and access
-                requests. If an account no longer belongs to any other
-                organization, that account and its credentials will also be
-                deleted. Accounts with memberships in other organizations
-                will remain active.
+                Are you sure you want to delete the organization? This action
+                cannot be undone.
               </p>
 
               <div className="change-password-field">

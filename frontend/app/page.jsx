@@ -1030,6 +1030,11 @@ const [usernameError, setUsernameError] = useState('')
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [documentPreview, setDocumentPreview] = useState(null)
+  const [documentActivity, setDocumentActivity] = useState(null)
+  const [loadingDocumentActivity, setLoadingDocumentActivity] = useState(false)
+  const [documentActivityError, setDocumentActivityError] = useState('')
+  const [showClearActivityConfirm, setShowClearActivityConfirm] = useState(false)
+  const [clearingActivity, setClearingActivity] = useState(false)
 
   const fetchMyOrganizations = async () => {
     if (!token) {
@@ -2961,7 +2966,7 @@ if (
     }
   }
 
-  
+
   const handleDeleteDocument = async () => {
   if (!pendingDeleteDocument || deletingDocument) {
     return
@@ -3267,6 +3272,132 @@ const handleNewConversation = () => {
     })
   }
 
+  const handleViewDocumentActivity = async (document) => {
+    const documentId = document?.document_id || document?.id
+
+    if (loadingDocumentActivity) {
+      return
+    }
+
+    const activityDocument = document
+      ? {
+          ...document,
+          file_name:
+            document.file_name ||
+            document.filename ||
+            document.title ||
+            'Unknown file',
+        }
+      : {
+          file_name: 'All organization activity',
+        }
+
+    setDocumentActivityError('')
+    setLoadingDocumentActivity(true)
+    setDocumentActivity({
+      document: activityDocument,
+      activities: [],
+    })
+
+    try {
+      const activityUrl = documentId
+        ? `/api/v1/activity?document_id=${encodeURIComponent(documentId)}`
+        : '/api/v1/activity'
+
+      const res = await fetch(activityUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      let data = null
+
+      try {
+        data = await res.json()
+      } catch {
+        data = null
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          `Failed to load activity (${res.status})`
+        )
+      }
+
+      setDocumentActivity({
+        document: activityDocument,
+        activities: Array.isArray(data) ? data : [],
+      })
+    } catch (err) {
+      console.error('Failed to load document activity:', err)
+      setDocumentActivityError(
+        err.message || 'Failed to load document activity.'
+      )
+    } finally {
+      setLoadingDocumentActivity(false)
+    }
+  }
+
+  const handleClearActivity = () => {
+    if (clearingActivity || loadingDocumentActivity) {
+      return
+    }
+
+    setDocumentActivityError('')
+    setShowClearActivityConfirm(true)
+  }
+
+  const executeClearActivity = async () => {
+    if (clearingActivity || loadingDocumentActivity) {
+      return
+    }
+
+    setShowClearActivityConfirm(false)
+    setDocumentActivityError('')
+    setClearingActivity(true)
+
+    try {
+      const res = await fetch('/api/v1/activity', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      let data = null
+
+      try {
+        data = await res.json()
+      } catch {
+        data = null
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data?.detail ||
+          `Failed to clear activity (${res.status})`
+        )
+      }
+
+      setDocumentActivity((current) =>
+        current
+          ? {
+              ...current,
+              activities: [],
+            }
+          : current
+      )
+    } catch (err) {
+      console.error('Failed to clear activity:', err)
+      setDocumentActivityError(
+        err.message || 'Failed to clear activity.'
+      )
+    } finally {
+      setClearingActivity(false)
+    }
+  }
+
   const currentDocument = file
     ? {
         ...selectedDocument,
@@ -3536,7 +3667,7 @@ const handleNewConversation = () => {
           <span className="sidebar-new-chat-icon">+</span>
           <span className="sidebar-new-chat-text">New Chat</span>
         </button>
-        
+
         <button
           type="button"
           className="sidebar-history"
@@ -3677,6 +3808,149 @@ const handleNewConversation = () => {
         </div>
       </aside>
 
+
+      {documentActivity && (
+        <div
+          className="activity-confirm-overlay"
+          role="presentation"
+          onClick={() => {
+            if (!loadingDocumentActivity) {
+              setDocumentActivity(null)
+              setDocumentActivityError('')
+            }
+          }}
+        >
+          <div
+            className="activity-confirm-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="document-activity-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="activity-confirm-header">
+              <div>
+                <h2 id="document-activity-title">
+                  {documentActivity.document?.document_id ||
+                  documentActivity.document?.id
+                    ? 'Document Activity'
+                    : 'Organization Activity'}
+                </h2>
+
+                <p className="activity-confirm-document">
+                  {documentActivity.document?.document_id ||
+                  documentActivity.document?.id
+                    ? (
+                        documentActivity.document?.file_name ||
+                        documentActivity.document?.title ||
+                        'Selected document'
+                      )
+                    : 'All activity across organization documents'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="activity-confirm-clear-top"
+                aria-label="Clear all activity"
+                title="Clear all activity"
+                disabled={
+  clearingActivity ||
+  loadingDocumentActivity ||
+  !documentActivity?.activities?.length
+}
+                onClick={handleClearActivity}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 7h16" />
+                  <path d="M9 7V4h6v3" />
+                  <path d="M7 7l1 13h8l1-13" />
+                  <path d="M10 11v5" />
+                  <path d="M14 11v5" />
+                </svg>
+                Clear all
+              </button>
+            </div>
+
+            {loadingDocumentActivity ? (
+              <div className="activity-confirm-empty">
+                Loading activity...
+              </div>
+            ) : documentActivityError ? (
+              <div className="activity-confirm-error">
+                {documentActivityError}
+              </div>
+            ) : documentActivity.activities.length === 0 ? (
+              <div className="activity-confirm-empty">
+                No activity recorded yet.
+              </div>
+            ) : (
+              <div className="activity-list">
+                {documentActivity.activities.map((activity) => (
+                  <div
+                    className="activity-list-item"
+                    key={activity.id}
+                  >
+                    <div className="activity-list-item-top">
+                      <span className="activity-list-user">
+                        {activity.actor_username || 'Unknown user'}
+                      </span>
+
+                      <span className="activity-list-time">
+                        {activity.created_at
+                          ? new Date(
+                              activity.created_at
+                            ).toLocaleString([], {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })
+                          : 'Unknown time'}
+                      </span>
+                    </div>
+
+                    <div className="activity-list-type">
+                      {activity.activity_type
+                        ?.replaceAll('_', ' ')
+                        ?.toLowerCase()
+                        ?.replace(/\b\w/g, (letter) =>
+                          letter.toUpperCase()
+                        ) || 'Activity'}
+                    </div>
+
+                    <div className="activity-list-message">
+                      {activity.message}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="activity-confirm-actions">
+<button
+                type="button"
+                className="delete-confirm-cancel"
+                onClick={() => {
+                  if (!loadingDocumentActivity && !clearingActivity) {
+                    setDocumentActivity(null)
+                    setDocumentActivityError('')
+                  }
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingDeleteDocument && (
   <div
@@ -4150,7 +4424,7 @@ const handleNewConversation = () => {
     </div>
 
     <div className="settings-action-group">
-      
+
 
       <button
         type="button"
@@ -4913,6 +5187,57 @@ const handleNewConversation = () => {
         </div>
       )}
 
+      {showClearActivityConfirm && (
+        <div
+          className="logout-confirm-backdrop clear-activity-confirm-backdrop"
+          role="presentation"
+          onClick={() => {
+            if (!clearingActivity) {
+              setShowClearActivityConfirm(false)
+            }
+          }}
+        >
+          <div
+            className="logout-confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="clear-activity-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="logout-confirm-content">
+              <h2 id="clear-activity-confirm-title">
+                Clear all activity?
+              </h2>
+
+              <p className="logout-confirm-message">
+                Are you sure you want to clear all activity for this organization?
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="logout-confirm-actions">
+              <button
+                type="button"
+                className="logout-confirm-primary logout-confirm-button logout-confirm-clear"
+                onClick={executeClearActivity}
+                disabled={clearingActivity}
+              >
+                {clearingActivity ? 'Clearing...' : 'Clear all'}
+              </button>
+
+              <button
+                type="button"
+                className="logout-confirm-secondary"
+                onClick={() => setShowClearActivityConfirm(false)}
+                disabled={clearingActivity}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showLogoutConfirm && (
         <div
           className="logout-confirm-backdrop"
@@ -5276,6 +5601,7 @@ const handleNewConversation = () => {
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
 
+
                                 <button
                                   type="button"
                                   className="document-list-delete"
@@ -5485,6 +5811,20 @@ const handleNewConversation = () => {
             >
               {showDocumentViewer ? 'Hide document' : 'View document'}
             </button>
+
+            {accountType === 'organization' && role === 'admin' && (
+              <button
+                type="button"
+                className="document-viewer-toggle"
+                onClick={() =>
+                  handleViewDocumentActivity(selectedDocument || currentDocument)
+                }
+                disabled={loadingDocumentActivity}
+                title="View activity"
+              >
+                View activity
+              </button>
+            )}
 
           </div>
         </header>
@@ -5895,7 +6235,7 @@ const handleNewConversation = () => {
                       title={documentPreview.name}
                     />
                   </div>
-                )}    
+                )}
                 {documentPreview?.kind === 'csv' && (
                   <div className="document-csv-preview">
                     <table className="document-csv-table">

@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 import json
 
 from backend.database.database import get_db
+from backend.database.activity import log_activity
 from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.auth.dependencies import require_active_organization_access
 from backend.database import crud
-from backend.database.models import AccessGrantModel, TenantMembershipModel
+from backend.database.models import AccessGrantModel, TenantMembershipModel, DocumentModel
 from backend.domain.models import Document, Version
 from backend.workers.tasks import process_document_task
 from backend.api.schemas.document_schemas import DocumentResponse, VersionResponse
@@ -216,12 +217,39 @@ def delete_document(document_id: str, db: Session = Depends(get_db), auth: AuthC
                     detail="Access required to delete this document",
                 )
 
+        document = (
+            db.query(DocumentModel)
+            .filter(
+                DocumentModel.id == document_id,
+                DocumentModel.tenant_id == auth.tenant_id,
+            )
+            .first()
+        )
+
+        document_name = (
+            (document.file_name or document.title or "Untitled document")
+            if document
+            else "Untitled document"
+        )
+
         success = crud.delete_document(
             db,
             document_id,
             actor_id=auth.user_id,
             tenant_id=auth.tenant_id,
         )
+
+        if success:
+            log_activity(
+                db,
+                tenant_id=auth.tenant_id,
+                actor_id=auth.user_id,
+                activity_type="DOCUMENT_DELETED",
+                message=f"Deleted {document_name}",
+                document_id=document_id,
+                document_name=document_name,
+            )
+            db.commit()
     else:
         success = crud.delete_document(
             db,

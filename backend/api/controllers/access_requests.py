@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from backend.auth.dependencies import AuthContext, get_auth_context
 from backend.database.database import get_db
+from backend.database.activity import log_activity
 from backend.database.models import (
     AccessGrantModel,
     AccessRequestModel,
@@ -181,6 +182,17 @@ def create_access_request(
     )
 
     db.add(request)
+
+    log_activity(
+        db,
+        tenant_id=auth.tenant_id,
+        actor_id=auth.user_id,
+        activity_type="DELETE_REQUESTED",
+        message=f"Requested delete access for {document.file_name or document.title or 'this document'}",
+        document_id=document.id,
+        document_name=document.file_name or document.title or "Untitled document",
+    )
+
     db.commit()
     db.refresh(request)
 
@@ -314,6 +326,23 @@ def approve_access_request(
     request.status = "approved"
     request.resolved_at = utc_now()
     request.resolved_by = auth.user_id
+
+    log_activity(
+        db,
+        tenant_id=auth.tenant_id,
+        actor_id=auth.user_id,
+        activity_type="ACCESS_GRANTED",
+        message=(
+            f"Granted delete access for "
+            f"{document.file_name or document.title or 'this document'}"
+        ),
+        document_id=document.id,
+        document_name=document.file_name or document.title or "Untitled document",
+        metadata_json={
+            "requester_id": request.requester_id,
+            "requested_role": request.requested_role,
+        },
+    )
 
     db.commit()
     db.refresh(request)

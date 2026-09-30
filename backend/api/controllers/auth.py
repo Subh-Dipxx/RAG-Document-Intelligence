@@ -24,6 +24,7 @@ from backend.api.schemas.auth_schemas import (
 from backend.auth.security import create_access_token, verify_password, hash_password
 from backend.auth.dependencies import get_current_user
 from backend.database.database import get_db
+from backend.database.activity import log_activity
 from backend.database.models import PasswordResetTokenModel, TenantMembershipModel, TenantModel, UserModel, utc_now
 from backend.auth.email_service import send_password_reset_email
 
@@ -584,7 +585,34 @@ def change_username(
             detail="Username is already taken",
         )
 
+    old_username = user.username
     user.username = new_username
+
+    memberships = (
+        db.query(TenantMembershipModel)
+        .filter(
+            TenantMembershipModel.user_id == user.id,
+            TenantMembershipModel.access_status == "active",
+        )
+        .all()
+    )
+
+    for membership in memberships:
+        log_activity(
+            db,
+            tenant_id=membership.tenant_id,
+            actor_id=user.id,
+            activity_type="USERNAME_CHANGED",
+            message=(
+                f"Username changed from {old_username} "
+                f"to {new_username}"
+            ),
+            metadata_json={
+                "old_username": old_username,
+                "new_username": new_username,
+            },
+        )
+
     db.commit()
     db.refresh(user)
 
