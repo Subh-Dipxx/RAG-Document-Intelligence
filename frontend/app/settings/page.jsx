@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import OrganizationAccessNotification from '../../components/OrganizationAccessNotification'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -33,6 +34,8 @@ export default function SettingsPage() {
   const [pendingOrganizationInvitations, setPendingOrganizationInvitations] = useState([])
   const [invitationActionId, setInvitationActionId] = useState(null)
   const [invitationActionError, setInvitationActionError] = useState('')
+  const [accessGrantedMessage, setAccessGrantedMessage] = useState('')
+  const [accessGrantedLeaving, setAccessGrantedLeaving] = useState(false)
 
   const [showChangeUsername, setShowChangeUsername] = useState(false)
   const [newUsername, setNewUsername] = useState('')
@@ -346,14 +349,23 @@ export default function SettingsPage() {
       const currentTenantId =
         localStorage.getItem('tenant_id') || tenantId
 
-      const current = organizations.find(
-        (organization) =>
-          String(organization.organization_id) === String(currentTenantId)
-      )
+      const current =
+        organizations.find(
+          (organization) =>
+            String(organization.organization_id) === String(currentTenantId)
+        ) || (organizations.length === 1 ? organizations[0] : null)
 
       if (current) {
         setTenantId(current.organization_id)
         setOrganizationName(current.organization_name || '')
+        localStorage.setItem('tenant_id', current.organization_id)
+      } else {
+        // The previously active organization is no longer available
+        // (for example, the member was deleted from that organization).
+        setTenantId(null)
+        setOrganizationName('')
+        setNewOrganizationName('')
+        localStorage.removeItem('tenant_id')
       }
     } catch (error) {
       console.error('Failed to load organizations:', error)
@@ -606,6 +618,28 @@ export default function SettingsPage() {
     }
   }
 
+  useEffect(() => {
+    if (!accessGrantedMessage) {
+      setAccessGrantedLeaving(false)
+      return undefined
+    }
+
+    setAccessGrantedLeaving(false)
+
+    const leaveTimer = window.setTimeout(() => {
+      setAccessGrantedLeaving(true)
+
+      const removeTimer = window.setTimeout(() => {
+        setAccessGrantedMessage('')
+        setAccessGrantedLeaving(false)
+      }, 450)
+
+      return () => clearTimeout(removeTimer)
+    }, 3000)
+
+    return () => clearTimeout(leaveTimer)
+  }, [accessGrantedMessage])
+
   const respondToOrganizationInvitation = async (invitationId, action) => {
     const token = getToken()
     if (!token) return
@@ -662,7 +696,7 @@ export default function SettingsPage() {
       await fetchMyOrganizations()
 
       if (action === 'accept') {
-        window.location.href = '/'
+        setAccessGrantedMessage('Access granted by admin')
       }
     } catch (error) {
       setInvitationActionError(error.message)
@@ -1376,6 +1410,109 @@ export default function SettingsPage() {
 
   return (
     <>
+      <OrganizationAccessNotification />
+
+      {accessGrantedMessage && (
+        <div
+          className={accessGrantedLeaving ? 'access-granted-notification leaving' : 'access-granted-notification'}
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '24px',
+            zIndex: 9999,
+            width: '380px',
+            maxWidth: 'calc(100vw - 32px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            padding: '16px 18px',
+            borderRadius: '14px',
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderLeft: '4px solid #22c55e',
+            boxShadow: '0 12px 30px rgba(15, 23, 42, 0.16)',
+            color: '#166534',
+            animation: 'accessGrantedSlideIn 0.35s ease-out',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              flexShrink: 0,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              background: '#22c55e',
+              color: '#ffffff',
+              fontSize: '20px',
+              fontWeight: 700,
+            }}
+          >
+            ✓
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: '15px',
+                fontWeight: 700,
+                color: '#14532d',
+              }}
+            >
+              Access granted by admin
+            </div>
+
+            <div
+              style={{
+                marginTop: '3px',
+                fontSize: '13px',
+                lineHeight: '1.45',
+                color: '#166534',
+              }}
+            >
+              You now have access to the organization's shared documents.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .access-granted-notification {
+          animation: accessGrantedSlideIn 0.45s
+            cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .access-granted-notification.leaving {
+          animation: accessGrantedSlideOut 0.45s
+            cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes accessGrantedSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(calc(100% + 40px));
+          }
+
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes accessGrantedSlideOut {
+          from {
+            opacity: 1;
+            transform: translateX(0);
+          }
+
+          to {
+            opacity: 0;
+            transform: translateX(calc(100% + 40px));
+          }
+        }
+      `}</style>
+
       <div className="settings-page-wrapper">
       {/* Main Settings Container */}
       <main className="settings-container">
@@ -1411,7 +1548,7 @@ export default function SettingsPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
                   <path d="M3 21h18M5 21V7l8-4 6 4v14M9 10h2M9 14h2M13 10h2M13 14h2"/>
                 </svg>
-                <span>Organization: <strong className="settings-org-name">{organizationName || 'Org2'}</strong></span>
+                <span>Organization: <strong className="settings-org-name">{organizationName || 'No organization'}</strong></span>
               </div>
 
 

@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import mammoth from 'mammoth'
 import { parsePPTXToSlides } from 'pptx-json-parser'
 import LoginPage from '../components/LoginPage'
+import OrganizationAccessNotification from '../components/OrganizationAccessNotification'
 import ChartRenderer from '../components/ChartRenderer'
 import * as XLSX from 'xlsx'
 
@@ -1522,13 +1523,13 @@ const [usernameError, setUsernameError] = useState('')
     fetchConversations()
   }, [token])
 
-  const fetchDocuments = async () => {
-    if (!token) return []
+  const fetchDocuments = async (authToken = token) => {
+    if (!authToken) return []
 
     try {
       const res = await fetch('/api/v1/documents?skip=0&limit=100', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
       })
 
@@ -1569,8 +1570,8 @@ const [usernameError, setUsernameError] = useState('')
     }
   }
 
-  const fetchOrganizationInvitations = async () => {
-    if (!token) {
+  const fetchOrganizationInvitations = async (authToken = token) => {
+    if (!authToken) {
       setPendingOrganizationInvitations([])
       return []
     }
@@ -1578,7 +1579,7 @@ const [usernameError, setUsernameError] = useState('')
     setLoadingOrganizationInvitations(true)
     try {
       const res = await fetch('/api/v1/organization-members/invitations', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
       const data = await res.json().catch(() => [])
       if (!res.ok) {
@@ -1610,7 +1611,6 @@ const [usernameError, setUsernameError] = useState('')
         throw new Error(data?.detail || `Failed to ${action} organization invitation`)
       }
 
-      await fetchOrganizationInvitations()
       if (action === 'accept') {
         setSelectedDocument(null)
         setAccountType('organization')
@@ -1619,10 +1619,69 @@ const [usernameError, setUsernameError] = useState('')
         if (data?.organization_id) {
           localStorage.setItem('tenant_id', data.organization_id)
           setTenantId(data.organization_id)
+
+          // Refresh the JWT immediately after acceptance so subsequent
+          // document requests use the newly active organization context.
+          const switchRes = await fetch(
+            '/api/v1/organization-members/switch',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                organization_id: data.organization_id,
+              }),
+            }
+          )
+
+          const switchData = await switchRes.json().catch(() => ({}))
+
+          if (!switchRes.ok) {
+            throw new Error(
+              switchData?.detail ||
+              'Access was accepted, but the organization session could not be refreshed.'
+            )
+          }
+
+          if (switchData?.access_token) {
+            localStorage.setItem(
+              'access_token',
+              switchData.access_token
+            )
+            localStorage.setItem(
+              'token',
+              switchData.access_token
+            )
+            localStorage.setItem(
+              'auth_token',
+              switchData.access_token
+            )
+            setToken(switchData.access_token)
+
+            // Fetch documents immediately with the NEW token.
+            // React state updates asynchronously, so fetchDocuments()
+            // must not use the stale token from the current render.
+            await fetchDocuments(switchData.access_token)
+            await fetchOrganizationInvitations(switchData.access_token)
+          }
+
+          if (switchData?.role) {
+            setRole(switchData.role)
+            localStorage.setItem('role', switchData.role)
+          }
+
+          if (switchData?.organization_id) {
+            setTenantId(switchData.organization_id)
+            localStorage.setItem(
+              'tenant_id',
+              switchData.organization_id
+            )
+          }
         }
 
         await fetchMyOrganizations()
-        await fetchDocuments()
       }
     } catch (error) {
       setInvitationActionError(error?.message || 'Unable to process invitation')
@@ -2065,6 +2124,14 @@ const [usernameError, setUsernameError] = useState('')
       return []
     }
   }
+
+  const pendingDeleteRequestCount = Array.isArray(accessRequests)
+    ? accessRequests.filter(
+        (request) =>
+          request?.status === 'pending' &&
+          request?.requested_role === 'delete'
+      ).length
+    : 0
 
   const requestDocumentAccess = async () => {
     if (!token || !accessRequestDocument || requestingAccess) return
@@ -3571,6 +3638,7 @@ const handleNewConversation = () => {
       className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
       data-theme={theme}
     >
+      <OrganizationAccessNotification />
       <style jsx global>{`
         .workspace {
           grid-template-columns: minmax(0, 1fr);
@@ -3809,9 +3877,29 @@ const handleNewConversation = () => {
             setShowDocuments(true)
             fetchDocuments()
           }}
+          style={{ position: 'relative' }}
         >
           <span className="sidebar-documents-icon">▣</span>
           <span className="sidebar-documents-text">Documents</span>
+
+          {pendingDeleteRequestCount > 0 && (
+            <span
+              aria-label={`${pendingDeleteRequestCount} pending delete request(s)`}
+              title={`${pendingDeleteRequestCount} pending delete request(s)`}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: '#ef4444',
+                border: '2px solid var(--sidebar-bg, #09090b)',
+                boxShadow: '0 0 6px rgba(239, 68, 68, 0.9)',
+              }}
+            />
+          )}
         </button>
 
         {(role === 'admin' || currentRole?.toLowerCase() === 'admin') && (

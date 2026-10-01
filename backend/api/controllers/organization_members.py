@@ -348,7 +348,6 @@ def list_sidebar_organization_members(
         )
         for membership, user in rows
     ]
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 @router.post(
     "/{user_id}/revoke-access",
     response_model=OrganizationMemberResponse,
@@ -423,6 +422,7 @@ def revoke_organization_member_access(
     )
 
 
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_organization_member(
     user_id: str,
     db: Session = Depends(get_db),
@@ -711,11 +711,20 @@ def accept_organization_invitation(
     db: Session = Depends(get_db),
     auth: AuthContext = Depends(get_auth_context),
 ):
-    invitation = _get_my_pending_invitation(
-        db,
-        auth,
-        invitation_id,
+    invitation = (
+        db.query(OrganizationInvitationModel)
+        .filter(
+            OrganizationInvitationModel.id == invitation_id,
+            OrganizationInvitationModel.invitee_user_id == auth.user_id,
+        )
+        .first()
     )
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization invitation not found",
+        )
 
     tenant = (
         db.query(TenantModel)
@@ -737,6 +746,44 @@ def accept_organization_invitation(
         )
         .first()
     )
+
+    if invitation.status == "accepted" and membership and membership.access_status == "active":
+        user = (
+            db.query(UserModel)
+            .filter(UserModel.id == auth.user_id)
+            .first()
+        )
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User account not found",
+            )
+
+        access_token = create_access_token(
+            user_id=auth.user_id,
+            username=user.username,
+            tenant_id=tenant.id,
+            role=membership.role,
+            account_type="organization",
+        )
+
+        return {
+            "message": "Organization access granted",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "organization_id": tenant.id,
+            "organization_name": tenant.name,
+            "role": membership.role,
+            "access_status": membership.access_status,
+            "account_type": "organization",
+        }
+
+    if invitation.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending organization invitation not found",
+        )
 
     if membership:
         if membership.role == "admin":
@@ -762,12 +809,35 @@ def accept_organization_invitation(
     db.commit()
     db.refresh(membership)
 
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.id == auth.user_id)
+        .first()
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found",
+        )
+
+    access_token = create_access_token(
+        user_id=auth.user_id,
+        username=user.username,
+        tenant_id=tenant.id,
+        role=membership.role,
+        account_type="organization",
+    )
+
     return {
         "message": "Organization access granted",
-        "organization_id": invitation.tenant_id,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "organization_id": tenant.id,
         "organization_name": tenant.name,
         "role": membership.role,
         "access_status": membership.access_status,
+        "account_type": "organization",
     }
 
 

@@ -6464,7 +6464,7 @@ html.dark .organization-member-grant-button:hover:not(:disabled) {
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid rgba(124, 58, 237, 0.35);
-  border-radius: 8px;
+  border-radius: 9px;
   background: rgba(124, 58, 237, 0.08);
   color: #7c3aed;
   font-family: var(--font-body);
@@ -9816,7 +9816,7 @@ html.dark .revoke-confirm-cancel {
 
 /* Revoke Access — pill shape only */
 .organization-member-revoke-button {
-  border-radius: 999px !important;
+  border-radius: 9px !important;
 }
 
 /* Organization member search */
