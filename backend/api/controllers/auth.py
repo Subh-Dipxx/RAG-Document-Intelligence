@@ -203,7 +203,7 @@ def organization_signup(
         tenant_id=tenant.id,
         user_id=user.id,
         role=membership_role,
-        access_status=("active" if membership_role == "admin" else "pending"),
+        access_status=("active" if membership_role == "admin" else "revoked"),
     )
     db.add(membership)
     db.commit()

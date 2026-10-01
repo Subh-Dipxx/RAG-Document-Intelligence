@@ -10760,3 +10760,149 @@ html[data-theme="dark"] .profile-picture-remove-icon:hover:not(:disabled) {
   background: #6d28d9;
 }
 
+
+
+/* Organization Settings Visual Redesign */
+.settings-organization-redesign {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Organization cards have a slightly more structured workspace appearance */
+.settings-organization-redesign > .settings-card {
+  border-radius: 18px;
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  background: var(--surface);
+  box-shadow:
+    0 8px 24px rgba(25, 18, 55, 0.055),
+    0 1px 3px rgba(25, 18, 55, 0.025);
+}
+
+/* Organization name card */
+.settings-organization-redesign > .settings-card:first-child {
+  box-shadow: 0 6px 20px rgba(25, 18, 55, 0.045);
+}
+
+.settings-organization-redesign > .settings-card:first-child .settings-card-header {
+  padding-bottom: 18px;
+}
+
+/* Members card gets stronger visual hierarchy */
+.settings-organization-redesign > .settings-card:nth-child(2) {
+  border-color: rgba(124, 58, 237, 0.15);
+  overflow: hidden;
+}
+
+.settings-organization-redesign > .settings-card:nth-child(2) .settings-card-header {
+  padding-bottom: 18px;
+}
+
+.settings-organization-redesign .settings-card-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.16),
+    rgba(168, 85, 247, 0.08)
+  );
+  border: 1px solid rgba(124, 58, 237, 0.08);
+}
+
+/* Organization name row */
+.settings-organization-redesign .settings-row-item {
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.settings-organization-redesign .settings-row-item:hover {
+  background: rgba(124, 58, 237, 0.035);
+}
+
+/* Buttons retain the existing purple language but feel more deliberate */
+.settings-organization-redesign .settings-btn-primary {
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.18);
+}
+
+.settings-organization-redesign .settings-btn-outline {
+  border-radius: 10px;
+  border-color: rgba(124, 58, 237, 0.20);
+}
+
+/* Member access states */
+.settings-organization-redesign .organization-member-access {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.settings-organization-redesign .organization-member-grant-button,
+.settings-organization-redesign .organization-member-revoke-button,
+.settings-organization-redesign .organization-member-delete-button {
+  border-radius: 9px;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.settings-organization-redesign .organization-member-grant-button:hover,
+.settings-organization-redesign .organization-member-revoke-button:hover,
+.settings-organization-redesign .organization-member-delete-button:hover {
+  transform: translateY(-1px);
+}
+
+/* Pending / granted / revoked badges keep their existing colors */
+.settings-organization-redesign .organization-member-access.is-granted,
+.settings-organization-redesign .organization-member-access.is-requested {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Light theme */
+html[data-theme="light"] .settings-organization-redesign > .settings-card {
+  background: #ffffff;
+  border-color: rgba(124, 58, 237, 0.11);
+  box-shadow:
+    0 8px 24px rgba(25, 18, 55, 0.055),
+    0 1px 3px rgba(25, 18, 55, 0.025);
+}
+
+html[data-theme="light"] .settings-organization-redesign > .settings-card:nth-child(2) {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(124, 58, 237, 0.018) 0%,
+      #ffffff 24%
+    );
+}
+
+html[data-theme="light"] .settings-organization-redesign .settings-row-item:hover {
+  background: rgba(124, 58, 237, 0.035);
+}
+
+/* Dark theme */
+html[data-theme="dark"] .settings-organization-redesign > .settings-card {
+  background: var(--surface);
+  border-color: rgba(167, 139, 250, 0.15);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.20),
+    0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="dark"] .settings-organization-redesign > .settings-card:nth-child(2) {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(124, 58, 237, 0.045) 0%,
+      var(--surface) 24%
+    );
+}
+
+html[data-theme="dark"] .settings-organization-redesign .settings-row-item:hover {
+  background: rgba(124, 58, 237, 0.07);
+}
+

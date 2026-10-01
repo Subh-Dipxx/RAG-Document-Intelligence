@@ -3856,7 +3856,7 @@ const handleNewConversation = () => {
                   }
                 }}
               >
-                <div className="sidebar-profile-menu-avatar">
+                <div className="sidebar-profile-menu-avatar" style={{ position: 'relative' }}>
                   {profilePictureUrl ? (
                     <img
                       src={profilePictureUrl}
@@ -3874,6 +3874,22 @@ const handleNewConversation = () => {
                     <span>
                       {username ? username.charAt(0).toUpperCase() : 'U'}
                     </span>
+                  )}
+                  {pendingOrganizationInvitations.length > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ef4444',
+                        border: '2px solid var(--surface)',
+                        boxShadow: '0 0 6px rgba(239, 68, 68, 0.9)',
+                      }}
+                      title={`${pendingOrganizationInvitations.length} pending organization invitation(s)`}
+                    />
                   )}
                 </div>
                 <div className="sidebar-profile-menu-details">

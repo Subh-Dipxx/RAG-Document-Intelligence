@@ -59,6 +59,8 @@ def query_documents(
         else None
     )
 
+    owned_document = None
+
     if requested_document_id:
         if auth.tenant_id:
             owned_document = get_document(

@@ -108,8 +108,8 @@ def load_settings() -> Settings:
         database_url=_required("DATABASE_URL"),
 
         minio_endpoint=_required("MINIO_ENDPOINT"),
-        minio_root_user=_required("MINIO_ROOT_USER"),
-        minio_root_password=_required("MINIO_ROOT_PASSWORD"),
+        minio_root_user=_required("AWS_ACCESS_KEY_ID"),
+        minio_root_password=_required("AWS_SECRET_ACCESS_KEY"),
         minio_bucket_raw_documents=_required(
             "MINIO_BUCKET_RAW_DOCUMENTS"
         ),

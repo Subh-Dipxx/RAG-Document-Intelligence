@@ -1395,7 +1395,9 @@ export default function SettingsPage() {
             </button>
 
             <div>
-              <div className="settings-eyebrow">SETTINGS</div>
+              {settingsSection === 'organization' && (
+                <div className="settings-eyebrow">SETTINGS</div>
+              )}
               <h1 className="settings-title">
                 {settingsSection === 'organization' ? 'Organization' : 'Profile'}
               </h1>
@@ -1442,7 +1444,7 @@ export default function SettingsPage() {
 
         {/* Conditional Cards Rendering */}
         {settingsSection === 'organization' ? (
-          <>
+          <div className="settings-organization-redesign">
             {/* Organization Card 1: Organization Name */}
             <div className="settings-card">
               <div className="settings-card-header">
@@ -1585,8 +1587,7 @@ export default function SettingsPage() {
                     {filteredOrganizationMembers.map((member) => {
                       const isAdmin = member.role === 'admin'
                       const isDeleting = deletingOrganizationMemberId === member.user_id
-                      const hasAccess = member.has_document_delete_access
-                      const accessRequestSent = member.document_delete_access_requested
+                      const accessStatus = String(member.access_status || '').toLowerCase()
 
                       return (
                         <div
@@ -1610,26 +1611,35 @@ export default function SettingsPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {!isAdmin && (
-                              hasAccess ? (
-                                <button
-                                  type="button"
-                                  className="settings-btn-outline"
-                                  style={{ color: '#ef4444', borderColor: '#fca5a5' }}
-                                  onClick={() => revokeOrganizationMemberAccess(member)}
-                                  disabled={isDeleting}
-                                >
-                                  Revoke Delete Access
-                                </button>
-                              ) : accessRequestSent ? (
-                                <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600 }}>Request Sent</span>
+                              accessStatus === 'active' ? (
+                                <>
+                                  <span className="organization-member-access is-granted">
+                                    <span className="organization-member-access-dot" />
+                                    Access Granted
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    className="organization-member-revoke-button"
+                                    onClick={() => revokeOrganizationMemberAccess(member)}
+                                    disabled={isDeleting}
+                                  >
+                                    Revoke Access
+                                  </button>
+                                </>
+                              ) : accessStatus === 'pending' ? (
+                                <span className="organization-member-access is-requested">
+                                  <span className="organization-member-access-dot" />
+                                  Pending
+                                </span>
                               ) : (
                                 <button
                                   type="button"
-                                  className="settings-btn-primary"
+                                  className="organization-member-grant-button"
                                   onClick={() => grantOrganizationMemberAccess(member)}
                                   disabled={grantingOrganizationMemberId === member.user_id || isDeleting}
                                 >
-                                  {grantingOrganizationMemberId === member.user_id ? 'Granting...' : 'Grant Delete Access'}
+                                  {grantingOrganizationMemberId === member.user_id ? 'Granting...' : 'Grant Access'}
                                 </button>
                               )
                             )}
@@ -1637,10 +1647,11 @@ export default function SettingsPage() {
                             {!isAdmin && (
                               <button
                                 type="button"
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px' }}
+                                className="organization-member-delete-button"
                                 onClick={() => deleteOrganizationMember(member)}
                                 disabled={isDeleting}
                                 title="Remove member"
+                                aria-label={`Remove ${member.username}`}
                               >
                                 🗑
                               </button>
@@ -1756,9 +1767,235 @@ export default function SettingsPage() {
                 )}
               </div>
             )}
-          </>
+          </div>
         ) : (
           <>
+            {/* Organization Access Invitation - display existing invitation state */}
+            {pendingOrganizationInvitations.length > 0 && (
+              <div
+                className="settings-card"
+                style={{
+                  marginBottom: '20px',
+                  overflow: 'hidden'
+                }}
+              >
+                <div className="settings-card-header">
+                  <div className="settings-card-icon-box">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="8.5" cy="7" r="4" />
+                      <path d="M17 11l2 2 4-4" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <h3 className="settings-card-title">
+                      Organization Access Invitation
+                    </h3>
+                    <p className="settings-card-subtitle">
+                      You have been invited to access an organization.
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: '4px',
+                    padding: '18px 20px',
+                    borderRadius: '14px',
+                    background: 'rgba(124, 58, 237, 0.06)',
+                    border: '1px solid rgba(124, 58, 237, 0.16)'
+                  }}
+                >
+                  {pendingOrganizationInvitations.map((invitation) => (
+                    <div key={invitation.id}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '64px',
+                            height: '64px',
+                            flexShrink: 0,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #e9d5ff, #c4b5fd)',
+                            color: '#6b21a8',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: '24px',
+                            fontWeight: '700'
+                          }}
+                        >
+                          {(invitation.invited_by_username || 'A')
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: '240px' }}>
+                          <div
+                            style={{
+                              fontSize: '15px',
+                              fontWeight: '700',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            You were given access by{' '}
+                            <span style={{ color: '#7c3aed' }}>
+                              {invitation.invited_by_username}
+                            </span>
+                            {invitation.invited_by_email
+                              ? ` (${invitation.invited_by_email})`
+                              : ''}
+                            {' '}to{' '}
+                            <span style={{ color: '#7c3aed' }}>
+                              {invitation.organization_name}
+                            </span>
+                            .
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop: '6px',
+                              fontSize: '13px',
+                              lineHeight: '1.5',
+                              color: 'var(--text-secondary, #64748b)'
+                            }}
+                          >
+                            Accept the invitation to access the
+                            organization's shared documents.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: '18px',
+                          padding: '13px 16px',
+                          borderRadius: '12px',
+                          background: 'rgba(124, 58, 237, 0.07)',
+                          border: '1px solid rgba(124, 58, 237, 0.10)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            flexShrink: 0,
+                            borderRadius: '10px',
+                            background: 'rgba(124, 58, 237, 0.10)',
+                            color: '#7c3aed',
+                            display: 'grid',
+                            placeItems: 'center'
+                          }}
+                        >
+                          <svg
+                            width="19"
+                            height="19"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M3 21h18M5 21V7l8-4 6 4v14" />
+                            <path d="M9 10h2M9 14h2M13 10h2M13 14h2" />
+                          </svg>
+                        </div>
+
+                        <div>
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: 'var(--text-secondary, #64748b)'
+                            }}
+                          >
+                            Organization
+                          </div>
+                          <div
+                            style={{
+                              marginTop: '2px',
+                              fontSize: '15px',
+                              fontWeight: '700',
+                              color: '#7c3aed'
+                            }}
+                          >
+                            {invitation.organization_name}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: '10px',
+                          marginTop: '18px',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="settings-btn-outline"
+                          disabled={invitationActionId === invitation.id}
+                          onClick={() =>
+                            respondToOrganizationInvitation(
+                              invitation.id,
+                              'decline'
+                            )
+                          }
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          className="settings-btn-primary"
+                          disabled={invitationActionId === invitation.id}
+                          onClick={() =>
+                            respondToOrganizationInvitation(
+                              invitation.id,
+                              'accept'
+                            )
+                          }
+                        >
+                          {invitationActionId === invitation.id
+                            ? 'Accepting...'
+                            : '✓  Accept Invitation'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {invitationActionError && (
+                    <div
+                      style={{
+                        color: '#ef4444',
+                        fontSize: '13px',
+                        marginTop: '12px'
+                      }}
+                    >
+                      {invitationActionError}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Card 1: Account Information */}
             <div className="settings-card">
               <div className="settings-card-header">

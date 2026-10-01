@@ -631,34 +631,11 @@ def invite_organization_member(
             tenant_id=auth.tenant_id,
             user_id=user.id,
             role="member",
-            access_status="pending",
+            access_status="revoked",
         )
         db.add(membership)
-    else:
-        membership.access_status = "pending"
-
-    pending = (
-        db.query(OrganizationInvitationModel)
-        .filter(
-            OrganizationInvitationModel.tenant_id == auth.tenant_id,
-            OrganizationInvitationModel.invitee_user_id == user.id,
-            OrganizationInvitationModel.status == "pending",
-        )
-        .first()
-    )
-    if pending:
-        # Resend semantics: keep the same pending invitation and refresh its timestamp.
-        pending.created_at = datetime.now(timezone.utc)
-        pending.invited_by_user_id = auth.user_id
-    else:
-        db.add(
-            OrganizationInvitationModel(
-                tenant_id=auth.tenant_id,
-                invitee_user_id=user.id,
-                invited_by_user_id=auth.user_id,
-                status="pending",
-            )
-        )
+    # Creating a member does not grant organization document access.
+    # Access becomes pending only when the admin explicitly clicks Grant Access.
 
     db.commit()
     db.refresh(membership)

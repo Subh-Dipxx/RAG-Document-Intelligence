@@ -13,7 +13,7 @@ pgvector
 PyMuPDF
 
 # Object Storage
-minio
+boto3
 
 # Vector & search backends
 qdrant-client
