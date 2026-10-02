@@ -108,8 +108,12 @@ def load_settings() -> Settings:
         database_url=_required("DATABASE_URL"),
 
         minio_endpoint=_required("MINIO_ENDPOINT"),
-        minio_root_user=_required("AWS_ACCESS_KEY_ID"),
-        minio_root_password=_required("AWS_SECRET_ACCESS_KEY"),
+        minio_root_user=os.getenv("AWS_ACCESS_KEY_ID")
+        or os.getenv("MINIO_ROOT_USER")
+        or "minioadmin",
+        minio_root_password=os.getenv("AWS_SECRET_ACCESS_KEY")
+        or os.getenv("MINIO_ROOT_PASSWORD")
+        or "minioadmin",
         minio_bucket_raw_documents=_required(
             "MINIO_BUCKET_RAW_DOCUMENTS"
         ),
