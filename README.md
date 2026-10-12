@@ -284,8 +284,8 @@ rag-document-intelligence/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/rag-document-intelligence.git
-   cd rag-document-intelligence
+   git clone https://github.com/Subh-Dipxx/RAG-Document-Intelligence.git
+   cd RAG-Document-Intelligence
    ```
 
 2. Copy the example configuration file:
